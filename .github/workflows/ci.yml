@@ -12,8 +12,31 @@ concurrency:
 
 jobs:
   build-test:
-    name: build · lint · typecheck · test
+    name: build · lint · typecheck · unit + integration tests
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: playslot
+          POSTGRES_PASSWORD: dev
+          POSTGRES_DB: playslot_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U playslot -d playslot_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://playslot:dev@localhost:5432/playslot_test?schema=public
+      AUTH_SECRET: ci-secret-at-least-16-characters-long
+      APP_BASE_URL: http://localhost:3000
+      API_BASE_URL: http://localhost:3001
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:3001
+
     steps:
       - uses: actions/checkout@v4
 
@@ -40,5 +63,11 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Test
+      - name: Unit tests
         run: pnpm test
+
+      - name: Apply migrations
+        run: pnpm --filter @playslot/db migrate:deploy
+
+      - name: Integration tests (auth + tenant isolation)
+        run: pnpm --filter @playslot/api test:e2e

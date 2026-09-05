@@ -1,0 +1,148 @@
+@import 'tailwindcss';
+
+/*
+ * PlaySlot design tokens (from docs/design/playslot-design.html).
+ * Light palette on :root; dark overrides under prefers-color-scheme and an
+ * explicit [data-theme="dark"]. Colors are theme-aware; slot-state colors are
+ * kept distinct from the brand accent and are never used color-only in the UI.
+ */
+:root {
+  --ground: #f5f7f2;
+  --surface: #ffffff;
+  --surface-2: #edefe8;
+  --ink: #14181b;
+  --ink-2: #464c4e;
+  --ink-3: #7b8184;
+  --line: #e1e4db;
+  --line-2: #cdd1c6;
+
+  --lime: #c7f000; /* brand accent — always ink text on top */
+  --lime-deep: #a6c900;
+  --teal: #0e9e9c; /* info / coach */
+  --teal-soft: #d6eeec;
+  --clay: #e4622e; /* secondary highlight */
+  --clay-soft: #f8e2d6;
+
+  /* slot-state semantics */
+  --free: #1e9e57;
+  --free-soft: #dbf0e4;
+  --held: #c98a06;
+  --held-soft: #f6eacb;
+  --booked: #9aa0a2;
+  --booked-soft: #e7e9e4;
+  --event: #7a5af0;
+  --event-soft: #e5defb;
+
+  --radius: 14px;
+  --radius-sm: 9px;
+  --shadow: 0 1px 2px rgba(20, 24, 27, 0.05), 0 10px 30px rgba(20, 24, 27, 0.07);
+  --shadow-sm: 0 1px 2px rgba(20, 24, 27, 0.06), 0 3px 10px rgba(20, 24, 27, 0.05);
+  --maxw: 1180px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --ground: #0e1113;
+    --surface: #171b1e;
+    --surface-2: #20262a;
+    --ink: #f1f3ee;
+    --ink-2: #b9bfc0;
+    --ink-3: #828889;
+    --line: #272d30;
+    --line-2: #39403f;
+    --lime: #cbf33a;
+    --lime-deep: #a6c900;
+    --teal: #33b7b4;
+    --teal-soft: #0f2e2d;
+    --clay: #f0774a;
+    --clay-soft: #33190f;
+    --free: #41b978;
+    --free-soft: #12301f;
+    --held: #dca83a;
+    --held-soft: #322611;
+    --booked: #6d7375;
+    --booked-soft: #23282a;
+    --event: #9b83f5;
+    --event-soft: #1e1836;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 34px rgba(0, 0, 0, 0.5);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+}
+
+:root[data-theme='dark'] {
+  --ground: #0e1113;
+  --surface: #171b1e;
+  --surface-2: #20262a;
+  --ink: #f1f3ee;
+  --ink-2: #b9bfc0;
+  --ink-3: #828889;
+  --line: #272d30;
+  --line-2: #39403f;
+  --lime: #cbf33a;
+  --lime-deep: #a6c900;
+  --teal: #33b7b4;
+  --teal-soft: #0f2e2d;
+  --clay: #f0774a;
+  --clay-soft: #33190f;
+  --free: #41b978;
+  --free-soft: #12301f;
+  --held: #dca83a;
+  --held-soft: #322611;
+  --booked: #6d7375;
+  --booked-soft: #23282a;
+  --event: #9b83f5;
+  --event-soft: #1e1836;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 34px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Expose tokens to Tailwind so utilities like bg-surface / text-ink work. */
+@theme inline {
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-lime: var(--lime);
+  --color-teal: var(--teal);
+  --color-clay: var(--clay);
+  --font-display: var(--font-bricolage), system-ui, sans-serif;
+  --font-sans: var(--font-hanken), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-hanken), system-ui, sans-serif;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-bricolage), system-ui, sans-serif;
+  margin: 0;
+  line-height: 1.08;
+  text-wrap: balance;
+  letter-spacing: -0.02em;
+}
+
+.mono {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+/* Visible focus for keyboard nav (WCAG 2.1 AA, spec §20). */
+:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+  border-radius: 4px;
+}

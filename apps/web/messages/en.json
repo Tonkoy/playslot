@@ -1,0 +1,34 @@
+{
+  "Common": {
+    "appName": "PlaySlot",
+    "tagline": "Book a court and a coach — in one place."
+  },
+  "Nav": {
+    "clubs": "Clubs",
+    "coaches": "Coaches",
+    "login": "Log in",
+    "register": "Sign up",
+    "language": "Language"
+  },
+  "Home": {
+    "eyebrow": "Sofia · tennis · and more sports",
+    "title": "Find a free court. Book it instantly.",
+    "titleHighlight": "free court",
+    "subtitle": "PlaySlot shows real availability across clubs, bundles a court and a coach into a single reservation, and makes double-booking impossible at the database layer.",
+    "searchCourt": "Search courts",
+    "searchLesson": "Search coach lessons",
+    "phaseNoticeTitle": "Under construction",
+    "phaseNotice": "This is the foundation (Milestone 0). The reservation, availability, and payment engines come next.",
+    "supportedSports": "Supported sports: {count}",
+    "legendTitle": "Slot states"
+  },
+  "SlotStates": {
+    "FREE": "Free",
+    "RESERVED": "Reserved",
+    "MINE": "Mine",
+    "UNAVAILABLE": "Unavailable",
+    "PAST": "Past",
+    "EVENT": "Event",
+    "TOURNAMENT": "Tournament"
+  }
+}

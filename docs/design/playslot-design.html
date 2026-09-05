@@ -1,0 +1,382 @@
+<title>PlaySlot Design Direction</title>
+<meta name="description" content="Brand system and key-screen mockups for PlaySlot — a multi-sport court and coach booking platform.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --ground:#F5F7F2;
+    --surface:#FFFFFF;
+    --surface-2:#EDEFE8;
+    --ink:#14181B;
+    --ink-2:#464C4E;
+    --ink-3:#7B8184;
+    --line:#E1E4DB;
+    --line-2:#CDD1C6;
+    --lime:#C7F000;        /* brand accent — always ink text on top */
+    --lime-deep:#A6C900;
+    --teal:#0E9E9C;        /* info / coach */
+    --teal-soft:#D6EEEC;
+    --clay:#E4622E;        /* secondary highlight */
+    --clay-soft:#F8E2D6;
+    /* slot-state semantics (distinct from brand accent) */
+    --free:#1E9E57;   --free-soft:#DBF0E4;
+    --held:#C98A06;   --held-soft:#F6EACB;
+    --booked:#9AA0A2; --booked-soft:#E7E9E4;
+    --event:#7A5AF0;  --event-soft:#E5DEFB;
+    --radius:14px; --radius-sm:9px;
+    --shadow:0 1px 2px rgba(20,24,27,.05),0 10px 30px rgba(20,24,27,.07);
+    --shadow-sm:0 1px 2px rgba(20,24,27,.06),0 3px 10px rgba(20,24,27,.05);
+    --maxw:1180px;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --ground:#0E1113; --surface:#171B1E; --surface-2:#20262A; --ink:#F1F3EE; --ink-2:#B9BFC0; --ink-3:#828889;
+    --line:#272D30; --line-2:#39403F; --lime:#CBF33A; --lime-deep:#A6C900; --teal:#33B7B4; --teal-soft:#0F2E2D;
+    --clay:#F0774A; --clay-soft:#33190F; --free:#41B978; --free-soft:#12301F; --held:#DCA83A; --held-soft:#322611;
+    --booked:#6D7375; --booked-soft:#23282A; --event:#9B83F5; --event-soft:#1E1836;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 34px rgba(0,0,0,.5); --shadow-sm:0 1px 2px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.4);
+  }}
+  :root[data-theme="dark"]{
+    --ground:#0E1113; --surface:#171B1E; --surface-2:#20262A; --ink:#F1F3EE; --ink-2:#B9BFC0; --ink-3:#828889;
+    --line:#272D30; --line-2:#39403F; --lime:#CBF33A; --lime-deep:#A6C900; --teal:#33B7B4; --teal-soft:#0F2E2D;
+    --clay:#F0774A; --clay-soft:#33190F; --free:#41B978; --free-soft:#12301F; --held:#DCA83A; --held-soft:#322611;
+    --booked:#6D7375; --booked-soft:#23282A; --event:#9B83F5; --event-soft:#1E1836;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 34px rgba(0,0,0,.5); --shadow-sm:0 1px 2px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.4);
+  }
+  *{box-sizing:border-box}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  body{background:var(--ground);color:var(--ink);font-family:"Hanken Grotesk",system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  h1,h2,h3,h4{font-family:"Bricolage Grotesque","Hanken Grotesk",system-ui,sans-serif;margin:0;line-height:1.08;text-wrap:balance;letter-spacing:-.02em}
+  .mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+
+  /* hero */
+  .hero{padding:60px 0 40px}
+  .brandrow{display:flex;align-items:center;gap:14px;margin-bottom:34px}
+  .logo{display:inline-flex;align-items:center;gap:11px;font-family:"Bricolage Grotesque";font-weight:800;font-size:26px;letter-spacing:-.03em;color:var(--ink)}
+  .mark{width:34px;height:34px;border-radius:9px;background:var(--ink);display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;padding:6px}
+  .mark i{border-radius:2px;background:var(--booked)}
+  .mark i.on{background:var(--lime)}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--teal)}
+  .hero h1{font-size:clamp(38px,7vw,72px);font-weight:800;margin:14px 0 0}
+  .hero h1 .lime{background:var(--lime);color:var(--ink);padding:0 .12em;border-radius:8px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+  .hero p{max-width:56ch;color:var(--ink-2);font-size:clamp(16px,2.2vw,20px);margin:20px 0 0}
+  .hero .tags{margin-top:22px;display:flex;flex-wrap:wrap;gap:8px}
+  .tag{font-size:12.5px;font-family:"IBM Plex Mono";background:var(--surface);border:1px solid var(--line);border-radius:100px;padding:5px 12px;color:var(--ink-2)}
+
+  section{padding:40px 0;border-top:1px solid var(--line)}
+  .sh{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+  .sh .n{font-family:"IBM Plex Mono";font-size:13px;color:var(--teal);font-weight:600}
+  section h2{font-size:clamp(22px,3.6vw,32px);font-weight:700}
+  .sub{color:var(--ink-2);max-width:64ch;margin:6px 0 24px;font-size:16px}
+
+  /* palette */
+  .swgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  @media(min-width:640px){.swgrid{grid-template-columns:repeat(4,1fr)}}
+  .sw{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--surface);box-shadow:var(--shadow-sm)}
+  .sw .chip{height:76px}
+  .sw .meta{padding:10px 12px}
+  .sw .meta b{font-size:13.5px;font-weight:600;display:block}
+  .sw .meta span{font-size:11.5px;color:var(--ink-3);font-family:"IBM Plex Mono"}
+  .role{font-size:11px;color:var(--ink-3);margin-top:2px}
+
+  .states{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:8px}
+  @media(min-width:720px){.states{grid-template-columns:repeat(3,1fr)}}
+  .st{display:flex;align-items:center;gap:11px;border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px;background:var(--surface);font-size:13.5px}
+  .st .dot{width:26px;height:26px;border-radius:7px;flex:none;display:grid;place-items:center;font-size:11px;font-family:"IBM Plex Mono";font-weight:600}
+  .st b{font-weight:600}.st span{color:var(--ink-3);font-size:12px}
+
+  /* type */
+  .typ{display:grid;gap:18px}
+  .typ .row{border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;background:var(--surface);box-shadow:var(--shadow-sm)}
+  .typ .lab{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);font-family:"IBM Plex Mono";margin-bottom:8px}
+  .scale{display:flex;flex-wrap:wrap;align-items:baseline;gap:16px}
+
+  /* tokens */
+  .tok{display:grid;grid-template-columns:1fr;gap:14px}
+  @media(min-width:760px){.tok{grid-template-columns:1fr 1fr}}
+  .card{border:1px solid var(--line);border-radius:var(--radius);padding:18px;background:var(--surface);box-shadow:var(--shadow-sm)}
+  .card h4{font-size:14px;font-weight:700;margin-bottom:12px;font-family:"Bricolage Grotesque"}
+  .btns{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .btn{font-family:"Hanken Grotesk";font-weight:600;font-size:14px;border-radius:10px;padding:10px 18px;border:1px solid transparent;cursor:default}
+  .btn.primary{background:var(--lime);color:#14181B;border-color:var(--lime-deep)}
+  .btn.dark{background:var(--ink);color:var(--surface)}
+  .btn.ghost{background:transparent;color:var(--ink);border-color:var(--line-2)}
+  .btn.teal{background:var(--teal);color:#fff}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .pill{font-size:12px;font-weight:600;padding:5px 12px;border-radius:100px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2)}
+  .pill.free{background:var(--free-soft);color:var(--free);border-color:transparent}
+  .pill.coach{background:var(--teal-soft);color:var(--teal);border-color:transparent}
+
+  /* phone mockups */
+  .screens{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:26px 22px;align-items:start}
+  .phone{background:var(--surface);border:1px solid var(--line);border-radius:30px;box-shadow:var(--shadow);overflow:hidden;position:relative}
+  .phone .notch{height:26px;display:flex;align-items:center;justify-content:center}
+  .phone .notch::after{content:"";width:70px;height:5px;border-radius:100px;background:var(--line-2)}
+  .scr{padding:0 13px 16px;font-size:12.5px}
+  .caption{margin-top:10px;font-size:12.5px;color:var(--ink-3);text-align:center}
+  .caption b{color:var(--ink-2);font-weight:600;display:block;font-family:"Bricolage Grotesque";font-size:13.5px}
+  .hero-screen{grid-column:1/-1}
+  @media(min-width:760px){.hero-screen{display:grid;grid-template-columns:300px 1fr;gap:26px;align-items:center}}
+
+  /* in-screen UI atoms */
+  .appbar{display:flex;align-items:center;justify-content:space-between;padding:6px 4px 12px}
+  .applogo{display:flex;align-items:center;gap:7px;font-family:"Bricolage Grotesque";font-weight:800;font-size:15px}
+  .applogo .m{width:18px;height:18px;border-radius:5px;background:var(--ink);display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1.5px;padding:3px}
+  .applogo .m i{border-radius:1px;background:var(--booked)} .applogo .m i.on{background:var(--lime)}
+  .seg{display:flex;background:var(--surface-2);border-radius:10px;padding:3px;gap:3px;font-size:11.5px;font-weight:600}
+  .seg span{flex:1;text-align:center;padding:6px 4px;border-radius:8px;color:var(--ink-3)}
+  .seg span.act{background:var(--ink);color:var(--surface)}
+  .field{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:9px 11px;color:var(--ink-2);display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .field .ic{color:var(--teal)}
+  .clubcard{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:10px;background:var(--surface)}
+  .clubcard .ph{height:64px;background:linear-gradient(120deg,var(--teal) 0%,var(--ink) 120%);position:relative}
+  .clubcard .ph .fav{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.9);display:grid;place-items:center;font-size:11px}
+  .clubcard .b{padding:9px 11px}
+  .clubcard .b .nm{font-weight:700;font-size:13px}
+  .clubcard .b .ad{color:var(--ink-3);font-size:11px;margin-top:1px}
+  .clubcard .b .rowx{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+  .price{font-family:"IBM Plex Mono";font-weight:600;font-size:12.5px}
+  .mini-btn{background:var(--lime);color:#14181B;font-weight:700;font-size:11.5px;border-radius:8px;padding:5px 12px}
+
+  /* the grid */
+  .grid-wrap{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .ghead{display:grid;grid-template-columns:34px repeat(4,1fr);background:var(--surface-2);border-bottom:1px solid var(--line)}
+  .ghead div{padding:6px 2px;text-align:center;font-family:"IBM Plex Mono";font-size:9.5px;color:var(--ink-2);border-left:1px solid var(--line)}
+  .ghead div:first-child{border-left:0}
+  .grow{display:grid;grid-template-columns:34px repeat(4,1fr);border-bottom:1px solid var(--line)}
+  .grow:last-child{border-bottom:0}
+  .gt{display:grid;place-items:center;font-family:"IBM Plex Mono";font-size:9.5px;color:var(--ink-3);background:var(--surface-2)}
+  .cell{border-left:1px solid var(--line);min-height:34px;display:grid;place-items:center;font-family:"IBM Plex Mono";font-size:9px;line-height:1.15;text-align:center;padding:2px}
+  .cell.free{background:var(--free-soft);color:var(--free);font-weight:600;cursor:pointer}
+  .cell.coach{background:var(--teal-soft);color:var(--teal);font-weight:600}
+  .cell.booked{background:repeating-linear-gradient(45deg,var(--booked-soft),var(--booked-soft) 4px,var(--line) 4px,var(--line) 5px);color:var(--ink-3)}
+  .cell.held{background:var(--held-soft);color:var(--held);font-weight:600}
+  .cell.na{background:var(--surface)}
+  .legend2{display:flex;flex-wrap:wrap;gap:9px;margin-top:9px;font-size:10.5px;color:var(--ink-2)}
+  .legend2 span{display:inline-flex;align-items:center;gap:5px}
+  .legend2 i{width:11px;height:11px;border-radius:3px;flex:none}
+
+  .coachrow{display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--surface)}
+  .av{width:34px;height:34px;border-radius:50%;background:var(--clay-soft);color:var(--clay);display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}
+  .coachrow .nm{font-weight:700;font-size:12.5px}
+  .coachrow .mt{color:var(--ink-3);font-size:10.5px}
+
+  .summary{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface)}
+  .srow{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;color:var(--ink-2)}
+  .srow.tot{border-top:1px dashed var(--line);margin-top:6px;padding-top:8px;font-weight:700;color:var(--ink);font-size:13.5px}
+  .cta{display:block;text-align:center;background:var(--lime);color:#14181B;font-weight:700;border-radius:11px;padding:12px;margin-top:12px;font-size:13.5px}
+  .confirm-ico{width:56px;height:56px;border-radius:50%;background:var(--free-soft);color:var(--free);display:grid;place-items:center;font-size:26px;margin:14px auto 10px}
+  .center{text-align:center}
+
+  .note{border-left:3px solid var(--teal);background:var(--teal-soft);color:var(--ink);padding:12px 15px;border-radius:0 9px 9px 0;font-size:13.5px;margin-top:22px;max-width:70ch}
+  .note b{font-weight:700}
+  footer{padding:34px 0 60px;color:var(--ink-3);font-size:12.5px;border-top:1px solid var(--line);margin-top:10px}
+</style>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="brandrow">
+      <span class="logo"><span class="mark"><i class="on"></i><i></i><i></i><i class="on"></i></span>PlaySlot</span>
+    </div>
+    <span class="eyebrow">◍ Design Direction · v1</span>
+    <h1>Book the <span class="lime">slot</span>.<br>Play the game.</h1>
+    <p>The visual system for <b>PlaySlot</b> — a multi-sport court &amp; coach booking platform. Energetic where it counts, calm where you book. Built mobile-first around one hero object: the time-slot grid.</p>
+    <div class="tags">
+      <span class="tag">Bricolage Grotesque</span><span class="tag">Hanken Grotesk</span><span class="tag">IBM Plex Mono</span>
+      <span class="tag">Lime · Ink · Teal</span><span class="tag">Light + Dark</span><span class="tag">WCAG AA</span>
+    </div>
+  </header>
+
+  <!-- LOGO -->
+  <section>
+    <div class="sh"><span class="n">01</span><h2>Logo &amp; the slot mark</h2></div>
+    <p class="sub">The mark is a 2×2 grid of slots with two “booked” lime — literally a booking grid. It scales from favicon to signage and reads in one color.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:18px;align-items:center">
+      <div class="card" style="flex:1;min-width:200px"><h4>Primary lockup</h4>
+        <span class="logo" style="font-size:30px"><span class="mark" style="width:40px;height:40px"><i class="on"></i><i></i><i></i><i class="on"></i></span>PlaySlot</span></div>
+      <div class="card" style="flex:1;min-width:160px"><h4>Mark only</h4>
+        <span class="mark" style="width:52px;height:52px"><i class="on"></i><i></i><i></i><i class="on"></i></span></div>
+      <div class="card" style="flex:1;min-width:160px;background:var(--ink)"><h4 style="color:var(--surface)">On ink</h4>
+        <span class="logo" style="color:#fff"><span class="mark" style="background:#0b0d0f"><i class="on"></i><i></i><i></i><i class="on"></i></span>PlaySlot</span></div>
+    </div>
+  </section>
+
+  <!-- PALETTE -->
+  <section>
+    <div class="sh"><span class="n">02</span><h2>Color</h2></div>
+    <p class="sub">Lime is the single loud note — reserved for the primary action and the logo, always with ink text on top for contrast. Ink and a green-biased off-white do the heavy lifting; teal carries coaching, clay is a warm secondary.</p>
+    <div class="swgrid">
+      <div class="sw"><div class="chip" style="background:var(--lime)"></div><div class="meta"><b>Lime</b><span>#C7F000</span><div class="role">Brand · primary CTA</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--ink)"></div><div class="meta"><b>Ink</b><span>#14181B</span><div class="role">Text · dark surfaces</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--teal)"></div><div class="meta"><b>Court Teal</b><span>#0E9E9C</span><div class="role">Coaching · info</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--clay)"></div><div class="meta"><b>Clay</b><span>#E4622E</span><div class="role">Secondary accent</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--ground);border-bottom:1px solid var(--line)"></div><div class="meta"><b>Ground</b><span>#F5F7F2</span><div class="role">Page background</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--surface-2)"></div><div class="meta"><b>Surface-2</b><span>#EDEFE8</span><div class="role">Fields · fills</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--ink-2)"></div><div class="meta"><b>Ink-2</b><span>#464C4E</span><div class="role">Secondary text</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--line-2)"></div><div class="meta"><b>Line</b><span>#CDD1C6</span><div class="role">Borders</div></div></div>
+    </div>
+
+    <h3 style="font-size:16px;margin:26px 0 4px;font-family:'Bricolage Grotesque'">Slot-state semantics</h3>
+    <p class="sub" style="margin-bottom:12px">These are separate from the brand accent, so booking state never fights the CTA. Every state also carries a pattern/label — never color alone.</p>
+    <div class="states">
+      <div class="st"><span class="dot" style="background:var(--free-soft);color:var(--free)">€</span><div><b>Free</b> <span>· tap to book</span></div></div>
+      <div class="st"><span class="dot" style="background:var(--teal-soft);color:var(--teal)">◍</span><div><b>Coach</b> <span>· lesson slot</span></div></div>
+      <div class="st"><span class="dot" style="background:var(--held-soft);color:var(--held)">⏳</span><div><b>Held</b> <span>· in checkout</span></div></div>
+      <div class="st"><span class="dot" style="background:repeating-linear-gradient(45deg,var(--booked-soft),var(--booked-soft) 3px,var(--line) 3px,var(--line) 4px);color:var(--ink-3)">╱</span><div><b>Reserved</b> <span>· taken</span></div></div>
+      <div class="st"><span class="dot" style="background:var(--event-soft);color:var(--event)">★</span><div><b>Event</b> <span>· tournament</span></div></div>
+      <div class="st"><span class="dot" style="background:var(--surface);border:1px solid var(--line-2);color:var(--ink-3)">–</span><div><b>Unavailable</b> <span>· closed</span></div></div>
+    </div>
+  </section>
+
+  <!-- TYPE -->
+  <section>
+    <div class="sh"><span class="n">03</span><h2>Typography</h2></div>
+    <p class="sub">A characterful grotesque for display, a highly legible one for body, and a tabular mono for the thing users scan most: times and prices.</p>
+    <div class="typ">
+      <div class="row"><div class="lab">Display · Bricolage Grotesque</div>
+        <div class="scale"><span style="font-family:'Bricolage Grotesque';font-weight:800;font-size:40px">Center court, 6pm</span>
+        <span style="font-family:'Bricolage Grotesque';font-weight:700;font-size:24px">Book a coach</span></div></div>
+      <div class="row"><div class="lab">Body · Hanken Grotesk</div>
+        <div style="font-size:16px;max-width:60ch;color:var(--ink-2)">Find a real free slot in seconds, add a coach in the same booking, and pay — or reserve and settle at the club. No calls, no back-and-forth.</div></div>
+      <div class="row"><div class="lab">Data · IBM Plex Mono (tabular)</div>
+        <div class="mono" style="font-size:18px;font-weight:500;letter-spacing:.02em">07:00 · 60′ · 14.00 € &nbsp;|&nbsp; 18:00 · 90′ · 42.00 €</div></div>
+    </div>
+  </section>
+
+  <!-- TOKENS -->
+  <section>
+    <div class="sh"><span class="n">04</span><h2>Components &amp; tokens</h2></div>
+    <p class="sub">These wire straight into the web app's Tailwind theme + shadcn tokens (roadmap Phase PD), so every screen from P2 onward inherits them.</p>
+    <div class="tok">
+      <div class="card"><h4>Buttons</h4><div class="btns">
+        <span class="btn primary">Reserve</span><span class="btn dark">Add coach</span><span class="btn ghost">Cancel</span><span class="btn teal">Message coach</span>
+      </div><p style="font-size:12px;color:var(--ink-3);margin:12px 0 0">Radius 10px · primary = lime + ink text (AA) · one primary per view.</p></div>
+      <div class="card"><h4>Chips &amp; tags</h4><div class="chips">
+        <span class="pill free">● Free</span><span class="pill coach">◍ Coach available</span><span class="pill">Clay</span><span class="pill">Indoor</span><span class="pill">Lit</span>
+      </div><p style="font-size:12px;color:var(--ink-3);margin:12px 0 0">Radius 100px · used for filters &amp; facility flags.</p></div>
+    </div>
+  </section>
+
+  <!-- SCREENS -->
+  <section>
+    <div class="sh"><span class="n">05</span><h2>Key screens</h2></div>
+    <p class="sub">Mobile-first mockups of the core flows. The reservation grid is the hero — everything else feeds into it.</p>
+
+    <!-- HERO: GRID -->
+    <div class="hero-screen" style="margin-bottom:30px">
+      <div>
+        <h3 style="font-size:22px;font-family:'Bricolage Grotesque';margin-bottom:8px">The reservation grid</h3>
+        <p style="color:var(--ink-2);font-size:14.5px;max-width:38ch">Rows = time, columns = courts. Tap a green slot to book; teal slots offer a coach. The whole product hinges on this screen being fast and unambiguous.</p>
+        <div class="legend2" style="margin-top:14px">
+          <span><i style="background:var(--free-soft);border:1px solid var(--free)"></i>Free</span>
+          <span><i style="background:var(--teal-soft);border:1px solid var(--teal)"></i>Coach</span>
+          <span><i style="background:var(--held-soft)"></i>Held</span>
+          <span><i style="background:var(--line)"></i>Reserved</span>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="scr">
+          <div class="appbar"><span class="applogo"><span class="m"><i class="on"></i><i></i><i></i><i class="on"></i></span>360 Тенис клуб</span><span class="mono" style="font-size:11px;color:var(--ink-3)">Пт 05.09</span></div>
+          <div class="grid-wrap">
+            <div class="ghead"><div></div><div>Центр.</div><div>Корт 2</div><div>Корт 3</div><div>Корт 4</div></div>
+            <div class="grow"><div class="gt">16:00</div><div class="cell booked"></div><div class="cell free">14€</div><div class="cell coach">◍</div><div class="cell free">14€</div></div>
+            <div class="grow"><div class="gt">17:00</div><div class="cell free">16€</div><div class="cell held">⏳</div><div class="cell free">16€</div><div class="cell booked"></div></div>
+            <div class="grow"><div class="gt">18:00</div><div class="cell free">16€</div><div class="cell free">16€</div><div class="cell coach">◍</div><div class="cell na"></div></div>
+            <div class="grow"><div class="gt">19:00</div><div class="cell booked"></div><div class="cell free">16€</div><div class="cell free">16€</div><div class="cell free">16€</div></div>
+            <div class="grow"><div class="gt">20:00</div><div class="cell free">16€</div><div class="cell na"></div><div class="cell booked"></div><div class="cell free">16€</div></div>
+          </div>
+          <div class="cta">Reserve 18:00 · Court 3 · +Coach</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screens">
+      <!-- HOME / SEARCH -->
+      <div>
+        <div class="phone"><div class="notch"></div><div class="scr">
+          <div class="appbar"><span class="applogo"><span class="m"><i class="on"></i><i></i><i></i><i class="on"></i></span>PlaySlot</span><span style="font-size:11px;color:var(--ink-3)">Sofia ▾</span></div>
+          <div class="seg" style="margin-bottom:10px"><span class="act">Court</span><span>Court + Coach</span><span>Lesson</span></div>
+          <div class="field"><span class="ic">◍</span>Sofia · all clubs</div>
+          <div class="field"><span class="ic">▤</span>Today · 18:00</div>
+          <div class="field"><span class="ic">◷</span>60 min</div>
+          <div class="cta" style="margin-top:4px">Search availability</div>
+          <div style="font-size:10.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;margin:14px 0 8px;font-family:'IBM Plex Mono'">71 clubs · 26 cities</div>
+          <div class="clubcard"><div class="ph"><div class="fav">♡</div></div><div class="b"><div class="nm">360 Тенис клуб</div><div class="ad">Цариградско шосе 31</div><div class="rowx"><span class="price">from 14.00 €</span><span class="mini-btn">Book</span></div></div></div>
+        </div></div>
+        <div class="caption"><b>Home / Search</b>Court · Court+Coach · Lesson</div>
+      </div>
+
+      <!-- CLUB PROFILE -->
+      <div>
+        <div class="phone"><div class="notch"></div><div class="scr">
+          <div class="clubcard" style="margin:4px 0 10px"><div class="ph" style="height:88px"><div class="fav">♡</div></div></div>
+          <div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:17px">360 Тенис клуб</div>
+          <div style="color:var(--ink-3);font-size:11px;margin:2px 0 10px">Цариградско шосе 31 · Sofia</div>
+          <div class="chips" style="margin-bottom:12px"><span class="pill">Clay · 6</span><span class="pill">Lit</span><span class="pill coach">◍ 2 coaches</span></div>
+          <div class="seg" style="margin-bottom:10px"><span>About</span><span class="act">Schedule</span><span>Coaches</span></div>
+          <div class="grid-wrap"><div class="ghead"><div></div><div>C.</div><div>2</div><div>3</div><div>4</div></div>
+            <div class="grow"><div class="gt">18</div><div class="cell free">16€</div><div class="cell coach">◍</div><div class="cell booked"></div><div class="cell free">16€</div></div>
+            <div class="grow"><div class="gt">19</div><div class="cell free">16€</div><div class="cell free">16€</div><div class="cell free">16€</div><div class="cell na"></div></div></div>
+        </div></div>
+        <div class="caption"><b>Club profile</b>Facilities + live schedule</div>
+      </div>
+
+      <!-- COACH -->
+      <div>
+        <div class="phone"><div class="notch"></div><div class="scr">
+          <div class="center" style="padding:8px 0 4px"><div class="av" style="width:56px;height:56px;font-size:20px;margin:0 auto">СА</div>
+            <div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:17px;margin-top:8px">Станислав Александров</div>
+            <div style="color:var(--ink-3);font-size:11px">Tennis coach · BG / EN</div></div>
+          <div class="chips" style="justify-content:center;margin:10px 0"><span class="pill">Beginner</span><span class="pill">Advanced</span></div>
+          <div class="coachrow"><div class="av">1h</div><div style="flex:1"><div class="nm">Private lesson</div><div class="mt">60 min · court included</div></div><span class="price">40 €</span></div>
+          <div class="coachrow"><div class="av">1h</div><div style="flex:1"><div class="nm">Group (2–4)</div><div class="mt">60 min</div></div><span class="price">25 €</span></div>
+          <div class="cta">See available times</div>
+        </div></div>
+        <div class="caption"><b>Coach profile</b>Coach-first booking entry</div>
+      </div>
+
+      <!-- CHECKOUT -->
+      <div>
+        <div class="phone"><div class="notch"></div><div class="scr">
+          <div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:16px;margin:6px 0 10px">Confirm booking</div>
+          <div class="summary">
+            <div class="srow"><span>Court 3 · Clay</span><span class="mono">18:00–19:00</span></div>
+            <div class="srow"><span>Coach · S. Александров</span><span class="mono">Private</span></div>
+            <div class="srow"><span>Date</span><span class="mono">Fri 05.09</span></div>
+            <div class="srow tot"><span>Total</span><span class="mono">42.00 €</span></div>
+          </div>
+          <div style="font-size:10.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;margin:14px 0 8px;font-family:'IBM Plex Mono'">Payment</div>
+          <div class="field"><span class="ic">▤</span>Pay online (card)</div>
+          <div class="field">On-site at club</div>
+          <div class="cta">Pay 42.00 €</div>
+          <div style="font-size:10px;color:var(--ink-3);text-align:center;margin-top:8px">Free cancellation ≥ 24h before</div>
+        </div></div>
+        <div class="caption"><b>Checkout</b>One transaction: court + coach</div>
+      </div>
+
+      <!-- CONFIRMATION -->
+      <div>
+        <div class="phone"><div class="notch"></div><div class="scr center">
+          <div class="confirm-ico">✓</div>
+          <div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:18px">You're booked!</div>
+          <div style="color:var(--ink-3);font-size:11.5px;margin:4px 0 12px">Ref · PS-9931 · confirmation sent</div>
+          <div class="summary" style="text-align:left">
+            <div class="srow"><span>360 Тенис клуб · Court 3</span><span class="mono">18:00</span></div>
+            <div class="srow"><span>Coach S. Александров</span><span class="mono">60′</span></div>
+          </div>
+          <div class="btns" style="justify-content:center;margin-top:12px"><span class="btn ghost">Add to calendar</span><span class="btn dark">My bookings</span></div>
+        </div></div>
+        <div class="caption"><b>Confirmation</b>Reference + add-to-calendar</div>
+      </div>
+    </div>
+
+    <div class="note"><b>Note on language:</b> mockups mix English UI chrome with real Bulgarian club/coach names to show how localization sits over the same layout. Production ships <b>Bulgarian (default) + English</b> via <span class="mono">next-intl</span>, with a header language switch. Every screen is mobile-first and fluid from 360px up.</div>
+  </section>
+
+  <footer class="wrap" style="padding-left:0;padding-right:0">
+    PlaySlot · design direction v1 · for review before UI coding (roadmap Phase PD). Palette is AA-checked in both themes; lime is used only as a fill with ink text on top, never as text on light grounds.
+  </footer>
+</div>

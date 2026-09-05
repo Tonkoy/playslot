@@ -1,0 +1,39 @@
+# Local development infrastructure for PlaySlot.
+# Start with:  docker compose up -d
+# Postgres uses btree_gist / tstzrange (needed by the reservation EXCLUDE constraint, spec §8).
+services:
+  db:
+    image: postgres:16
+    container_name: playslot-db
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: playslot
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: playslot
+    volumes:
+      - playslot_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U playslot -d playslot']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    container_name: playslot-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - playslot_redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  playslot_db:
+  playslot_redis:

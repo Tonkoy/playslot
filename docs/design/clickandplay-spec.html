@@ -1,0 +1,657 @@
+<title>Click&Play Rebuild Spec</title>
+<meta name="description" content="Product audit and rebuild specification for the Click&Play multi-sport court booking platform.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --ground:#FAF8F5;
+    --surface:#FFFFFF;
+    --surface-2:#F3EEE7;
+    --ink:#1B1A18;
+    --ink-2:#4A463F;
+    --ink-3:#7C766C;
+    --line:#E5DED4;
+    --line-2:#D3Cabb;
+    --accent:#E8501E;      /* Click&Play orange-red */
+    --accent-ink:#B63a10;
+    --clay:#C4623C;        /* clay court */
+    --court:#0E7C7B;       /* teal — semantic/secondary */
+    --court-soft:#D9EBEA;
+    --good:#2E7D46;
+    --good-soft:#DCEEE1;
+    --warn:#B67514;
+    --warn-soft:#F5E8CE;
+    --crit:#C0392B;
+    --crit-soft:#F6DED9;
+    --shadow:0 1px 2px rgba(27,26,24,.04),0 6px 20px rgba(27,26,24,.06);
+    --radius:10px;
+    --maxw:1120px;
+    --read:70ch;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#141317;
+      --surface:#1C1B20;
+      --surface-2:#25242B;
+      --ink:#F1EDE6;
+      --ink-2:#C3BDB3;
+      --ink-3:#8E887E;
+      --line:#302E36;
+      --line-2:#403D47;
+      --accent:#FF6A3C;
+      --accent-ink:#FF8B62;
+      --clay:#DB7C55;
+      --court:#3FB6B2;
+      --court-soft:#123231;
+      --good:#5BB776;
+      --good-soft:#16301E;
+      --warn:#D9A44A;
+      --warn-soft:#33270F;
+      --crit:#E4715F;
+      --crit-soft:#33150F;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#141317;--surface:#1C1B20;--surface-2:#25242B;--ink:#F1EDE6;--ink-2:#C3BDB3;--ink-3:#8E887E;
+    --line:#302E36;--line-2:#403D47;--accent:#FF6A3C;--accent-ink:#FF8B62;--clay:#DB7C55;--court:#3FB6B2;
+    --court-soft:#123231;--good:#5BB776;--good-soft:#16301E;--warn:#D9A44A;--warn-soft:#33270F;--crit:#E4715F;--crit-soft:#33150F;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.4);
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+  body{
+    background:var(--ground);color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,sans-serif;
+    line-height:1.6;font-size:16px;-webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{font-family:"Archivo","Archivo",system-ui,sans-serif;text-wrap:balance;line-height:1.12;margin:0}
+  a{color:var(--accent-ink);text-decoration-color:var(--line-2);text-underline-offset:2px}
+  code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+  ::selection{background:var(--accent);color:#fff}
+
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+  .layout{display:grid;grid-template-columns:1fr;gap:0}
+  @media(min-width:1000px){
+    .layout{grid-template-columns:236px minmax(0,1fr);gap:56px;align-items:start}
+  }
+
+  /* ---- sticky nav ---- */
+  .toc{display:none}
+  @media(min-width:1000px){
+    .toc{display:block;position:sticky;top:24px;font-size:13.5px;padding-top:8px}
+    .toc .brand{font-family:"Archivo";font-weight:800;font-size:17px;letter-spacing:-.01em;margin-bottom:2px;display:flex;align-items:center;gap:8px}
+    .toc .brand .dot{width:11px;height:11px;border-radius:3px;background:var(--accent);transform:rotate(45deg)}
+    .toc .kicker{color:var(--ink-3);text-transform:uppercase;letter-spacing:.12em;font-size:10.5px;font-weight:600;margin:22px 0 10px}
+    .toc ol{list-style:none;margin:0;padding:0;counter-reset:s}
+    .toc li{counter-increment:s;margin:0}
+    .toc a{display:flex;gap:10px;padding:5px 0;color:var(--ink-2);text-decoration:none;border-radius:6px}
+    .toc a::before{content:counter(s,decimal-leading-zero);color:var(--ink-3);font-family:"IBM Plex Mono";font-size:11px;padding-top:2px;min-width:18px}
+    .toc a:hover{color:var(--accent-ink)}
+  }
+
+  /* ---- hero ---- */
+  .hero{padding:56px 0 34px;border-bottom:1px solid var(--line)}
+  .eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:12px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--court);background:var(--court-soft);padding:5px 12px;border-radius:100px}
+  .hero h1{font-size:clamp(34px,6vw,58px);font-weight:800;letter-spacing:-.025em;margin:20px 0 0}
+  .hero h1 em{font-style:normal;color:var(--accent)}
+  .hero .lede{max-width:60ch;color:var(--ink-2);font-size:clamp(16px,2.1vw,19px);margin-top:18px}
+  .hero .meta{margin-top:22px;display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13px;color:var(--ink-3);font-family:"IBM Plex Mono"}
+  .hero .meta b{color:var(--ink-2);font-weight:500}
+
+  /* ---- stat band ---- */
+  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin:30px 0 8px}
+  @media(min-width:640px){.stats{grid-template-columns:repeat(3,1fr)}}
+  @media(min-width:900px){.stats{grid-template-columns:repeat(6,1fr)}}
+  .stat{background:var(--surface);padding:16px 16px 15px}
+  .stat .n{font-family:"Archivo";font-weight:800;font-size:24px;letter-spacing:-.02em;color:var(--ink)}
+  .stat .l{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-top:3px}
+
+  /* ---- section ---- */
+  section{padding:46px 0;border-bottom:1px solid var(--line);scroll-margin-top:20px}
+  section:last-of-type{border-bottom:0}
+  .sec-h{display:flex;align-items:baseline;gap:14px;margin-bottom:8px}
+  .sec-h .num{font-family:"IBM Plex Mono";font-size:13px;color:var(--accent);font-weight:600;padding-top:3px}
+  section h2{font-size:clamp(23px,3.4vw,30px);font-weight:700;letter-spacing:-.02em}
+  .sec-sub{color:var(--ink-2);max-width:var(--read);margin:0 0 22px;font-size:16.5px}
+  section p{max-width:var(--read)}
+  section h3{font-size:18px;font-weight:600;letter-spacing:-.01em;margin:30px 0 10px;font-family:"Archivo"}
+  section h3:first-of-type{margin-top:8px}
+  p{margin:0 0 14px}
+
+  /* ---- prose lists ---- */
+  .list{max-width:var(--read);margin:0 0 16px;padding:0;list-style:none}
+  .list li{position:relative;padding:5px 0 5px 24px;border-bottom:1px dashed var(--line)}
+  .list li::before{content:"";position:absolute;left:2px;top:14px;width:7px;height:7px;background:var(--accent);border-radius:2px;transform:rotate(45deg)}
+  .list li b{font-weight:600}
+
+  /* ---- tables ---- */
+  .tw{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);margin:6px 0 20px;box-shadow:var(--shadow)}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:520px}
+  th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  thead th{background:var(--surface-2);font-family:"Archivo";font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-2);position:sticky;top:0}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover td{background:var(--surface-2)}
+  td .mono,th .mono{font-size:12.5px}
+  td.mono{color:var(--court);white-space:nowrap}
+  table td b{font-weight:600}
+
+  /* ---- cards grid ---- */
+  .grid{display:grid;gap:14px;margin:6px 0 8px}
+  .g2{grid-template-columns:1fr}
+  @media(min-width:680px){.g2{grid-template-columns:1fr 1fr}}
+  .g3{grid-template-columns:1fr}
+  @media(min-width:680px){.g3{grid-template-columns:repeat(2,1fr)}}
+  @media(min-width:980px){.g3{grid-template-columns:repeat(3,1fr)}}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:17px 18px;box-shadow:var(--shadow)}
+  .card h4{font-size:15px;font-weight:700;letter-spacing:-.01em;margin-bottom:6px;display:flex;align-items:center;gap:9px}
+  .card .ico{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;background:var(--court-soft);color:var(--court);flex:none;font-size:14px}
+  .card p{font-size:13.5px;color:var(--ink-2);margin:0;max-width:none}
+  .card ul{margin:8px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)}
+  .card ul li{margin:3px 0}
+
+  /* ---- entity block ---- */
+  .entity{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-bottom:14px;box-shadow:var(--shadow)}
+  .entity summary{cursor:pointer;padding:14px 18px;display:flex;align-items:center;gap:12px;list-style:none;font-family:"Archivo";font-weight:600;font-size:16px}
+  .entity summary::-webkit-details-marker{display:none}
+  .entity summary .tag{font-family:"IBM Plex Mono";font-size:11px;font-weight:500;color:var(--court);background:var(--court-soft);padding:2px 8px;border-radius:5px}
+  .entity summary .chev{margin-left:auto;color:var(--ink-3);transition:transform .2s}
+  .entity[open] summary .chev{transform:rotate(90deg)}
+  .entity[open] summary{border-bottom:1px solid var(--line)}
+  .entity .body{padding:2px 0}
+  .entity .body table{min-width:480px}
+  .entity[open] .body table th{position:static}
+
+  /* ---- flow steps ---- */
+  .flow{counter-reset:f;display:grid;gap:12px;margin:8px 0 8px}
+  .step{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px 16px 62px;box-shadow:var(--shadow)}
+  .step::before{counter-increment:f;content:counter(f);position:absolute;left:16px;top:15px;width:32px;height:32px;border-radius:8px;background:var(--accent);color:#fff;font-family:"Archivo";font-weight:800;display:grid;place-items:center;font-size:16px}
+  .step h4{font-size:15px;font-weight:600;margin:1px 0 4px;font-family:"Archivo"}
+  .step p{font-size:13.5px;color:var(--ink-2);margin:0;max-width:none}
+  .step .ep{font-family:"IBM Plex Mono";font-size:12px;color:var(--court);margin-top:6px;display:inline-block}
+
+  /* ---- reservation grid mock ---- */
+  .mockwrap{margin:16px 0 6px;overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .mock{min-width:520px;background:var(--surface)}
+  .mock .mhead{display:grid;grid-template-columns:56px repeat(6,1fr);background:var(--surface-2);border-bottom:1px solid var(--line)}
+  .mock .mhead div{padding:9px 6px;font-size:11px;font-family:"IBM Plex Mono";color:var(--ink-2);text-align:center;border-left:1px solid var(--line)}
+  .mock .mhead div:first-child{border-left:0}
+  .mock .mrow{display:grid;grid-template-columns:56px repeat(6,1fr);border-bottom:1px solid var(--line)}
+  .mock .mrow:last-child{border-bottom:0}
+  .mock .t{padding:0 6px;font-size:11px;font-family:"IBM Plex Mono";color:var(--ink-3);display:grid;place-items:center;background:var(--surface-2)}
+  .mock .c{border-left:1px solid var(--line);min-height:38px;padding:4px;font-size:10.5px;text-align:center;line-height:1.25}
+  .mock .free{background:var(--good-soft);color:var(--good);cursor:pointer;font-family:"IBM Plex Mono"}
+  .mock .free b{display:block;font-weight:600;font-size:11px}
+  .mock .res{background:repeating-linear-gradient(45deg,var(--surface-2),var(--surface-2) 5px,var(--line) 5px,var(--line) 6px);color:var(--ink-3)}
+  .mock .na{background:var(--surface);color:var(--line-2)}
+  .mock .coach{background:var(--court-soft);color:var(--court);font-family:"IBM Plex Mono"}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin:12px 0 4px;font-size:12.5px;color:var(--ink-2)}
+  .legend span{display:inline-flex;align-items:center;gap:7px}
+  .legend i{width:13px;height:13px;border-radius:3px;display:inline-block;flex:none}
+
+  /* ---- callout ---- */
+  .note{border-left:3px solid var(--court);background:var(--court-soft);padding:13px 16px;border-radius:0 8px 8px 0;margin:16px 0;font-size:14px;color:var(--ink);max-width:var(--read)}
+  .note.warn{border-color:var(--warn);background:var(--warn-soft)}
+  .note b{font-weight:600}
+  .note .lbl{font-family:"Archivo";font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:3px;color:var(--ink-2)}
+
+  /* ---- code block ---- */
+  pre{background:var(--ink);color:#EDE7DC;border-radius:var(--radius);padding:16px 18px;overflow-x:auto;font-family:"IBM Plex Mono";font-size:12.5px;line-height:1.65;margin:6px 0 18px;box-shadow:var(--shadow)}
+  :root[data-theme="dark"] pre,:root:not([data-theme="light"]) pre{background:#0E0D11;border:1px solid var(--line)}
+  @media (prefers-color-scheme:light){:root:not([data-theme="dark"]) pre{background:#211F1C}}
+  pre .k{color:#FF9E6D}
+  pre .s{color:#8FD3B0}
+  pre .c{color:#7C766C}
+
+  /* ---- phase timeline ---- */
+  .phase{display:grid;gap:0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-top:6px}
+  .phase .row{display:grid;grid-template-columns:64px 1fr;gap:0;border-bottom:1px solid var(--line);background:var(--surface)}
+  .phase .row:last-child{border-bottom:0}
+  .phase .ph{background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 6px;border-right:1px solid var(--line);text-align:center}
+  .phase .ph b{font-family:"Archivo";font-weight:800;font-size:20px;color:var(--accent)}
+  .phase .ph span{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-top:2px}
+  .phase .det{padding:14px 18px}
+  .phase .det h4{font-size:15px;font-weight:600;font-family:"Archivo";margin-bottom:4px}
+  .phase .det p{font-size:13.5px;color:var(--ink-2);margin:0;max-width:none}
+  .phase .det .chips{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font-size:11.5px;font-family:"IBM Plex Mono";background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2);padding:2px 8px;border-radius:100px}
+
+  .pill{display:inline-block;font-size:11px;font-weight:600;font-family:"IBM Plex Mono";padding:2px 8px;border-radius:5px;letter-spacing:.02em}
+  .pill.pub{background:var(--good-soft);color:var(--good)}
+  .pill.gate{background:var(--warn-soft);color:var(--warn)}
+  .pill.b2b{background:var(--court-soft);color:var(--court)}
+
+  footer{padding:30px 0 60px;color:var(--ink-3);font-size:12.5px}
+  footer .mono{color:var(--ink-3)}
+
+  .tag-legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12.5px;color:var(--ink-2);margin:-4px 0 16px}
+  .tag-legend span{display:inline-flex;gap:7px;align-items:center}
+</style>
+
+<div class="wrap">
+<div class="layout">
+
+  <!-- ============ TOC ============ -->
+  <nav class="toc" aria-label="Contents">
+    <div class="brand"><span class="dot"></span>Click&amp;Play</div>
+    <div style="font-size:11.5px;color:var(--ink-3)">Rebuild specification</div>
+    <div class="kicker">Contents</div>
+    <ol>
+      <li><a href="#overview">Product overview</a></li>
+      <li><a href="#sitemap">Sitemap &amp; routes</a></li>
+      <li><a href="#model">Domain model</a></li>
+      <li><a href="#booking">Booking engine</a></li>
+      <li><a href="#coach">Coach booking</a></li>
+      <li><a href="#roles">Roles &amp; auth</a></li>
+      <li><a href="#b2b">Club onboarding</a></li>
+      <li><a href="#features">Feature inventory</a></li>
+      <li><a href="#stack">Tech &amp; rebuild stack</a></li>
+      <li><a href="#plan">Build plan</a></li>
+      <li><a href="#gaps">Gaps to verify</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============ MAIN ============ -->
+  <main>
+
+    <header class="hero" id="top">
+      <span class="eyebrow">Product Audit · Rebuild Spec</span>
+      <h1>Recreating <em>Click&amp;Play</em>, a multi-sport court &amp; coach booking marketplace</h1>
+      <p class="lede">A full teardown of <b>clickandplay.bg</b> — the public flows, URL scheme, booking engine and data model — turned into a specification a team can build against.</p>
+      <div class="meta">
+        <span><b>Source:</b> clickandplay.bg</span>
+        <span><b>Audited:</b> 4 Sep 2026</span>
+        <span><b>Method:</b> live public walkthrough</span>
+        <span><b>Scope:</b> guest-visible product</span>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="n">11</div><div class="l">Sports</div></div>
+        <div class="stat"><div class="n">71</div><div class="l">Tennis clubs</div></div>
+        <div class="stat"><div class="n">26</div><div class="l">Cities</div></div>
+        <div class="stat"><div class="n">46,822</div><div class="l">Players</div></div>
+        <div class="stat"><div class="n">5.4M</div><div class="l">Reservations</div></div>
+        <div class="stat"><div class="n">3</div><div class="l">Languages</div></div>
+      </div>
+      <p style="font-size:12.5px;color:var(--ink-3);margin-top:10px;max-width:var(--read)">Figures shown on the live homepage across all sports. They double as social proof and hint at the platform's real scale — the data model below has to carry millions of reservation rows.</p>
+    </header>
+
+    <!-- 1 OVERVIEW -->
+    <section id="overview">
+      <div class="sec-h"><span class="num">01</span><h2>Product overview</h2></div>
+      <p class="sec-sub">Click&amp;Play is a two-sided marketplace: sports clubs list their courts and coaches; players discover clubs and self-book time slots online. It spans 11 racket/team sports, but tennis is the anchor.</p>
+
+      <p>The product is organised around three nouns — <b>clubs</b>, <b>coaches</b> and <b>players</b> — mirrored directly in the top navigation (<span class="mono">Клубове / Играчи / Новини</span> plus <span class="mono">Създай своя клуб</span> = "Create your club"). Everything a guest can do funnels toward one action: opening a club's daily schedule and clicking a free slot to reserve.</p>
+
+      <div class="grid g3">
+        <div class="card"><h4><span class="ico">◎</span>Discovery</h4><p>Browse clubs by sport, filter by city (26) and payment type. Each sport has its own landing page and club count.</p></div>
+        <div class="card"><h4><span class="ico">▦</span>Booking</h4><p>A live courts × hours grid per club, per day. Click a free cell → modal → confirm. Duration and payment method chosen inline.</p></div>
+        <div class="card"><h4><span class="ico">✦</span>Community</h4><p>Public directories of players and coaches, each with a profile. A privacy toggle controls whether a player is listed.</p></div>
+      </div>
+
+      <div class="note"><span class="lbl">Business model</span>The platform is a SaaS + marketplace for clubs. Clubs self-register, configure courts/pricing/coaches, then are <b>manually activated by an admin</b>. Revenue is almost certainly club subscriptions and/or a cut of online payments — the public site shows sponsor tie-ins (Inbet, DEVIN Active) as an additional channel.</p></div>
+
+      <h3>Supported sports</h3>
+      <div class="tag-legend">
+        <span>🎾 Tennis <b>(71)</b></span><span>🏓 Table tennis (14)</span><span>🏸 Badminton (2)</span>
+        <span>🎾 Padel (17)</span><span>⚽ Football (20)</span><span>🏀 Basketball (6)</span>
+        <span>🏐 Volleyball (4)</span><span>🏖 Beach tennis (2)</span><span>🏐 Beach volleyball (2)</span>
+        <span>🥒 Pickleball (5)</span><span>🎾 Squash (1)</span>
+      </div>
+      <p style="font-size:13px;color:var(--ink-3)">Each sport is a first-class filter with its own route (<span class="mono">/home/sport/s-tennis</span>, <span class="mono">s-padel</span>, …). Club counts are live and should be derived, not stored.</p>
+    </section>
+
+    <!-- 2 SITEMAP -->
+    <section id="sitemap">
+      <div class="sec-h"><span class="num">02</span><h2>Sitemap &amp; route scheme</h2></div>
+      <p class="sec-sub">The site is server-rendered with a <span class="mono">/controller/action</span> routing convention plus SEO "pretty" slugged <span class="mono">.html</span> URLs for club-facing pages. Legend: <span class="pill pub">public</span> <span class="pill gate">login-gated</span> <span class="pill b2b">club/B2B</span></p>
+
+      <div class="tw">
+      <table>
+        <thead><tr><th>Route</th><th>Purpose</th><th>Access</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">/</td><td>Home — sport tiles, city/payment search, live stats, new clubs, players, news</td><td><span class="pill pub">public</span></td></tr>
+          <tr><td class="mono">/home/sport/s-{sport}</td><td>Sport landing (tennis, padel, football…) → filtered club list</td><td><span class="pill pub">public</span></td></tr>
+          <tr><td class="mono">/home/language/{bg|en|ru}</td><td>Locale switch (session-based)</td><td><span class="pill pub">public</span></td></tr>
+          <tr><td class="mono">/clubs/index</td><td>Club directory — filters: <span class="mono">city_id</span>, <span class="mono">payment_method</span>; paginated</td><td><span class="pill pub">public</span></td></tr>
+          <tr><td class="mono">/{slug}-club{id}.html</td><td>Club profile — address, phone, map, facility counts, description</td><td><span class="pill pub">public</span></td></tr>
+          <tr><td class="mono">/{slug}-reservation{id}.html</td><td>Daily schedule (today) — the booking grid</td><td><span class="pill pub">public</span></td></tr>
+          <tr><td class="mono">/{slug}-reservation-{DD.MM.YYYY}-{id}.html</td><td>Daily schedule for a specific date</td><td><span class="pill pub">public</span></td></tr>
+          <tr><td class="mono">/{slug}-reservations{id}.html</td><td>Weekly schedule view</td><td><span class="pill pub">public</span></td></tr>
+          <tr><td class="mono">/{slug}-view-coaches{id}.html</td><td>Club's coach roster</td><td><span class="pill pub">public</span></td></tr>
+          <tr><td class="mono">/coaches/view/{coachId}</td><td>Coach profile + weekly availability calendar (bookable)</td><td><span class="pill pub">public</span></td></tr>
+          <tr><td class="mono">/players/index</td><td>Player directory — paginated (thousands of pages)</td><td><span class="pill pub">public</span></td></tr>
+          <tr><td class="mono">/players/view/{id}</td><td>Player profile — gender, playing hand, (stats/history)</td><td><span class="pill pub">public</span></td></tr>
+          <tr><td class="mono">/news/index</td><td>News / blog list</td><td><span class="pill pub">public</span></td></tr>
+          <tr><td class="mono">/auth/index</td><td>Login form</td><td><span class="pill pub">public</span></td></tr>
+          <tr><td class="mono">/auth/register → /auth/postRegister</td><td>Player registration (POST)</td><td><span class="pill pub">public</span></td></tr>
+          <tr><td class="mono">/reservation/court_reservation</td><td>Create a booking (POST from modal)</td><td><span class="pill gate">login-gated</span></td></tr>
+          <tr><td class="mono">/clubs/send_join_request → /clubs/post_join_request</td><td>Club onboarding request (POST)</td><td><span class="pill b2b">B2B</span></td></tr>
+          <tr><td class="mono">/terms-static1.html</td><td>Terms &amp; conditions / cookie policy</td><td><span class="pill pub">public</span></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="note"><span class="lbl">Rebuild note</span>The slugged <span class="mono">.html</span> routes are pure SEO. In a modern rebuild, keep the <b>canonical, human-readable, localised slugs</b> (great for search) but resolve them to a single <span class="mono">Club</span> resource by ID — the trailing numeric id is the real key; the slug is decorative and should 301 to the canonical form if it drifts.</div>
+    </section>
+
+    <!-- 3 MODEL -->
+    <section id="model">
+      <div class="sec-h"><span class="num">03</span><h2>Domain model</h2></div>
+      <p class="sec-sub">Six core entities carry the product. Fields below are drawn from what the public pages expose (including the live reservation-slot payload); private fields are inferred and marked.</p>
+
+      <details class="entity" open>
+        <summary><span class="tag">CLUB</span> Club / venue <span class="chev">›</span></summary>
+        <div class="body"><div class="tw"><table>
+          <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">id</td><td>int</td><td>Primary key, appears in every club URL</td></tr>
+            <tr><td class="mono">name / slug</td><td>string</td><td>Localised slug used for SEO URL</td></tr>
+            <tr><td class="mono">sport_id</td><td>fk</td><td>A club belongs to one sport (11 total)</td></tr>
+            <tr><td class="mono">city_id</td><td>fk</td><td>One of 26 cities; drives the city filter</td></tr>
+            <tr><td class="mono">address, phone</td><td>string</td><td>Shown on profile</td></tr>
+            <tr><td class="mono">lat, lng</td><td>float</td><td>Google Maps embed ("Намерете ни на картата")</td></tr>
+            <tr><td class="mono">description</td><td>text</td><td>Free HTML — history, amenities, house rules</td></tr>
+            <tr><td class="mono">accepts_multisport</td><td>bool</td><td>MultiSport corporate card acceptance (noted in copy)</td></tr>
+            <tr><td class="mono">is_active</td><td>bool</td><td>Admin-activated after onboarding</td></tr>
+          </tbody>
+        </table></div></div>
+      </details>
+
+      <details class="entity">
+        <summary><span class="tag">COURT</span> Court / playing surface <span class="chev">›</span></summary>
+        <div class="body"><div class="tw"><table>
+          <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">court_id</td><td>int</td><td>e.g. 706; a column in the grid</td></tr>
+            <tr><td class="mono">club_id</td><td>fk</td><td>Parent club</td></tr>
+            <tr><td class="mono">name</td><td>string</td><td>"Централен" (Central), "2", "3"…</td></tr>
+            <tr><td class="mono">surface</td><td>enum</td><td>Clay ("Клей"), hard, etc.</td></tr>
+            <tr><td class="mono">is_indoor</td><td>bool</td><td>Закрит / Незакрит (covered vs open)</td></tr>
+            <tr><td class="mono">has_lighting</td><td>bool</td><td>Осветен — enables evening slots</td></tr>
+            <tr><td class="mono">court_multy</td><td>bool</td><td>Multi-purpose flag (present in payload)</td></tr>
+            <tr><td class="mono">min_reservation_time</td><td>int</td><td>Minutes; e.g. 60 (per club/court)</td></tr>
+            <tr><td class="mono">allow_halfs</td><td>bool</td><td>Whether 30-min half-slots are bookable</td></tr>
+          </tbody>
+        </table></div></div>
+      </details>
+
+      <details class="entity">
+        <summary><span class="tag">SLOT</span> Time slot &amp; pricing <span class="chev">›</span></summary>
+        <div class="body"><div class="tw"><table>
+          <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">court_id + date_time</td><td>composite</td><td>Unix ts; a slot is (court, start time)</td></tr>
+            <tr><td class="mono">price</td><td>decimal</td><td>Time-of-day pricing (14€ day → 16€ evening)</td></tr>
+            <tr><td class="mono">duration / end_duration</td><td>int</td><td>Selectable: 60 / 120 min based on availability</td></tr>
+            <tr><td class="mono">state</td><td>enum</td><td>free · reserved · mine · event · tournament · unavailable · closed</td></tr>
+            <tr><td class="mono">coaches</td><td>json?</td><td>Coaches attachable to a slot (see §5)</td></tr>
+          </tbody>
+        </table></div></div>
+      </details>
+
+      <details class="entity">
+        <summary><span class="tag">COACH</span> Coach / trainer <span class="chev">›</span></summary>
+        <div class="body"><div class="tw"><table>
+          <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">id</td><td>int</td><td><span class="mono">/coaches/view/{id}</span></td></tr>
+            <tr><td class="mono">name</td><td>string</td><td>Display name + initials avatar</td></tr>
+            <tr><td class="mono">club_id(s)</td><td>fk</td><td>Listed under a club's "Треньори" tab</td></tr>
+            <tr><td class="mono">bio</td><td>text</td><td>"Прочети повече" expandable description</td></tr>
+            <tr><td class="mono">availability</td><td>calendar</td><td>Own weekly days × hours grid, bookable</td></tr>
+          </tbody>
+        </table></div></div>
+      </details>
+
+      <details class="entity">
+        <summary><span class="tag">PLAYER</span> Player / user <span class="chev">›</span></summary>
+        <div class="body"><div class="tw"><table>
+          <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">id</td><td>int</td><td><span class="mono">/players/view/{id}</span></td></tr>
+            <tr><td class="mono">name, email</td><td>string</td><td>From registration</td></tr>
+            <tr><td class="mono">gender</td><td>enum</td><td>Пол — shown on profile</td></tr>
+            <tr><td class="mono">hand</td><td>enum</td><td>Ръка — playing hand (L/R)</td></tr>
+            <tr><td class="mono">is_show</td><td>bool</td><td>"Visible to other users" — directory opt-in</td></tr>
+            <tr><td class="mono">subscribe</td><td>bool</td><td>Marketing email opt-in</td></tr>
+          </tbody>
+        </table></div></div>
+      </details>
+
+      <details class="entity">
+        <summary><span class="tag">RESERVATION</span> Reservation <span class="chev">›</span></summary>
+        <div class="body"><div class="tw"><table>
+          <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">id</td><td>int</td><td></td></tr>
+            <tr><td class="mono">court_id, player_id</td><td>fk</td><td>Who booked what</td></tr>
+            <tr><td class="mono">start, end</td><td>datetime</td><td>Derived from slot + chosen duration</td></tr>
+            <tr><td class="mono">coach_id</td><td>fk?</td><td>Optional — lesson vs. free play</td></tr>
+            <tr><td class="mono">price, payment_method</td><td>—</td><td>on-site · online · free · (multisport)</td></tr>
+            <tr><td class="mono">status</td><td>enum</td><td>confirmed / cancelled / event / tournament</td></tr>
+          </tbody>
+        </table></div></div>
+      </details>
+    </section>
+
+    <!-- 4 BOOKING -->
+    <section id="booking">
+      <div class="sec-h"><span class="num">04</span><h2>The booking engine</h2></div>
+      <p class="sec-sub">This is the heart of the product. Each club renders a grid: <b>rows = hours (07:00–22:00), columns = courts</b>. Every cell is a slot in one of several states. Clicking a free cell opens the reservation modal.</p>
+
+      <div class="mockwrap"><div class="mock">
+        <div class="mhead"><div></div><div>Центр.<br>clay</div><div>2<br>clay</div><div>3<br>clay</div><div>4<br>clay</div><div>5<br>clay</div><div>6<br>clay</div></div>
+        <div class="mrow"><div class="t">13:00</div><div class="c res"></div><div class="c free"><b>14.00€</b>60′</div><div class="c free"><b>14.00€</b>60′</div><div class="c free"><b>14.00€</b>60′</div><div class="c na"></div><div class="c free"><b>14.00€</b>60′</div></div>
+        <div class="mrow"><div class="t">14:00</div><div class="c free"><b>14.00€</b>60′</div><div class="c coach">coach</div><div class="c free"><b>14.00€</b>60′</div><div class="c res"></div><div class="c free"><b>14.00€</b>60′</div><div class="c free"><b>14.00€</b>60′</div></div>
+        <div class="mrow"><div class="t">17:00</div><div class="c free"><b>16.00€</b>60′</div><div class="c free"><b>16.00€</b>60′</div><div class="c na"></div><div class="c res"></div><div class="c res"></div><div class="c na"></div></div>
+      </div></div>
+      <div class="legend">
+        <span><i style="background:var(--good-soft);border:1px solid var(--good)"></i>Free (click to book)</span>
+        <span><i style="background:var(--line)"></i>Reserved</span>
+        <span><i style="background:var(--court-soft);border:1px solid var(--court)"></i>Coach slot</span>
+        <span><i style="background:var(--surface);border:1px solid var(--line-2)"></i>Unavailable</span>
+      </div>
+
+      <h3>Slot states</h3>
+      <p>The live legend defines seven states, each with its own colour: <b>Свободно</b> (free), <b>Резервирано</b> (reserved), <b>Моите резервации</b> (my reservations), <b>Не е налично</b> (unavailable), <b>Събитие</b> (event), <b>Турнир</b> (tournament), and past hours ("old-hour", greyed). Pricing varies by time of day — daytime slots at 14€, evening (17:00+) at 16€.</p>
+
+      <h3>The reservation modal — real payload</h3>
+      <p>Clicking a free cell calls <span class="mono">showPop("reservationModal", {…})</span>. The exact object captured from the live site — this <em>is</em> your booking API contract:</p>
+      <pre><span class="c">// onclick payload of a free slot (360 Тенис клуб, court 706)</span>
+{
+  <span class="k">"court"</span>: <span class="s">"Централен, Клей, 360 Тенис клуб"</span>,
+  <span class="k">"club_id"</span>: 100,          <span class="c">"court_id"</span>: 706,
+  <span class="k">"price"</span>: 14,             <span class="k">"date_time"</span>: 1788526800,
+  <span class="k">"date_time_str"</span>: <span class="s">"04.09.2026 16:00:00"</span>,
+  <span class="k">"hour"</span>: <span class="s">"16:00"</span>,        <span class="k">"end_duration"</span>: <span class="s">"16:00"</span>,
+  <span class="k">"duration"</span>: <span class="s">"60 мин ( до 17:00 ч.)"</span>,
+  <span class="k">"payment"</span>: <span class="s">"На място"</span>,   <span class="c">// on-site</span>
+  <span class="k">"min_reservation_time"</span>: 60,
+  <span class="k">"allow_halfs"</span>: 0,        <span class="k">"half_data"</span>: [],
+  <span class="k">"coaches"</span>: null,         <span class="k">"selectedCoach"</span>: 0,
+  <span class="k">"is_closed"</span>: 0, <span class="k">"busy"</span>: null, <span class="k">"reservation"</span>: 0
+}</pre>
+
+      <h3>Modal fields shown to the user</h3>
+      <ul class="list">
+        <li><b>Court</b> — name + surface + club (read-only)</li>
+        <li><b>Date &amp; hour</b> — read-only, from the clicked cell</li>
+        <li><b>Duration</b> <span class="mono">&lt;select end_duration&gt;</span> — options generated from contiguous free slots (e.g. 60 / 120 min)</li>
+        <li><b>Payment method</b> <span class="mono">&lt;select payment_method&gt;</span> — per-club subset of {on-site, online, free, multisport}</li>
+        <li><b>Amount</b> — recalculated from duration × slot price</li>
+        <li><b>Reserve</b> — POST → <span class="mono">/reservation/court_reservation</span></li>
+      </ul>
+
+      <div class="note warn"><span class="lbl">Critical rebuild logic</span>Two rules must be enforced <b>server-side</b>, never trusted from the client: (1) <b>slot locking / no double-booking</b> — concurrent clicks on the same cell need a transactional guard; (2) <b>duration validity</b> — a 120-min booking requires the next cell also free. Price is recomputed from the source of truth on submit. The public payload is a convenience, not authorization.</div>
+    </section>
+
+    <!-- 5 COACH -->
+    <section id="coach">
+      <div class="sec-h"><span class="num">05</span><h2>Coach discovery &amp; booking</h2></div>
+      <p class="sec-sub">Coaches are attached to clubs and have their own bookable calendar — the platform monetises lessons, not just court time. This is the flow you specifically called out.</p>
+
+      <div class="flow">
+        <div class="step"><h4>Open a club, go to the "Треньори" tab</h4><p>Each club page has four tabs: About · Daily · Weekly · <b>Coaches</b>. The coaches tab lists each trainer as an initials-avatar card with a short bio and "Виж профил".</p><span class="ep">/{slug}-view-coaches{id}.html</span></div>
+        <div class="step"><h4>View the coach profile</h4><p>Opens the coach's page titled "График на {name}" — a <b>weekly availability grid</b> (7 days × 24 hours) using the same slot states as courts. Empty cells = not offered; free cells = bookable lesson times.</p><span class="ep">/coaches/view/{coachId}</span></div>
+        <div class="step"><h4>Select a free lesson slot</h4><p>Clicking a free slot triggers the same reservation modal. The booking payload carries <span class="mono">coaches</span> and <span class="mono">selectedCoach</span> fields, so a court slot can also be booked <em>with</em> a coach attached.</p></div>
+        <div class="step"><h4>Confirm → reservation with coach_id</h4><p>The resulting reservation links player + court/time + coach. "Free play" bookings simply leave <span class="mono">coach_id</span> null.</p></div>
+      </div>
+
+      <div class="note"><span class="lbl">Data insight</span>Because the slot payload already contains a <span class="mono">coaches</span> array, coach availability is modelled as an <b>overlay on court/time</b>, not a separate silo. A rebuild should treat "book a coach" and "book a court" as one reservation flow with an optional coach dimension — this keeps pricing, conflicts and the calendar unified. Not every club has coaches (many show "Няма регистрирани треньори" = none registered), so it must be optional per club.</div>
+    </section>
+
+    <!-- 6 ROLES -->
+    <section id="roles">
+      <div class="sec-h"><span class="num">06</span><h2>Roles &amp; authentication</h2></div>
+      <p class="sec-sub">Three roles: guest, player (member), and club/admin. Auth is classic email + password with reCAPTCHA; no social login was observed (only a Facebook page link).</p>
+
+      <div class="grid g2">
+        <div class="card">
+          <h4><span class="ico">👤</span>Player registration</h4>
+          <p><span class="mono">POST /auth/postRegister</span></p>
+          <ul>
+            <li><b>name</b> (Име и фамилия) *</li>
+            <li><b>email</b> *</li>
+            <li><b>password</b> + confirmation *</li>
+            <li><b>g-recaptcha-response</b> * (Google reCAPTCHA)</li>
+            <li><b>terms</b> checkbox *</li>
+            <li><b>subscribe</b> — marketing opt-in</li>
+            <li><b>is_show</b> — list me in the player directory</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4><span class="ico">🔑</span>Login &amp; sessions</h4>
+          <p><span class="mono">/auth/index</span> — email + password. Session-based (server-rendered). Language preference (<span class="mono">/home/language/*</span>) is also session-scoped.</p>
+          <p style="margin-top:10px">Login-gated actions: submitting a reservation, "My reservations" state in the grid, and any member dashboard (not visible to guests — see §11).</p>
+        </div>
+      </div>
+      <div class="note"><span class="lbl">Rebuild recommendation</span>Keep email+password but add OAuth (Google/Apple) and swap reCAPTCHA for a privacy-friendlier challenge (hCaptcha/Turnstile). The <span class="mono">is_show</span> flag is a real GDPR-relevant consent — model it explicitly and default to <b>off</b>.</div>
+    </section>
+
+    <!-- 7 B2B -->
+    <section id="b2b">
+      <div class="sec-h"><span class="num">07</span><h2>Club onboarding (B2B)</h2></div>
+      <p class="sec-sub">The supply side. Clubs self-register through a single form that creates both the club record and the owner's account, then wait for manual activation.</p>
+
+      <div class="grid g2">
+        <div class="card">
+          <h4><span class="ico">🏛</span>Join request form</h4>
+          <p><span class="mono">POST /clubs/post_join_request</span></p>
+          <ul>
+            <li><b>club_name</b>, <b>club_city</b>, <b>phone</b></li>
+            <li><b>name</b> (owner), <b>email</b>, <b>password</b> + confirm</li>
+            <li><b>terms</b>, <b>reCAPTCHA</b></li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4><span class="ico">⚙</span>Post-signup (inferred)</h4>
+          <p>On-screen copy: "fill in all club &amp; court info, then <b>contact the admin to activate</b>." This implies a club admin panel (behind login) to configure courts, surfaces, lighting, pricing, opening hours, coaches, and payment methods — plus a manual approval gate.</p>
+        </div>
+      </div>
+      <div class="note warn"><span class="lbl">Biggest hidden surface</span>The <b>club admin back-office is not publicly visible</b> but is the largest build item: court/schedule editor, dynamic pricing (time-of-day, seasonal), coach management, reservation calendar/overrides, events &amp; tournaments, payouts. Budget for it explicitly — it dwarfs the public booking UI.</div>
+    </section>
+
+    <!-- 8 FEATURES -->
+    <section id="features">
+      <div class="sec-h"><span class="num">08</span><h2>Feature inventory</h2></div>
+      <p class="sec-sub">Everything observed, grouped by surface. Use this as the scope checklist.</p>
+      <div class="grid g3">
+        <div class="card"><h4><span class="ico">🔎</span>Discovery</h4><ul>
+          <li>11 sport landing pages</li><li>Club directory + pagination</li><li>City filter (26)</li><li>Payment-type filter</li><li>Live counters (clubs/players/reservations)</li><li>"New clubs" feed</li></ul></div>
+        <div class="card"><h4><span class="ico">📅</span>Booking</h4><ul>
+          <li>Daily grid (courts × hours)</li><li>Weekly grid</li><li>Date navigation</li><li>Slot modal + duration/payment</li><li>Time-of-day pricing</li><li>30/60/120-min slots</li><li>7 slot states</li></ul></div>
+        <div class="card"><h4><span class="ico">🎓</span>Coaching</h4><ul>
+          <li>Per-club coach roster</li><li>Coach profile + bio</li><li>Coach weekly availability</li><li>Book lesson (coach on slot)</li></ul></div>
+        <div class="card"><h4><span class="ico">🏟</span>Club profile</h4><ul>
+          <li>Address + phone + Google map</li><li>Facility counts (indoor/lit/surface)</li><li>Rich description</li><li>MultiSport card flag</li></ul></div>
+        <div class="card"><h4><span class="ico">🧑‍🤝‍🧑</span>Community</h4><ul>
+          <li>Player directory (paginated)</li><li>Player profile (gender/hand)</li><li>Directory opt-in privacy</li><li>News / blog</li></ul></div>
+        <div class="card"><h4><span class="ico">🌐</span>Platform</h4><ul>
+          <li>BG / EN / RU locales</li><li>Cookie consent</li><li>reCAPTCHA</li><li>Sponsor placements</li><li>SEO slug URLs</li></ul></div>
+      </div>
+    </section>
+
+    <!-- 9 STACK -->
+    <section id="stack">
+      <div class="sec-h"><span class="num">09</span><h2>Observed tech &amp; recommended rebuild stack</h2></div>
+      <p class="sec-sub">What the current site appears to run on, and a pragmatic modern stack for the rebuild.</p>
+
+      <h3>Observed on the live site</h3>
+      <ul class="list">
+        <li><b>Server-rendered</b>, <span class="mono">/controller/action</span> routing + slugged <span class="mono">.html</span> URLs — classic PHP MVC (CodeIgniter/Laravel-style) signature.</li>
+        <li><b>jQuery-era front end</b> — inline <span class="mono">onclick</span> handlers, a global <span class="mono">showPop()</span> modal helper, full-page reloads for date/tab changes.</li>
+        <li><b>Google reCAPTCHA</b> and <b>Google Maps</b> embeds.</li>
+        <li><b>Multi-language via session</b> route switch; some mixed BG/RU strings in filters (i18n debt).</li>
+      </ul>
+
+      <h3>Recommended rebuild</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Layer</th><th>Recommendation</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Front end</td><td>Next.js / React (SSR)</td><td>Keep SEO from SSR; make the grid a live, no-reload component</td></tr>
+          <tr><td>API</td><td>REST/GraphQL over Node or Laravel</td><td>Clean booking contract; reuse team's language</td></tr>
+          <tr><td>DB</td><td>PostgreSQL</td><td>Transactional slot locking; millions of reservation rows</td></tr>
+          <tr><td>Realtime</td><td>WebSocket/SSE on the grid</td><td>Live "just booked" updates prevent collisions</td></tr>
+          <tr><td>Payments</td><td>Stripe + local (myPOS) + MultiSport</td><td>Online payment is already a filter; formalise it</td></tr>
+          <tr><td>Search/i18n</td><td>Managed locale files (BG/EN/RU)</td><td>Fix mixed-language strings observed</td></tr>
+          <tr><td>Maps / captcha</td><td>Google Maps · Turnstile/hCaptcha</td><td>Same UX, better privacy</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- 10 PLAN -->
+    <section id="plan">
+      <div class="sec-h"><span class="num">10</span><h2>Phased build plan</h2></div>
+      <p class="sec-sub">Ordered so a usable booking product ships early; the heavy back-office follows.</p>
+      <div class="phase">
+        <div class="row"><div class="ph"><b>0</b><span>Founda-<br>tion</span></div><div class="det"><h4>Data model + auth</h4><p>Entities from §3, player registration/login, roles, i18n scaffolding, seed one real club with courts.</p><div class="chips"><span class="chip">Club/Court/Slot</span><span class="chip">Auth + reCAPTCHA</span><span class="chip">BG/EN/RU</span></div></div></div>
+        <div class="row"><div class="ph"><b>1</b><span>Core<br>booking</span></div><div class="det"><h4>The grid + reservation</h4><p>Daily/weekly courts×hours grid, slot states, modal, duration/payment select, transactional booking with double-book protection. <b>This is the MVP.</b></p><div class="chips"><span class="chip">Grid UI</span><span class="chip">Slot locking</span><span class="chip">Time-of-day pricing</span></div></div></div>
+        <div class="row"><div class="ph"><b>2</b><span>Discovery</span></div><div class="det"><h4>Directory, filters, profiles</h4><p>Sport landings, club directory with city/payment filters, club profile (map, facilities), live counters, news.</p><div class="chips"><span class="chip">Filters</span><span class="chip">SEO slugs</span><span class="chip">Maps</span></div></div></div>
+        <div class="row"><div class="ph"><b>3</b><span>Coaching</span></div><div class="det"><h4>Coaches &amp; lessons</h4><p>Coach roster, profile, weekly availability, coach-attached bookings. Player directory + privacy opt-in.</p><div class="chips"><span class="chip">Coach calendar</span><span class="chip">coach_id on reservation</span></div></div></div>
+        <div class="row"><div class="ph"><b>4</b><span>Club<br>back-office</span></div><div class="det"><h4>Admin panel + onboarding</h4><p>Self-serve club onboarding, court/schedule/pricing editor, coach management, reservation overrides, events/tournaments, admin activation gate.</p><div class="chips"><span class="chip">Schedule editor</span><span class="chip">Approval flow</span><span class="chip">Big scope</span></div></div></div>
+        <div class="row"><div class="ph"><b>5</b><span>Payments</span></div><div class="det"><h4>Online payments &amp; passes</h4><p>Stripe/local card payment, MultiSport integration, refunds/cancellations, club payouts &amp; reporting.</p><div class="chips"><span class="chip">Stripe</span><span class="chip">MultiSport</span><span class="chip">Payouts</span></div></div></div>
+      </div>
+    </section>
+
+    <!-- 11 GAPS -->
+    <section id="gaps">
+      <div class="sec-h"><span class="num">11</span><h2>Gaps &amp; things to verify</h2></div>
+      <p class="sec-sub">This audit covers the <b>guest-visible</b> product only. To finish the spec, the following need a logged-in account or club access to confirm.</p>
+      <ul class="list">
+        <li><b>Member dashboard</b> — "My reservations", cancellation window/policy, profile editing, match history. Grid shows a "Моите резервации" state, implying it exists.</li>
+        <li><b>Club admin back-office</b> — the entire supply-side UI (§7). Highest-effort unknown.</li>
+        <li><b>Online payment flow</b> — the filter offers "online payment"; the one club sampled only exposed "on-site". Confirm the card/checkout UX and provider.</li>
+        <li><b>MultiSport / corporate cards</b> — how acceptance maps to booking &amp; settlement.</li>
+        <li><b>Events &amp; tournaments</b> — slot states exist for both; the creation/registration flow is unseen.</li>
+        <li><b>Cancellation, no-show, refund rules</b> — business policy, not visible publicly.</li>
+        <li><b>Notifications</b> — booking confirmation emails/SMS (subscribe flag hints at email infra).</li>
+        <li><b>Mobile app</b> — verify whether a native app exists alongside the responsive web.</li>
+      </ul>
+      <div class="note"><span class="lbl">Suggested next step</span>If you can share a test <b>player login</b> (and ideally a <b>club admin login</b>), I can walk the gated flows and extend this spec to cover the dashboard, checkout, and the club back-office — the remaining ~40% of the product.</div>
+    </section>
+
+    <footer>
+      <div class="mono">Click&amp;Play rebuild spec · audit of clickandplay.bg · 4 Sep 2026</div>
+      <p style="margin-top:6px;max-width:var(--read)">Prepared from a live public walkthrough. Field names in monospace are taken verbatim from the site's markup and route structure; inferred items are marked. No accounts were created and no bookings were submitted during the audit.</p>
+    </footer>
+
+  </main>
+</div>
+</div>
+
+<script>
+  // smooth active-state on TOC (progressive enhancement only)
+  (function(){
+    var links=[].slice.call(document.querySelectorAll('.toc a'));
+    var map={};links.forEach(function(a){var id=a.getAttribute('href').slice(1);map[id]=a;});
+    if(!('IntersectionObserver'in window))return;
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){if(e.isIntersecting){links.forEach(function(l){l.style.color='';l.style.fontWeight='';});
+        var a=map[e.target.id];if(a){a.style.color='var(--accent-ink)';a.style.fontWeight='600';}}});
+    },{rootMargin:'-10% 0px -80% 0px'});
+    document.querySelectorAll('section[id]').forEach(function(s){io.observe(s);});
+  })();
+</script>

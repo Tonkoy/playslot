@@ -17,8 +17,6 @@ const STATE_STYLE: Record<SlotState, { bg: string; fg: string; icon: string; boo
   TOURNAMENT: { bg: 'var(--event-soft)', fg: 'var(--event)', icon: '⚑', bookable: false },
 };
 
-const DURATIONS = [60, 90, 120];
-
 function shiftDate(iso: string, days: number): string {
   const [y, m, d] = iso.split('-').map(Number);
   const dt = new Date(Date.UTC(y!, m! - 1, d!));
@@ -68,6 +66,8 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
   }, [query.data]);
 
   const courts = query.data?.courts ?? [];
+  // Booking-length options adapt to the club's slot time (30 → allow 30-min).
+  const durations = (query.data?.slotIntervalMin ?? 60) === 30 ? [30, 60, 90, 120] : [60, 90, 120];
 
   return (
     <section aria-labelledby="grid-heading" style={{ marginTop: 8 }}>
@@ -107,7 +107,7 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
             onChange={(e) => setDuration(Number(e.target.value))}
             style={dateInput}
           >
-            {DURATIONS.map((d) => (
+            {durations.map((d) => (
               <option key={d} value={d}>
                 {d} {t('minutes')}
               </option>

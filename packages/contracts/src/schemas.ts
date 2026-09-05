@@ -59,6 +59,12 @@ export type ClubJoinRequestInput = z.infer<typeof clubJoinRequestSchema>;
 
 // ── club / court admin DTOs ──
 
+/** Booking granularity: 30 or 60 minutes only. */
+export const slotIntervalSchema = z.coerce
+  .number()
+  .int()
+  .refine((v) => v === 30 || v === 60, { message: 'Slot time must be 30 or 60 minutes' });
+
 export const upsertClubSchema = z.object({
   name: z.string().min(1).max(160),
   slug: z
@@ -73,9 +79,16 @@ export const upsertClubSchema = z.object({
   timezone: z.string().min(1).default('Europe/Sofia'),
   currency: z.string().length(3).default('EUR'),
   description: z.string().max(4000).optional(),
+  slotIntervalMin: slotIntervalSchema.default(60),
   acceptsMultisport: z.boolean().optional(),
 });
 export type UpsertClubInput = z.infer<typeof upsertClubSchema>;
+
+/** Club-wide booking granularity — 30 or 60 minutes only (per-club, spec §5). */
+export const clubSettingsSchema = z.object({
+  slotIntervalMin: slotIntervalSchema,
+});
+export type ClubSettingsInput = z.infer<typeof clubSettingsSchema>;
 
 export const surfaceEnum = z.enum([
   'CLAY',

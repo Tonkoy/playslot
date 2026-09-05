@@ -218,6 +218,7 @@ model Club {
   timezone          String          @default("Europe/Sofia")
   currency          String          @default("EUR")
   description       String?
+  slotIntervalMin   Int             @default(60) // club-wide booking granularity: 30 or 60 (spec §5)
   acceptsMultisport Boolean         @default(false)
   paymentMethods    PaymentMethod[]
   status            ClubStatus      @default(PENDING) // PENDING → platform-admin activates → ACTIVE

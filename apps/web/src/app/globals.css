@@ -16,8 +16,10 @@
   --line: #e1e4db;
   --line-2: #cdd1c6;
 
-  --lime: #c7f000; /* brand accent — always ink text on top */
+  --lime: #c7f000; /* brand accent — always dark text on top */
   --lime-deep: #a6c900;
+  /* Text on the lime accent is ALWAYS dark in both themes (lime never darkens). */
+  --on-lime: #14181b;
   --teal: #0e9e9c; /* info / coach */
   --teal-soft: #d6eeec;
   --clay: #e4622e; /* secondary highlight */

@@ -49,7 +49,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
             <mark
               style={{
                 background: 'var(--lime)',
-                color: 'var(--ink)',
+                color: 'var(--on-lime)',
                 padding: '0 0.12em',
                 borderRadius: 8,
               }}
@@ -75,7 +75,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               href="/clubs"
               style={{
                 background: 'var(--lime)',
-                color: 'var(--ink)',
+                color: 'var(--on-lime)',
                 borderRadius: 'var(--radius-sm)',
                 padding: '12px 20px',
                 fontWeight: 700,

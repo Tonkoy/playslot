@@ -16,9 +16,11 @@ const PUBLIC_CLUB_SELECT = {
   timezone: true,
   currency: true,
   description: true,
+  slotIntervalMin: true,
   acceptsMultisport: true,
   paymentMethods: true,
   status: true,
+  cityId: true,
   city: { select: { id: true, name: true } },
 } satisfies Prisma.ClubSelect;
 
@@ -118,6 +120,7 @@ export class ClubsService {
         timezone: input.timezone,
         currency: input.currency,
         description: input.description ?? null,
+        slotIntervalMin: input.slotIntervalMin,
         acceptsMultisport: input.acceptsMultisport ?? false,
       },
       select: PUBLIC_CLUB_SELECT,
@@ -125,6 +128,29 @@ export class ClubsService {
 
     await this.audit(actorUserId, 'club.update', 'Club', clubId, before, club);
     return club;
+  }
+
+  /** Update just the club-wide booking granularity (30 or 60 min). */
+  async updateSettings(clubId: number, slotIntervalMin: number, actorUserId: number) {
+    const before = await this.prisma.club.findUnique({ where: { id: clubId } });
+    if (!before) throw new AppException('not_found');
+    const club = await this.prisma.club.update({
+      where: { id: clubId },
+      data: { slotIntervalMin },
+      select: PUBLIC_CLUB_SELECT,
+    });
+    await this.audit(actorUserId, 'club.settings', 'Club', clubId, before, club);
+    return club;
+  }
+
+  /** Clubs the current user administers/staffs (for the admin console). */
+  async listMyClubs(userId: number) {
+    const memberships = await this.prisma.clubMember.findMany({
+      where: { userId, status: 'ACTIVE' },
+      select: { role: true, club: { select: PUBLIC_CLUB_SELECT } },
+      orderBy: { clubId: 'asc' },
+    });
+    return memberships.map((m) => ({ role: m.role, club: m.club }));
   }
 
   // ── club onboarding (public) — creates CLUB_ADMIN + PENDING club (spec §13) ──

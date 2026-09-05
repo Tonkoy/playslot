@@ -32,6 +32,15 @@ export class ResourcesService {
         minReservationMin: input.minReservationMin,
         slotIntervalMin: input.slotIntervalMin,
         allowHalfHour: input.allowHalfHour,
+        // Default operating hours 07:00–22:00 every day so the court is bookable
+        // immediately; a full hours editor is Phase 4 (Club OS).
+        availabilityRules: {
+          create: Array.from({ length: 7 }, (_, weekday) => ({
+            weekday,
+            startMin: 7 * 60,
+            endMin: 22 * 60,
+          })),
+        },
       },
     });
     await this.audit(actorUserId, 'court.create', court.id, null, court);

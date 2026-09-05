@@ -41,6 +41,7 @@ export interface AvailabilityResponse {
   date: string;
   timezone: string;
   currency: string;
+  slotIntervalMin: number; // club-wide booking granularity (30 or 60)
   courts: AvailabilityCourt[];
   slots: AvailabilitySlot[];
 }

@@ -58,6 +58,9 @@ export function SiteHeader() {
             {t('clubs')}
           </Link>
           <span style={{ color: 'var(--ink-3)', fontSize: 14 }}>{t('coaches')}</span>
+          <Link href="/admin" style={{ color: 'var(--ink-2)', fontSize: 14, textDecoration: 'none' }}>
+            {t('admin')}
+          </Link>
           <LanguageSwitcher />
         </nav>
       </div>

@@ -28,11 +28,14 @@ export class AvailabilityService {
   async getAvailability(query: AvailabilityQuery, userId?: number): Promise<AvailabilityResponse> {
     const club = await this.prisma.club.findFirst({
       where: { id: query.clubId, status: 'ACTIVE' },
-      select: { currency: true, timezone: true },
+      select: { currency: true, timezone: true, slotIntervalMin: true },
     });
     if (!club) throw new AppException('not_found');
 
     const tz = club.timezone;
+    // Booking granularity is a club-wide setting (30 or 60 min); all courts use it.
+    const slotIntervalMin = club.slotIntervalMin;
+    const allowHalfHour = slotIntervalMin < 60;
     const dayStart = instantFromDayMinutes(query.date, 0, tz);
     const dayEnd = instantFromDayMinutes(query.date, 24 * 60, tz);
     const now = new Date();
@@ -109,9 +112,9 @@ export class AvailabilityService {
       const generated = generateSlots({
         resource: {
           id: court.id,
-          slotIntervalMin: court.slotIntervalMin,
+          slotIntervalMin, // club-wide granularity
           minReservationMin: court.minReservationMin,
-          allowHalfHour: court.allowHalfHour,
+          allowHalfHour,
         },
         rules: court.availabilityRules.map((r) => ({
           weekday: r.weekday,
@@ -157,7 +160,7 @@ export class AvailabilityService {
           durationsMin,
           coachIds: [], // populated in Phase 5 (coaching)
           minReservationMin: court.minReservationMin,
-          allowHalfHour: court.allowHalfHour,
+          allowHalfHour,
         });
       }
     }
@@ -166,6 +169,7 @@ export class AvailabilityService {
       date: query.date,
       timezone: tz,
       currency: club.currency,
+      slotIntervalMin,
       courts: courts.map((c) => ({
         id: c.id,
         name: c.name,
@@ -173,7 +177,7 @@ export class AvailabilityService {
         isIndoor: c.isIndoor,
         hasLighting: c.hasLighting,
         minReservationMin: c.minReservationMin,
-        allowHalfHour: c.allowHalfHour,
+        allowHalfHour,
       })),
       slots,
     };

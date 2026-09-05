@@ -123,6 +123,7 @@ async function main() {
       lat: 42.6939,
       lng: 23.3219,
       currency: 'EUR',
+      slotIntervalMin: 30, // half-hour booking granularity
       acceptsMultisport: true,
       status: 'ACTIVE',
       paymentMethods: ['ON_SITE', 'ONLINE', 'MULTISPORT'],
@@ -139,6 +140,7 @@ async function main() {
       lat: 42.6712,
       lng: 23.3502,
       currency: 'EUR',
+      slotIntervalMin: 60, // hourly booking granularity
       status: 'ACTIVE',
       paymentMethods: ['ON_SITE', 'ONLINE'],
       description: 'Модерен клуб с покрити кортове.',

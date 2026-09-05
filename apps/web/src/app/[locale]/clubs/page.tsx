@@ -61,7 +61,7 @@ export default async function ClubsPage({ params }: { params: Promise<{ locale: 
                   style={{
                     display: 'inline-block',
                     marginTop: 14,
-                    color: 'var(--ink)',
+                    color: 'var(--on-lime)',
                     background: 'var(--lime)',
                     borderRadius: 100,
                     padding: '6px 12px',

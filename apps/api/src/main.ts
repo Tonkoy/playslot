@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
+import cookieParser from 'cookie-parser';
 import { loadServerEnv } from '@playslot/config';
 import { AppModule } from './app.module';
 
@@ -10,7 +11,7 @@ async function bootstrap(): Promise<void> {
 
   const app = await NestFactory.create(AppModule, { cors: true });
   app.setGlobalPrefix('api');
-  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+  app.use(cookieParser());
   app.enableShutdownHooks();
 
   const port = new URL(env.API_BASE_URL).port || '3001';

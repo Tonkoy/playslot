@@ -1,0 +1,450 @@
+// PlaySlot data model — the single source of truth (spec §5).
+// Golden rules: PostgreSQL is authoritative; money in integer minor units;
+// times stored UTC; one reservation may consume multiple resources.
+//
+// The reservation no-double-booking guard (EXCLUDE USING gist on
+// ReservationResource, spec §8) is added by a raw-SQL migration in Phase 3;
+// the btree_gist extension is declared here so it is present ahead of time.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [btree_gist]
+}
+
+// ─── enums ───────────────────────────────────────────────────────────────────
+
+enum Sport {
+  TENNIS
+  TABLE_TENNIS
+  BADMINTON
+  PADEL
+  FOOTBALL
+  BASKETBALL
+  VOLLEYBALL
+  BEACH_TENNIS
+  BEACH_VOLLEYBALL
+  PICKLEBALL
+  SQUASH
+}
+
+enum ResourceType {
+  COURT
+  COACH
+  EQUIPMENT
+  ROOM
+}
+
+enum Surface {
+  CLAY
+  HARD
+  GRASS
+  CARPET
+  ARTIFICIAL_GRASS
+  PARQUET
+  OTHER
+}
+
+enum Role {
+  PLAYER
+  COACH
+  CLUB_STAFF
+  CLUB_ADMIN
+  PLATFORM_ADMIN
+}
+
+enum ReservationType {
+  COURT
+  LESSON
+  EVENT
+  TOURNAMENT
+  BLOCK
+  MAINTENANCE
+}
+
+enum ReservationStatus {
+  HOLD
+  PENDING_PAYMENT
+  CONFIRMED
+  COMPLETED
+  NO_SHOW
+  CANCELLED
+  REFUNDED
+}
+
+enum ReservationSource {
+  WEB
+  CLUB_STAFF
+  COACH
+  PLATFORM_ADMIN
+  API
+}
+
+enum PaymentMethod {
+  ON_SITE
+  ONLINE
+  FREE
+  MULTISPORT
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum ClubStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+}
+
+enum ResourceStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum VerificationPurpose {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+}
+
+// ─── identity ────────────────────────────────────────────────────────────────
+
+model User {
+  id              Int       @id @default(autoincrement())
+  email           String    @unique
+  phone           String?
+  name            String
+  passwordHash    String?
+  emailVerifiedAt DateTime? // set when the verification link is used (OAuth = pre-verified)
+  locale          String    @default("bg")
+  timezone        String    @default("Europe/Sofia")
+  isVisible       Boolean   @default(false) // player-directory opt-in (GDPR: default OFF)
+  subscribed      Boolean   @default(false)
+
+  roles         UserRole[]
+  memberships   ClubMember[]
+  coachProfile  CoachProfile?
+  playerProfile PlayerProfile?
+  reservations  Reservation[]
+  tokens        VerificationToken[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UserRole {
+  id     Int  @id @default(autoincrement())
+  userId Int
+  role   Role
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+  @@index([userId])
+}
+
+model PlayerProfile {
+  id     Int     @id @default(autoincrement())
+  userId Int     @unique
+  gender String?
+  hand   String?
+  level  String?
+  city   String?
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  id        Int                 @id @default(autoincrement())
+  userId    Int
+  tokenHash String              @unique // store a hash, never the raw token; single-use
+  purpose   VerificationPurpose
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime            @default(now())
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+}
+
+// ─── clubs & tenancy ───────────────────────────────────────────────────────────
+
+model City {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  clubs Club[]
+}
+
+model Club {
+  id                Int             @id @default(autoincrement())
+  slug              String          @unique // localized SEO slug; 301 on drift
+  name              String
+  address           String
+  cityId            Int
+  lat               Float?
+  lng               Float?
+  timezone          String          @default("Europe/Sofia")
+  currency          String          @default("EUR")
+  description       String?
+  acceptsMultisport Boolean         @default(false)
+  paymentMethods    PaymentMethod[]
+  status            ClubStatus      @default(PENDING) // PENDING → platform-admin activates → ACTIVE
+
+  city         City                 @relation(fields: [cityId], references: [id])
+  resources    Resource[]
+  members      ClubMember[]
+  policies     CancellationPolicy[]
+  priceRules   PriceRule[]
+  reservations Reservation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cityId])
+  @@index([status])
+}
+
+model ClubMember {
+  id     Int              @id @default(autoincrement())
+  clubId Int
+  userId Int
+  role   Role
+  status MembershipStatus @default(ACTIVE)
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([clubId, userId, role])
+  @@index([clubId])
+  @@index([userId])
+}
+
+// ─── resources (courts & coaches are both Resources) ─────────────────────────
+
+model Resource {
+  id                Int            @id @default(autoincrement())
+  clubId            Int
+  type              ResourceType
+  name              String
+  status            ResourceStatus @default(ACTIVE)
+  sport             Sport? // COURT
+  surface           Surface?
+  isIndoor          Boolean?
+  hasLighting       Boolean?
+  minReservationMin Int            @default(60)
+  slotIntervalMin   Int            @default(30)
+  allowHalfHour     Boolean        @default(false)
+  coachProfileId    Int? // when type = COACH
+
+  club                 Club                  @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  coachProfile         CoachProfile?         @relation(fields: [coachProfileId], references: [id])
+  availabilityRules    AvailabilityRule[]
+  exceptions           ResourceException[]
+  priceRules           PriceRule[]
+  reservationResources ReservationResource[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clubId])
+  @@index([clubId, type])
+}
+
+// ─── coaching ────────────────────────────────────────────────────────────────
+
+model CoachProfile {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  bio       String?
+  photoUrl  String?
+  languages String[]
+  levels    String[]
+
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  services  CoachService[]
+  clubs     CoachClub[]
+  resources Resource[]
+}
+
+model CoachClub {
+  id             Int @id @default(autoincrement())
+  coachProfileId Int
+  clubId         Int
+
+  coachProfile CoachProfile @relation(fields: [coachProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([coachProfileId, clubId])
+  @@index([clubId])
+}
+
+model CoachService {
+  id             Int     @id @default(autoincrement())
+  coachProfileId Int
+  name           String
+  durationMin    Int
+  minPlayers     Int     @default(1)
+  maxPlayers     Int     @default(1)
+  priceCents     Int
+  courtRequired  Boolean @default(true)
+
+  coachProfile CoachProfile @relation(fields: [coachProfileId], references: [id], onDelete: Cascade)
+  priceRules   PriceRule[]
+
+  @@index([coachProfileId])
+}
+
+// ─── availability & pricing ──────────────────────────────────────────────────
+
+model AvailabilityRule {
+  id         Int @id @default(autoincrement())
+  resourceId Int
+  weekday    Int // 0 = Sunday … 6 = Saturday
+  startMin   Int // minutes from local midnight
+  endMin     Int
+
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([resourceId])
+}
+
+model ResourceException {
+  id         Int      @id @default(autoincrement())
+  resourceId Int
+  startsAt   DateTime // UTC
+  endsAt     DateTime // UTC
+  reason     String
+
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([resourceId])
+}
+
+model PriceRule {
+  id          Int       @id @default(autoincrement())
+  clubId      Int
+  resourceId  Int?
+  serviceId   Int?
+  weekdayMask Int?
+  startMin    Int?
+  endMin      Int?
+  validFrom   DateTime?
+  validUntil  DateTime?
+  durationMin Int?
+  priceCents  Int
+  currency    String    @default("EUR")
+  priority    Int       @default(0)
+  active      Boolean   @default(true)
+
+  club     Club          @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  resource Resource?     @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  service  CoachService? @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([clubId])
+  @@index([resourceId])
+  @@index([serviceId])
+}
+
+// ─── reservations ────────────────────────────────────────────────────────────
+
+model Reservation {
+  id                 Int               @id @default(autoincrement())
+  clubId             Int
+  userId             Int
+  type               ReservationType
+  status             ReservationStatus @default(HOLD)
+  source             ReservationSource
+  startsAt           DateTime // UTC
+  endsAt             DateTime // UTC
+  priceCents         Int
+  currency           String            @default("EUR")
+  paymentMethod      PaymentMethod
+  holdExpiresAt      DateTime?
+  cancellationReason String?
+  participants       Json?
+
+  club      Club                  @relation(fields: [clubId], references: [id])
+  user      User                  @relation(fields: [userId], references: [id])
+  resources ReservationResource[]
+  payment   Payment?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clubId])
+  @@index([userId])
+  @@index([status])
+  @@index([startsAt])
+}
+
+// Conflict-bearing table; the EXCLUDE constraint lives HERE (spec §8), added by
+// a raw-SQL migration in Phase 3. `isActive` is kept in sync with the parent
+// reservation status by a trigger (also Phase 3).
+model ReservationResource {
+  id            Int                      @id @default(autoincrement())
+  reservationId Int
+  resourceId    Int
+  period        Unsupported("tstzrange") // [startsAt, endsAt)
+  isActive      Boolean                  @default(true)
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  resource    Resource    @relation(fields: [resourceId], references: [id])
+
+  @@index([reservationId])
+  @@index([resourceId])
+}
+
+model Payment {
+  id            Int           @id @default(autoincrement())
+  reservationId Int           @unique
+  provider      String
+  providerRef   String?
+  amountCents   Int
+  currency      String
+  status        PaymentStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+  capturedAt    DateTime?
+  refundedAt    DateTime?
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+}
+
+model CancellationPolicy {
+  id        Int             @id @default(autoincrement())
+  clubId    Int
+  appliesTo ReservationType
+  tiers     Json // e.g. [{ "minHoursBefore": 24, "refundPercent": 100 }, ...]
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@index([clubId])
+}
+
+// ─── audit ───────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  actorUserId Int?
+  action      String
+  objectType  String
+  objectId    Int
+  before      Json?
+  after       Json?
+  at          DateTime @default(now())
+
+  @@index([objectType, objectId])
+  @@index([actorUserId])
+}

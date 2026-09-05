@@ -1,13 +1,30 @@
 import { Module } from '@nestjs/common';
+import { APP_FILTER } from '@nestjs/core';
+import { AllExceptionsFilter } from './common/all-exceptions.filter';
+import { AppConfigModule } from './config/app-config.module';
+import { AuthModule } from './auth/auth.module';
+import { ClubsModule } from './clubs/clubs.module';
 import { HealthModule } from './health/health.module';
+import { MailModule } from './mail/mail.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { ResourcesModule } from './resources/resources.module';
 
 /**
- * Root module of the PlaySlot modular monolith (spec §4). Domain modules
- * (auth, clubs, resources, availability, pricing, reservations, payments,
- * cancellations, coaching, notifications, admin, platform) are added in later
- * milestones. Only the health probe exists in Phase 0.
+ * Root of the PlaySlot modular monolith (spec §4). Phase 1 wires config, Prisma,
+ * mail, auth (with global auth + role guards), clubs, and resources. Remaining
+ * domain modules (availability, pricing, reservations, payments, coaching,
+ * notifications) arrive in later phases.
  */
 @Module({
-  imports: [HealthModule],
+  imports: [
+    AppConfigModule,
+    PrismaModule,
+    MailModule,
+    AuthModule,
+    ClubsModule,
+    ResourcesModule,
+    HealthModule,
+  ],
+  providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],
 })
 export class AppModule {}

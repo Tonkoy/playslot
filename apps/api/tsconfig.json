@@ -23,6 +23,6 @@
     "strictBindCallApply": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "test/**/*.ts", "vitest.config.ts", "vitest.e2e.config.ts"],
   "exclude": ["node_modules", "dist"]
 }

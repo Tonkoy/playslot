@@ -54,7 +54,9 @@ export function SiteHeader() {
           style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 18 }}
           aria-label="Primary"
         >
-          <span style={{ color: 'var(--ink-3)', fontSize: 14 }}>{t('clubs')}</span>
+          <Link href="/clubs" style={{ color: 'var(--ink-2)', fontSize: 14, textDecoration: 'none' }}>
+            {t('clubs')}
+          </Link>
           <span style={{ color: 'var(--ink-3)', fontSize: 14 }}>{t('coaches')}</span>
           <LanguageSwitcher />
         </nav>

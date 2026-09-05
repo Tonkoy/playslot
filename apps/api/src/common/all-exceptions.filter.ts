@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { ZodError } from 'zod';
+import { type ZodIssue } from 'zod';
 import { type ApiError, type ErrorCode, httpStatusFor } from '@playslot/contracts';
 import { AppException } from './app-exception';
 import { type ApiLocale, normalizeLocale, t } from './i18n';
@@ -62,9 +62,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       };
     }
 
-    if (exception instanceof ZodError) {
+    const zodIssues = zodIssuesOf(exception);
+    if (zodIssues) {
       const fieldErrors: Record<string, string[]> = {};
-      for (const issue of exception.issues) {
+      for (const issue of zodIssues) {
         const key = issue.path.join('.') || '_';
         (fieldErrors[key] ??= []).push(issue.message);
       }
@@ -77,6 +78,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     return { code: 'internal', logAsError: true };
   }
+
+  // (see zodIssuesOf below)
 
   private mapHttpStatus(status: number): ErrorCode {
     switch (status) {
@@ -98,4 +101,21 @@ export class AllExceptionsFilter implements ExceptionFilter {
         return 'internal';
     }
   }
+}
+
+/**
+ * Detect a ZodError structurally rather than via `instanceof`. Schemas live in
+ * @playslot/contracts, which may bundle its own copy of zod; a structural check
+ * classifies those errors as validation failures regardless of which copy threw.
+ */
+function zodIssuesOf(exception: unknown): ZodIssue[] | null {
+  if (
+    exception &&
+    typeof exception === 'object' &&
+    (exception as { name?: string }).name === 'ZodError' &&
+    Array.isArray((exception as { issues?: unknown }).issues)
+  ) {
+    return (exception as { issues: ZodIssue[] }).issues;
+  }
+  return null;
 }

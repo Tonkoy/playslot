@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { Body, Controller, Get, Inject, Post, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Inject, Post, Query, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import type { ServerEnv } from '@playslot/config';
 import {
@@ -42,6 +42,7 @@ export class AuthController {
   }
 
   @Public()
+  @HttpCode(200)
   @Post('login')
   async login(
     @Body(new ZodBody(loginSchema)) body: import('@playslot/contracts').LoginInput,
@@ -54,6 +55,7 @@ export class AuthController {
 
   @Post('logout')
   @Public()
+  @HttpCode(200)
   logout(@Res({ passthrough: true }) res: Response, @Req() req: Request) {
     res.clearCookie(SESSION_COOKIE, { path: '/' });
     return { message: t('auth.logged_out', localeOf(req)) };
@@ -109,6 +111,7 @@ export class AuthController {
   }
 
   @Public()
+  @HttpCode(200)
   @Post('verify-email')
   async verifyEmail(
     @Body(new ZodBody(verifyEmailSchema)) body: { token: string },
@@ -119,6 +122,7 @@ export class AuthController {
   }
 
   @Public()
+  @HttpCode(200)
   @Post('resend-verification')
   async resend(
     @Body(new ZodBody(resendVerificationSchema)) body: { email: string },
@@ -129,6 +133,7 @@ export class AuthController {
   }
 
   @Public()
+  @HttpCode(200)
   @Post('forgot-password')
   async forgot(
     @Body(new ZodBody(forgotPasswordSchema)) body: { email: string },
@@ -139,6 +144,7 @@ export class AuthController {
   }
 
   @Public()
+  @HttpCode(200)
   @Post('reset-password')
   async reset(
     @Body(new ZodBody(resetPasswordSchema)) body: { token: string; password: string },

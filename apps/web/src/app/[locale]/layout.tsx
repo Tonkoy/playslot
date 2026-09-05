@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { Bricolage_Grotesque, Hanken_Grotesk, IBM_Plex_Mono } from 'next/font/google';
 import { isAppLocale, routing } from '@/i18n/routing';
+import { Providers } from '@/components/Providers';
 import '../globals.css';
 
 const bricolage = Bricolage_Grotesque({
@@ -57,7 +58,9 @@ export default async function LocaleLayout({
       className={`${bricolage.variable} ${hanken.variable} ${plexMono.variable}`}
     >
       <body>
-        <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
+        <NextIntlClientProvider messages={messages}>
+          <Providers>{children}</Providers>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

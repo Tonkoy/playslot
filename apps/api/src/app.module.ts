@@ -3,6 +3,7 @@ import { APP_FILTER } from '@nestjs/core';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
 import { AppConfigModule } from './config/app-config.module';
 import { AuthModule } from './auth/auth.module';
+import { AvailabilityModule } from './availability/availability.module';
 import { ClubsModule } from './clubs/clubs.module';
 import { HealthModule } from './health/health.module';
 import { MailModule } from './mail/mail.module';
@@ -23,6 +24,7 @@ import { ResourcesModule } from './resources/resources.module';
     AuthModule,
     ClubsModule,
     ResourcesModule,
+    AvailabilityModule,
     HealthModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],

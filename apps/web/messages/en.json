@@ -18,9 +18,10 @@
     "searchCourt": "Search courts",
     "searchLesson": "Search coach lessons",
     "phaseNoticeTitle": "Under construction",
-    "phaseNotice": "This is the foundation (Milestone 0). The reservation, availability, and payment engines come next.",
+    "phaseNotice": "This is the foundation. The reservation and payment engines come next.",
     "supportedSports": "Supported sports: {count}",
-    "legendTitle": "Slot states"
+    "legendTitle": "Slot states",
+    "browseClubs": "Browse clubs"
   },
   "SlotStates": {
     "FREE": "Free",
@@ -30,5 +31,35 @@
     "PAST": "Past",
     "EVENT": "Event",
     "TOURNAMENT": "Tournament"
+  },
+  "Clubs": {
+    "title": "Clubs",
+    "subtitle": "Pick a club to see its free courts.",
+    "empty": "No clubs are available right now.",
+    "viewClub": "View availability"
+  },
+  "ClubProfile": {
+    "notFoundTitle": "Club not found",
+    "notFound": "This club does not exist or is not active yet.",
+    "availability": "Availability",
+    "courts": "Courts",
+    "acceptsMultisport": "Accepts Multisport",
+    "backToClubs": "All clubs"
+  },
+  "Grid": {
+    "heading": "Availability by court and time",
+    "time": "Time",
+    "date": "Date",
+    "duration": "Duration",
+    "minutes": "min",
+    "today": "Today",
+    "prevDay": "Previous day",
+    "nextDay": "Next day",
+    "indoor": "indoor",
+    "outdoor": "outdoor",
+    "error": "Availability could not be loaded.",
+    "retry": "Try again",
+    "noCourts": "This club has no active courts.",
+    "noSlots": "No available times for the selected date."
   }
 }

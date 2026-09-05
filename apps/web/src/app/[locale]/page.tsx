@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { SLOT_STATES, SPORTS, type SlotState } from '@playslot/contracts';
 import { SiteHeader } from '@/components/SiteHeader';
+import { Link } from '@/i18n/navigation';
 
 // Map each slot state to a design token + a non-color cue (icon), per spec §7/§20.
 const STATE_STYLE: Record<SlotState, { bg: string; fg: string; icon: string }> = {
@@ -70,7 +71,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           </p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 28 }}>
-            <span
+            <Link
+              href="/clubs"
               style={{
                 background: 'var(--lime)',
                 color: 'var(--ink)',
@@ -80,10 +82,11 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                 minHeight: 44,
                 display: 'inline-flex',
                 alignItems: 'center',
+                textDecoration: 'none',
               }}
             >
               {t('searchCourt')}
-            </span>
+            </Link>
             <span
               style={{
                 background: 'var(--surface)',

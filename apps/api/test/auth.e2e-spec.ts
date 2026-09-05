@@ -111,4 +111,21 @@ describe('Auth flow (e2e)', () => {
     const res = await http().get('/auth/me').expect(401);
     expect(res.body.error).toBe('unauthenticated');
   });
+
+  describe('Google OAuth', () => {
+    it('redirects to Google with a state cookie', async () => {
+      const res = await http().get('/auth/google?returnTo=/bg').redirects(0);
+      expect(res.status).toBe(302);
+      expect(res.headers.location).toContain('accounts.google.com/o/oauth2/v2/auth');
+      expect(res.headers['set-cookie']?.[0]).toMatch(/playslot_oauth_state=/);
+    });
+
+    it('rejects the callback when the state does not match (CSRF guard)', async () => {
+      const res = await http()
+        .get('/auth/google/callback?code=abc&state=forged')
+        .redirects(0)
+        .expect(401);
+      expect(res.body.error).toBe('unauthenticated');
+    });
+  });
 });

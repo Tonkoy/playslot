@@ -59,6 +59,18 @@ CREATE TABLE "User" (
 );
 
 -- CreateTable
+CREATE TABLE "OAuthAccount" (
+    "id" SERIAL NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "provider" TEXT NOT NULL,
+    "providerAccountId" TEXT NOT NULL,
+    "email" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "OAuthAccount_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "UserRole" (
     "id" SERIAL NOT NULL,
     "userId" INTEGER NOT NULL,
@@ -307,6 +319,12 @@ CREATE TABLE "AuditLog" (
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
+CREATE INDEX "OAuthAccount_userId_idx" ON "OAuthAccount"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "OAuthAccount_provider_providerAccountId_key" ON "OAuthAccount"("provider", "providerAccountId");
+
+-- CreateIndex
 CREATE INDEX "UserRole_userId_idx" ON "UserRole"("userId");
 
 -- CreateIndex
@@ -404,6 +422,9 @@ CREATE INDEX "AuditLog_objectType_objectId_idx" ON "AuditLog"("objectType", "obj
 
 -- CreateIndex
 CREATE INDEX "AuditLog_actorUserId_idx" ON "AuditLog"("actorUserId");
+
+-- AddForeignKey
+ALTER TABLE "OAuthAccount" ADD CONSTRAINT "OAuthAccount_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "UserRole" ADD CONSTRAINT "UserRole_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

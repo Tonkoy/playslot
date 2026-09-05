@@ -9,6 +9,7 @@ import { SERVER_ENV } from '../config/app-config.module';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { type AuthenticatedUser, SESSION_TTL_SECONDS } from './auth.types';
+import type { GoogleProfile } from './google-oauth.service';
 import { hashPassword, verifyPassword } from './password';
 import {
   EMAIL_VERIFY_TTL_MIN,
@@ -153,6 +154,64 @@ export class AuthService {
         },
       }),
     ]);
+  }
+
+  // ── OAuth (Google) ───────────────────────────────────────────────────────────
+  /**
+   * Find-or-link-or-create a user from a verified OAuth profile (spec §13).
+   * Matches first on the stable provider account id, then on email (linking the
+   * external identity to the existing account), else creates a pre-verified user.
+   */
+  async upsertOAuthUser(
+    provider: string,
+    profile: GoogleProfile,
+  ): Promise<{ user: AuthenticatedUser; token: string }> {
+    const account = await this.prisma.oAuthAccount.findUnique({
+      where: { provider_providerAccountId: { provider, providerAccountId: profile.providerAccountId } },
+      include: { user: { include: { roles: true } } },
+    });
+    if (account) {
+      return { user: this.toAuthUser(account.user), token: await this.issueSession(account.user) };
+    }
+
+    const existing = await this.prisma.user.findUnique({
+      where: { email: profile.email },
+      include: { roles: true },
+    });
+    if (existing) {
+      await this.prisma.oAuthAccount.create({
+        data: {
+          userId: existing.id,
+          provider,
+          providerAccountId: profile.providerAccountId,
+          email: profile.email,
+        },
+      });
+      if (existing.emailVerifiedAt === null && profile.emailVerified) {
+        const updated = await this.prisma.user.update({
+          where: { id: existing.id },
+          data: { emailVerifiedAt: new Date() },
+        });
+        existing.emailVerifiedAt = updated.emailVerifiedAt;
+      }
+      return { user: this.toAuthUser(existing), token: await this.issueSession(existing) };
+    }
+
+    const created = await this.prisma.user.create({
+      data: {
+        email: profile.email,
+        name: profile.name,
+        emailVerifiedAt: profile.emailVerified ? new Date() : null,
+        locale: 'bg',
+        roles: { create: [{ role: Role.PLAYER }] },
+        playerProfile: { create: {} },
+        oauthAccounts: {
+          create: [{ provider, providerAccountId: profile.providerAccountId, email: profile.email }],
+        },
+      },
+      include: { roles: true },
+    });
+    return { user: this.toAuthUser(created), token: await this.issueSession(created) };
   }
 
   // ── helpers ──────────────────────────────────────────────────────────────────

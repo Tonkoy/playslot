@@ -6,6 +6,7 @@ import { SERVER_ENV } from '../config/app-config.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { ClubMembershipGuard } from './club-membership.guard';
+import { GoogleOAuthService } from './google-oauth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { RolesGuard } from './roles.guard';
 
@@ -21,6 +22,7 @@ import { RolesGuard } from './roles.guard';
   controllers: [AuthController],
   providers: [
     AuthService,
+    GoogleOAuthService,
     ClubMembershipGuard,
     // Order matters: authenticate, then check platform roles.
     { provide: APP_GUARD, useClass: JwtAuthGuard },

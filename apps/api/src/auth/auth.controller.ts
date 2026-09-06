@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { Body, Controller, Get, HttpCode, Inject, Post, Query, Req, Res } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import type { ServerEnv } from '@playslot/config';
 import {
@@ -21,6 +22,12 @@ import { GoogleOAuthService } from './google-oauth.service';
 
 const OAUTH_STATE_COOKIE = 'playslot_oauth_state';
 
+// Tighter limit on sensitive auth endpoints (spec §20): 10 req/min/IP (relaxed
+// under test). Applied per-route so /auth/me stays on the global default.
+const AUTH_LIMIT = {
+  default: { ttl: 60_000, limit: process.env.NODE_ENV === 'test' ? 100_000 : 10 },
+};
+
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -30,6 +37,7 @@ export class AuthController {
   ) {}
 
   @Public()
+  @Throttle(AUTH_LIMIT)
   @Post('register')
   async register(
     @Body(new ZodBody(registerSchema)) body: import('@playslot/contracts').RegisterInput,
@@ -43,6 +51,7 @@ export class AuthController {
 
   @Public()
   @HttpCode(200)
+  @Throttle(AUTH_LIMIT)
   @Post('login')
   async login(
     @Body(new ZodBody(loginSchema)) body: import('@playslot/contracts').LoginInput,
@@ -123,6 +132,7 @@ export class AuthController {
 
   @Public()
   @HttpCode(200)
+  @Throttle(AUTH_LIMIT)
   @Post('resend-verification')
   async resend(
     @Body(new ZodBody(resendVerificationSchema)) body: { email: string },
@@ -134,6 +144,7 @@ export class AuthController {
 
   @Public()
   @HttpCode(200)
+  @Throttle(AUTH_LIMIT)
   @Post('forgot-password')
   async forgot(
     @Body(new ZodBody(forgotPasswordSchema)) body: { email: string },
@@ -145,6 +156,7 @@ export class AuthController {
 
   @Public()
   @HttpCode(200)
+  @Throttle(AUTH_LIMIT)
   @Post('reset-password')
   async reset(
     @Body(new ZodBody(resetPasswordSchema)) body: { token: string; password: string },

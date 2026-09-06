@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
+import { SecurityModule } from './common/turnstile.service';
 import { AppConfigModule } from './config/app-config.module';
 import { AuthModule } from './auth/auth.module';
 import { AvailabilityModule } from './availability/availability.module';
@@ -14,14 +16,19 @@ import { ReservationsModule } from './reservations/reservations.module';
 import { ResourcesModule } from './resources/resources.module';
 
 /**
- * Root of the PlaySlot modular monolith (spec §4). Phase 1 wires config, Prisma,
- * mail, auth (with global auth + role guards), clubs, and resources. Remaining
- * domain modules (availability, pricing, reservations, payments, coaching,
- * notifications) arrive in later phases.
+ * Root of the PlaySlot modular monolith (spec §4): config, Prisma, mail, live
+ * events, auth (+ global auth/role guards), clubs, resources, availability,
+ * reservations, coaching, health. Hardening (§20): a global rate limiter
+ * (Throttler), Turnstile, security headers (helmet, in main.ts).
  */
 @Module({
   imports: [
+    // Default: 120 req/min/IP; relaxed under test so the e2e suite isn't throttled.
+    ThrottlerModule.forRoot([
+      { ttl: 60_000, limit: process.env.NODE_ENV === 'test' ? 100_000 : 120 },
+    ]),
     AppConfigModule,
+    SecurityModule,
     PrismaModule,
     MailModule,
     EventsModule,
@@ -33,6 +40,9 @@ import { ResourcesModule } from './resources/resources.module';
     CoachingModule,
     HealthModule,
   ],
-  providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],
+  providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_FILTER, useClass: AllExceptionsFilter },
+  ],
 })
 export class AppModule {}

@@ -21,6 +21,8 @@
     "migrate:status": "prisma migrate status",
     "seed": "tsx prisma/seed.ts",
     "studio": "prisma studio",
+    "db:backup": "tsx scripts/backup.ts",
+    "db:restore": "tsx scripts/restore.ts",
     "clean": "rm -rf dist"
   },
   "prisma": {

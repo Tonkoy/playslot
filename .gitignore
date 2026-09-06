@@ -18,6 +18,10 @@ build
 coverage
 playwright-report
 test-results
+.playwright
+
+# db backups
+backups
 
 # turbo
 .turbo

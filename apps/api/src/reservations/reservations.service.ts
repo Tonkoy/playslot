@@ -23,6 +23,7 @@ import {
 } from '@playslot/domain';
 import { AppException } from '../common/app-exception';
 import { normalizeLocale } from '../common/i18n';
+import { TurnstileService } from '../common/turnstile.service';
 import { SERVER_ENV } from '../config/app-config.module';
 import { EventsService } from '../events/events.service';
 import { MailService } from '../mail/mail.service';
@@ -56,6 +57,7 @@ export class ReservationsService {
     private readonly holds: HoldQueueService,
     private readonly events: EventsService,
     private readonly mail: MailService,
+    private readonly turnstile: TurnstileService,
   ) {}
 
   // ── player self-booking (spec §8) ──
@@ -66,6 +68,9 @@ export class ReservationsService {
   ): Promise<CreateReservationResponse> {
     if (source === 'WEB' && !actor.emailVerified) {
       throw new AppException('policy_violation', { reason: 'email_not_verified' });
+    }
+    if (source === 'WEB' && !(await this.turnstile.verify(input.turnstileToken))) {
+      throw new AppException('validation_failed', { fields: { turnstile: ['failed'] } });
     }
 
     const slot = await this.resolveSlot({

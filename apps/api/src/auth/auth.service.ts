@@ -7,6 +7,7 @@ import { AppException } from '../common/app-exception';
 import { type ApiLocale, normalizeLocale, t } from '../common/i18n';
 import { SERVER_ENV } from '../config/app-config.module';
 import { MailService } from '../mail/mail.service';
+import { TurnstileService } from '../common/turnstile.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { type AuthenticatedUser, SESSION_TTL_SECONDS } from './auth.types';
 import type { GoogleProfile } from './google-oauth.service';
@@ -25,11 +26,15 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly mail: MailService,
+    private readonly turnstile: TurnstileService,
     @Inject(SERVER_ENV) private readonly env: ServerEnv,
   ) {}
 
   // ── registration ──────────────────────────────────────────────────────────
   async register(input: RegisterInput): Promise<{ user: AuthenticatedUser; token: string }> {
+    if (!(await this.turnstile.verify(input.turnstileToken))) {
+      throw new AppException('validation_failed', { fields: { turnstile: ['failed'] } });
+    }
     const email = input.email.toLowerCase();
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {

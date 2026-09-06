@@ -4,6 +4,7 @@ import { config as loadDotenv } from 'dotenv';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import { loadServerEnv } from '@playslot/config';
 import { AppModule } from './app.module';
 
@@ -24,6 +25,7 @@ async function bootstrap(): Promise<void> {
     credentials: true,
   });
   app.setGlobalPrefix('api');
+  app.use(helmet());
   app.use(cookieParser());
   app.enableShutdownHooks();
 

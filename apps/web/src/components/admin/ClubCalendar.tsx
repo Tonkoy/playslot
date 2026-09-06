@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import type { CalendarEntry } from '@playslot/contracts';
+import { Modal } from '@/components/Modal';
 import {
   cancelReservationAsStaff,
   createBlock,
@@ -217,7 +218,10 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
                               width: '100%',
                               textAlign: 'left',
                               background: s.bg,
-                              border: `1px solid ${s.fg}`,
+                              border:
+                                selection?.kind === 'entry' && selection.entry.id === hit.entry.id
+                                  ? '2px solid var(--teal)'
+                                  : `1px solid ${s.fg}`,
                               borderRadius: 'var(--radius-sm)',
                               padding: '6px 8px',
                               cursor: 'pointer',
@@ -244,8 +248,16 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
                           style={{
                             width: '100%',
                             minHeight: 40,
-                            background: moveEntry ? 'var(--free-soft)' : 'transparent',
-                            border: '1px dashed var(--line-2)',
+                            background:
+                              selection?.kind === 'free' && selection.courtId === c.id && selection.startMin === min
+                                ? 'var(--teal-soft)'
+                                : moveEntry
+                                  ? 'var(--free-soft)'
+                                  : 'transparent',
+                            border:
+                              selection?.kind === 'free' && selection.courtId === c.id && selection.startMin === min
+                                ? '2px solid var(--teal)'
+                                : '1px dashed var(--line-2)',
                             borderRadius: 'var(--radius-sm)',
                             cursor: 'pointer',
                             color: 'var(--ink-3)',
@@ -264,15 +276,22 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
         </div>
       )}
 
-      {/* Booking form for a free cell */}
-      {selection?.kind === 'free' && (
-        <div style={panel}>
-          <h3 style={{ fontWeight: 700, marginBottom: 10 }}>
-            {t('newBooking', {
-              court: courts.find((c) => c.id === selection.courtId)?.name ?? '',
-              time: minToHHMM(selection.startMin),
-            })}
-          </h3>
+      {/* Booking / entry action modal */}
+      <Modal
+        open={selection !== null}
+        onClose={() => setSelection(null)}
+        title={
+          selection?.kind === 'free'
+            ? t('newBooking', {
+                court: courts.find((c) => c.id === selection.courtId)?.name ?? '',
+                time: minToHHMM(selection.startMin),
+              })
+            : selection?.kind === 'entry'
+              ? `${selection.entry.type === 'BLOCK' ? t('block') : (selection.entry.customerName ?? t('booking'))} · ${localHHMM(selection.entry.startsAt)}–${localHHMM(selection.entry.endsAt)}`
+              : undefined
+        }
+      >
+        {selection?.kind === 'free' && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'end' }}>
             <label style={fieldLabel}>
               {t('customer')}
@@ -300,16 +319,8 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
               {t('cancel')}
             </button>
           </div>
-        </div>
-      )}
-
-      {/* Entry action bar */}
-      {selection?.kind === 'entry' && (
-        <div style={panel}>
-          <h3 style={{ fontWeight: 700, marginBottom: 8 }}>
-            {selection.entry.type === 'BLOCK' ? t('block') : selection.entry.customerName ?? t('booking')} ·{' '}
-            {localHHMM(selection.entry.startsAt)}–{localHHMM(selection.entry.endsAt)}
-          </h3>
+        )}
+        {selection?.kind === 'entry' && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {selection.entry.type !== 'BLOCK' && (
               <button type="button" onClick={() => paidMut.mutate(selection.entry.id)} style={smallBtn}>
@@ -338,12 +349,9 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
             >
               {t('cancel')}
             </button>
-            <button type="button" onClick={() => setSelection(null)} style={{ ...smallBtn, marginLeft: 'auto' }}>
-              {t('close')}
-            </button>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }
@@ -385,14 +393,6 @@ const smallBtn: React.CSSProperties = {
   borderRadius: 'var(--radius-sm)',
   cursor: 'pointer',
   fontSize: 14,
-};
-const panel: React.CSSProperties = {
-  marginTop: 16,
-  background: 'var(--surface)',
-  border: '1px solid var(--line)',
-  borderRadius: 'var(--radius)',
-  padding: 16,
-  boxShadow: 'var(--shadow-sm)',
 };
 const banner: React.CSSProperties = {
   background: 'var(--surface)',

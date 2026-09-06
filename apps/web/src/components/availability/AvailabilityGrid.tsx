@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import type { AvailabilitySlot, SlotState } from '@playslot/contracts';
 import { Link, usePathname } from '@/i18n/navigation';
+import { Modal } from '@/components/Modal';
 import { coachesForClub, createReservation, fetchAvailability, getMe } from '@/lib/api';
 
 // State → design token + non-color cue (icon). Never color-only (spec §7/§20).
@@ -219,6 +220,8 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
                     const slot = byKey.get(`${c.id}@${time}`);
                     if (!slot) return <td key={c.id} style={{ ...cell, background: 'var(--ground)' }} aria-hidden />;
                     const s = STATE_STYLE[slot.state];
+                    const isSelected =
+                      selected?.resourceId === c.id && selected?.start === slot.start;
                     const inner = (
                       <>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -264,7 +267,18 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
                                 coachIds: slot.coachIds ?? [],
                               });
                             }}
-                            style={{ ...boxStyle, cursor: 'pointer', color: 'var(--ink)' }}
+                            style={{
+                              ...boxStyle,
+                              cursor: 'pointer',
+                              color: 'var(--ink)',
+                              ...(isSelected
+                                ? {
+                                    background: 'var(--teal-soft)',
+                                    border: '2px solid var(--teal)',
+                                    padding: '7px 7px',
+                                  }
+                                : {}),
+                            }}
                           >
                             {inner}
                           </button>
@@ -283,26 +297,31 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
         </div>
       )}
 
-      {/* Confirmation */}
-      {confirmedRef !== null && (
-        <div role="status" style={bookingPanel}>
-          <strong style={{ display: 'block', marginBottom: 4 }}>{bk('confirmedTitle')}</strong>
-          <span style={{ color: 'var(--ink-2)' }}>{bk('confirmedBody', { ref: confirmedRef })}</span>
-          <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-            <Link href="/me/bookings" style={{ ...pillBtn, background: 'var(--lime)', color: 'var(--on-lime)' }}>
-              {bk('myBookings')}
-            </Link>
-            <button type="button" onClick={() => setConfirmedRef(null)} style={pillBtn}>
-              {bk('close')}
-            </button>
-          </div>
+      {/* Confirmation modal */}
+      <Modal open={confirmedRef !== null} onClose={() => setConfirmedRef(null)} title={bk('confirmedTitle')}>
+        <p style={{ color: 'var(--ink-2)' }}>{bk('confirmedBody', { ref: confirmedRef ?? 0 })}</p>
+        <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+          <Link href="/me/bookings" style={{ ...pillBtn, background: 'var(--lime)', color: 'var(--on-lime)' }}>
+            {bk('myBookings')}
+          </Link>
+          <button type="button" onClick={() => setConfirmedRef(null)} style={pillBtn}>
+            {bk('close')}
+          </button>
         </div>
-      )}
+      </Modal>
 
-      {/* Checkout panel for a selected free slot */}
-      {selected && confirmedRef === null && (
-        <div style={bookingPanel}>
-          <h3 style={{ fontWeight: 700, marginBottom: 6 }}>{bk('title')}</h3>
+      {/* Checkout modal for a selected free slot */}
+      <Modal
+        open={!!selected && confirmedRef === null}
+        onClose={() => {
+          setSelected(null);
+          setCoachId(null);
+          setServiceId(null);
+        }}
+        title={bk('title')}
+      >
+        {selected && (
+          <>
           <p className="mono" style={{ color: 'var(--ink-2)', fontSize: 13, marginBottom: 12 }}>
             {selected.courtName} · {date} · {selected.time} · {duration} {t('minutes')}
             {selected.priceCents != null ? ` · ${money.format(selected.priceCents / 100)}` : ''}
@@ -390,20 +409,13 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
               </div>
             </div>
           )}
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
     </section>
   );
 }
 
-const bookingPanel: React.CSSProperties = {
-  marginTop: 16,
-  background: 'var(--surface)',
-  border: '1px solid var(--line)',
-  borderRadius: 'var(--radius)',
-  padding: 18,
-  boxShadow: 'var(--shadow-sm)',
-};
 const pillBtn: React.CSSProperties = {
   minHeight: 44,
   display: 'inline-flex',

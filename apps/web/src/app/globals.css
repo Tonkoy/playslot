@@ -148,3 +148,41 @@ h4 {
   outline-offset: 2px;
   border-radius: 4px;
 }
+
+/* Modal: full-width bottom sheet on mobile, centered card on desktop. */
+.modal-card {
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+@media (min-width: 560px) {
+  .modal-backdrop {
+    align-items: center !important;
+    padding: 16px;
+  }
+  .modal-card {
+    border-radius: var(--radius);
+  }
+}
+
+/* Responsive main nav: inline on desktop, hamburger + dropdown on mobile. */
+.nav-desktop {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-left: auto;
+}
+.nav-burger {
+  display: none;
+}
+@media (max-width: 640px) {
+  .nav-desktop {
+    display: none;
+  }
+  .nav-burger {
+    display: inline-flex;
+  }
+}
+@media (min-width: 641px) {
+  .nav-mobile-panel {
+    display: none !important;
+  }
+}

@@ -1,10 +1,9 @@
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { BrandMark } from './BrandMark';
-import { LanguageSwitcher } from './LanguageSwitcher';
+import { SiteNav } from './SiteNav';
 
 export function SiteHeader() {
-  const t = useTranslations('Nav');
   const c = useTranslations('Common');
 
   return (
@@ -14,7 +13,7 @@ export function SiteHeader() {
         background: 'var(--surface)',
         position: 'sticky',
         top: 0,
-        zIndex: 10,
+        zIndex: 30,
       }}
     >
       <div
@@ -25,6 +24,7 @@ export function SiteHeader() {
           display: 'flex',
           alignItems: 'center',
           gap: 16,
+          position: 'relative',
         }}
       >
         <Link
@@ -50,21 +50,7 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        <nav
-          style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 18 }}
-          aria-label="Primary"
-        >
-          <Link href="/clubs" style={{ color: 'var(--ink-2)', fontSize: 14, textDecoration: 'none' }}>
-            {t('clubs')}
-          </Link>
-          <Link href="/coaches" style={{ color: 'var(--ink-2)', fontSize: 14, textDecoration: 'none' }}>
-            {t('coaches')}
-          </Link>
-          <Link href="/admin" style={{ color: 'var(--ink-2)', fontSize: 14, textDecoration: 'none' }}>
-            {t('admin')}
-          </Link>
-          <LanguageSwitcher />
-        </nav>
+        <SiteNav />
       </div>
     </header>
   );

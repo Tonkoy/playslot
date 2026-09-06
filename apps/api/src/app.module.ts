@@ -8,6 +8,7 @@ import { ClubsModule } from './clubs/clubs.module';
 import { HealthModule } from './health/health.module';
 import { MailModule } from './mail/mail.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { ReservationsModule } from './reservations/reservations.module';
 import { ResourcesModule } from './resources/resources.module';
 
 /**
@@ -25,6 +26,7 @@ import { ResourcesModule } from './resources/resources.module';
     ClubsModule,
     ResourcesModule,
     AvailabilityModule,
+    ReservationsModule,
     HealthModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],

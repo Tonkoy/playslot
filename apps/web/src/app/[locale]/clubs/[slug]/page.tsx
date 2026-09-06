@@ -3,7 +3,9 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { SiteHeader } from '@/components/SiteHeader';
 import { AvailabilityGrid } from '@/components/availability/AvailabilityGrid';
+import { EventsSection } from '@/components/EventsSection';
 import { FavoriteButton } from '@/components/FavoriteButton';
+import { MembershipPlansSection } from '@/components/MembershipPlansSection';
 import { ReviewsSection } from '@/components/ReviewsSection';
 import { getClub, getClubCourts } from '@/lib/api';
 
@@ -84,6 +86,8 @@ export default async function ClubProfilePage({
           {t('availability')}
         </h2>
         <AvailabilityGrid clubId={club.id} />
+        <EventsSection clubId={club.id} currency={club.currency} timezone={club.timezone} />
+        <MembershipPlansSection clubId={club.id} currency={club.currency} />
         <ReviewsSection clubId={club.id} />
       </main>
     </>

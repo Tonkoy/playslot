@@ -89,6 +89,8 @@ export class AuthService {
     if (token.expiresAt < new Date()) {
       throw new AppException('policy_violation', undefined, t('auth.token_expired'));
     }
+    const user = await this.prisma.user.findUnique({ where: { id: token.userId } });
+    const firstVerification = user?.emailVerifiedAt === null;
     await this.prisma.$transaction([
       this.prisma.user.update({
         where: { id: token.userId },
@@ -99,6 +101,14 @@ export class AuthService {
         data: { usedAt: new Date() },
       }),
     ]);
+    // Welcome the user the first time they confirm (best-effort; never blocks
+    // the verification response). Skip re-verification of an already-verified
+    // account so the welcome fires exactly once.
+    if (user && firstVerification) {
+      await this.mail
+        .sendWelcome(user.email, user.name, normalizeLocale(user.locale))
+        .catch(() => undefined);
+    }
   }
 
   async resendVerification(email: string): Promise<void> {

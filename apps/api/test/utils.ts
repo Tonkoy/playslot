@@ -11,8 +11,17 @@ export class FakeMail {
   sent: SendEmailInput[] = [];
   verifications: { to: string; link: string }[] = [];
   resets: { to: string; link: string }[] = [];
+  welcomes: { to: string; name: string }[] = [];
   confirmations: { to: string }[] = [];
   cancellations: { to: string; refundCents: number }[] = [];
+  staffNotices: { to: string; customerName: string; what: string }[] = [];
+  coachNotices: { to: string; customerName: string }[] = [];
+  coachSchedules: {
+    to: string;
+    coachName: string;
+    date: string;
+    lessons: { time: string; clubName: string; customerName: string }[];
+  }[] = [];
 
   async send(input: SendEmailInput) {
     this.sent.push(input);
@@ -23,6 +32,9 @@ export class FakeMail {
   async sendPasswordReset(to: string, link: string, _locale?: ApiLocale) {
     this.resets.push({ to, link });
   }
+  async sendWelcome(to: string, name: string, _locale?: ApiLocale) {
+    this.welcomes.push({ to, name });
+  }
   async sendConfirmation(to: string, _info: unknown, _locale?: ApiLocale) {
     this.confirmations.push({ to });
   }
@@ -32,6 +44,31 @@ export class FakeMail {
     _locale?: ApiLocale,
   ) {
     this.cancellations.push({ to, refundCents: info.refundCents });
+  }
+  async sendStaffBookingNotice(
+    to: string,
+    info: { customerName: string; what: string },
+    _locale?: ApiLocale,
+  ) {
+    this.staffNotices.push({ to, customerName: info.customerName, what: info.what });
+  }
+  async sendCoachBookingNotice(
+    to: string,
+    info: { customerName: string },
+    _locale?: ApiLocale,
+  ) {
+    this.coachNotices.push({ to, customerName: info.customerName });
+  }
+  async sendCoachDailySchedule(
+    to: string,
+    info: {
+      coachName: string;
+      date: string;
+      lessons: { time: string; clubName: string; customerName: string }[];
+    },
+    _locale?: ApiLocale,
+  ) {
+    this.coachSchedules.push({ to, ...info });
   }
 
   tokenFrom(link: string): string {

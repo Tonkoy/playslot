@@ -98,7 +98,35 @@
     "indoor": "Indoor",
     "outdoor": "Outdoor",
     "lights": "Lights",
-    "openCalendar": "Calendar"
+    "openCalendar": "Calendar",
+    "membershipsTitle": "Membership plans",
+    "membershipsHelp": "Members get an automatic discount on every booking while their plan is active.",
+    "noPlans": "No plans yet.",
+    "addPlan": "Add a plan",
+    "planName": "Plan name",
+    "priceLabel": "Price ({currency})",
+    "durationDays": "Duration (days)",
+    "discountPercent": "Discount (%)",
+    "days": "days",
+    "grantTitle": "Grant a membership",
+    "grantHelp": "Assign a plan to a customer by email (payment handled offline).",
+    "customerEmail": "Customer email",
+    "plan": "Plan",
+    "grant": "Grant",
+    "granted": "Membership granted.",
+    "eventsTitle": "Events & tournaments",
+    "eventsHelp": "Publish events players can register for. Registration is capped at capacity.",
+    "noEvents": "No upcoming events.",
+    "addEvent": "Add an event",
+    "eventType": "Type",
+    "event": "Event",
+    "tournament": "Tournament",
+    "eventTitle": "Title",
+    "eventDescription": "Description",
+    "startsAt": "Starts",
+    "endsAt": "Ends",
+    "capacity": "Capacity",
+    "feeLabel": "Fee ({currency})"
   },
   "Calendar": {
     "title": "Calendar",
@@ -245,5 +273,23 @@
     "retry": "Try again",
     "noCourts": "This club has no active courts.",
     "noSlots": "No available times for the selected date."
+  },
+  "Events": {
+    "title": "Events & tournaments",
+    "tournament": "Tournament",
+    "event": "Event",
+    "free": "Free",
+    "full": "Full",
+    "spotsLeft": "{n} spots left",
+    "register": "Register",
+    "cancelRegistration": "Cancel registration",
+    "signInToRegister": "Sign in to register"
+  },
+  "Memberships": {
+    "title": "Memberships",
+    "activeBadge": "You're a {plan} member — {percent}% off every booking.",
+    "duration": "{days} days",
+    "discount": "{percent}% off bookings",
+    "howToJoin": "Ask the club to activate a membership for you — the discount then applies automatically."
   }
 }

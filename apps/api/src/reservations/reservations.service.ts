@@ -27,6 +27,7 @@ import { TurnstileService } from '../common/turnstile.service';
 import { SERVER_ENV } from '../config/app-config.module';
 import { EventsService } from '../events/events.service';
 import { MailService } from '../mail/mail.service';
+import { applyDiscount, MembershipsService } from '../memberships/memberships.service';
 import { PaymentsService } from '../payments/payments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { HoldQueueService } from './hold-queue.service';
@@ -61,6 +62,7 @@ export class ReservationsService {
     private readonly turnstile: TurnstileService,
     @Inject(forwardRef(() => PaymentsService))
     private readonly payments: PaymentsService,
+    private readonly memberships: MembershipsService,
   ) {}
 
   // ── player self-booking (spec §8) ──
@@ -97,6 +99,11 @@ export class ReservationsService {
     } else {
       priceCents = this.priceFor(await this.loadPriceRules(slot.clubId), slot);
     }
+    // Member pricing (spec §9): discount the recomputed server price.
+    priceCents = applyDiscount(
+      priceCents,
+      await this.memberships.discountPercent(slot.clubId, actor.userId),
+    );
 
     const online = requiresOnlinePayment(input.paymentMethod);
     const holdExpiresAt = new Date(Date.now() + this.env.HOLD_TTL_MIN * 60_000);
@@ -480,25 +487,91 @@ export class ReservationsService {
     return { status: 'CANCELLED' as const, refundCents, refundStatus };
   }
 
-  /** Load a confirmed reservation and email the customer (best-effort). */
+  /**
+   * On a confirmed booking, notify all three parties (spec §19), each in their
+   * own locale and all best-effort so a mail failure never rolls back the
+   * booking:
+   *   1. the customer — booking confirmation;
+   *   2. the club's admins/staff — a heads-up that a slot filled;
+   *   3. for a LESSON, the selected coach — a new-lesson notice.
+   */
   private async sendConfirmationEmail(reservationId: number): Promise<void> {
     const r = await this.prisma.reservation.findUnique({
       where: { id: reservationId },
       include: {
-        user: { select: { email: true, locale: true } },
-        club: { select: { name: true, timezone: true } },
+        user: { select: { email: true, locale: true, name: true } },
+        club: {
+          select: {
+            name: true,
+            timezone: true,
+            members: {
+              where: { status: 'ACTIVE', role: { in: ['CLUB_ADMIN', 'CLUB_STAFF'] } },
+              select: { user: { select: { email: true, locale: true } } },
+            },
+          },
+        },
+        resources: {
+          select: {
+            resource: {
+              select: {
+                type: true,
+                name: true,
+                coachProfile: { select: { user: { select: { email: true, locale: true } } } },
+              },
+            },
+          },
+        },
       },
     });
-    if (!r || !r.user || r.user.email.endsWith('@walkin.playslot.local')) return;
-    const locale = normalizeLocale(r.user.locale);
+    if (!r) return;
+
     const when = formatInZone(r.startsAt, r.club.timezone, 'yyyy-MM-dd HH:mm');
-    await this.mail
-      .sendConfirmation(
-        r.user.email,
-        { clubName: r.club.name, when, priceCents: r.priceCents, currency: r.currency },
-        locale,
-      )
-      .catch(() => undefined);
+    const walkin = r.user?.email.endsWith('@walkin.playslot.local') ?? true;
+    const participantName = (r.participants as { name?: string } | null)?.name;
+    const customerName =
+      (!walkin ? r.user?.name : undefined) ?? participantName ?? 'PlaySlot customer';
+    const what = r.resources.map((x) => x.resource.name).join(' + ') || r.type;
+    const customerEmail = r.user?.email;
+
+    // 1. customer (skip synthetic walk-in addresses)
+    if (r.user && !walkin) {
+      await this.mail
+        .sendConfirmation(
+          r.user.email,
+          { clubName: r.club.name, when, priceCents: r.priceCents, currency: r.currency },
+          normalizeLocale(r.user.locale),
+        )
+        .catch(() => undefined);
+    }
+
+    // 2. club admins/staff (dedupe; don't double-notify the booking customer)
+    const staffSeen = new Set<string>();
+    for (const m of r.club.members) {
+      const email = m.user.email;
+      if (email === customerEmail || staffSeen.has(email)) continue;
+      staffSeen.add(email);
+      await this.mail
+        .sendStaffBookingNotice(
+          email,
+          { clubName: r.club.name, when, customerName, what, priceCents: r.priceCents, currency: r.currency },
+          normalizeLocale(m.user.locale),
+        )
+        .catch(() => undefined);
+    }
+
+    // 3. the coach on a lesson
+    const coachUser = r.resources
+      .map((x) => x.resource)
+      .find((res) => res.type === 'COACH' && res.coachProfile?.user)?.coachProfile?.user;
+    if (coachUser) {
+      await this.mail
+        .sendCoachBookingNotice(
+          coachUser.email,
+          { clubName: r.club.name, when, customerName },
+          normalizeLocale(coachUser.locale),
+        )
+        .catch(() => undefined);
+    }
   }
 
   async listMine(userId: number): Promise<ReservationSummary[]> {

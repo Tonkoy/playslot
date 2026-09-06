@@ -58,10 +58,15 @@ describe('Auth flow (e2e)', () => {
     const token = ctx.mail.lastVerificationToken();
     expect(token).not.toBe('');
 
+    const welcomesBefore = ctx.mail.welcomes.length;
     await http().post('/auth/verify-email').send({ token }).expect(200);
 
     const user = await ctx.prisma.user.findUnique({ where: { email } });
     expect(user?.emailVerifiedAt).not.toBeNull();
+
+    // a welcome email is sent exactly once, on first verification
+    expect(ctx.mail.welcomes.length).toBe(welcomesBefore + 1);
+    expect(ctx.mail.welcomes.at(-1)?.to).toBe(email);
 
     // single-use
     await http().post('/auth/verify-email').send({ token }).expect(422);

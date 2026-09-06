@@ -12,7 +12,9 @@ import { CommunityModule } from './community/community.module';
 import { EventsModule } from './events/events.module';
 import { HealthModule } from './health/health.module';
 import { MailModule } from './mail/mail.module';
+import { MembershipsModule } from './memberships/memberships.module';
 import { PaymentsModule } from './payments/payments.module';
+import { ProgramsModule } from './programs/programs.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ReservationsModule } from './reservations/reservations.module';
 import { ResourcesModule } from './resources/resources.module';
@@ -44,6 +46,8 @@ import { SearchModule } from './search/search.module';
     CoachingModule,
     SearchModule,
     CommunityModule,
+    MembershipsModule,
+    ProgramsModule,
     HealthModule,
   ],
   providers: [

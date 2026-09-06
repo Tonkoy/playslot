@@ -47,6 +47,21 @@ export function localHHMM(iso: string): string {
   return iso.slice(11, 16);
 }
 
+/** Format an absolute ISO instant as "dd.MM.yyyy HH:mm" in the given timezone. */
+export function formatInstant(iso: string, tz: string): string {
+  const parts = new Intl.DateTimeFormat('bg-BG', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date(iso));
+  const p = (t: string) => parts.find((x) => x.type === t)?.value ?? '';
+  return `${p('day')}.${p('month')}.${p('year')} ${p('hour')}:${p('minute')}`;
+}
+
 export function hhmmToMin(hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number);
   return h! * 60 + m!;

@@ -6,3 +6,5 @@ export * from './reservations';
 export * from './coaching';
 export * from './search';
 export * from './community';
+export * from './memberships';
+export * from './events';

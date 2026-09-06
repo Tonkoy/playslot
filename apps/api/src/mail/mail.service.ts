@@ -75,6 +75,33 @@ export class MailService {
     });
   }
 
+  /** Welcome email, sent once the user confirms their email (spec §19). */
+  async sendWelcome(to: string, name: string, locale: ApiLocale = DEFAULT_LOCALE): Promise<void> {
+    const first = name.trim().split(/\s+/)[0] || name;
+    const copy =
+      locale === 'en'
+        ? {
+            subject: 'Welcome to PlaySlot 🎾',
+            greeting: `Hi ${first},`,
+            body: 'Your email is confirmed — your account is ready. Find a club or a coach and book your first slot.',
+            cta: 'Browse clubs',
+          }
+        : {
+            subject: 'Добре дошли в PlaySlot 🎾',
+            greeting: `Здравей, ${first},`,
+            body: 'Имейлът ви е потвърден — акаунтът ви е готов. Открийте клуб или треньор и направете първата си резервация.',
+            cta: 'Разгледай клубовете',
+          };
+    await this.send({
+      to,
+      subject: copy.subject,
+      text: `${copy.greeting}\n${copy.body}\n${this.webLink(locale, 'clubs')}`,
+      html: emailShell(
+        `<p>${copy.greeting}</p><p>${copy.body}</p>${button(this.webLink(locale, 'clubs'), copy.cta)}`,
+      ),
+    });
+  }
+
   async sendConfirmation(
     to: string,
     info: { clubName: string; when: string; priceCents: number; currency: string },
@@ -92,6 +119,95 @@ export class MailService {
             body: `Резервацията ви в ${info.clubName} на ${info.when} е потвърдена. Общо: ${price}.`,
           };
     await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+  }
+
+  /** Notify club admins/staff that a booking landed on their calendar (spec §19). */
+  async sendStaffBookingNotice(
+    to: string,
+    info: {
+      clubName: string;
+      when: string;
+      customerName: string;
+      what: string;
+      priceCents: number;
+      currency: string;
+    },
+    locale: ApiLocale = DEFAULT_LOCALE,
+  ): Promise<void> {
+    const price = `${(info.priceCents / 100).toFixed(2)} ${info.currency}`;
+    const copy =
+      locale === 'en'
+        ? {
+            subject: `New booking — ${info.clubName}`,
+            body: `${info.customerName} booked ${info.what} on ${info.when}. Total: ${price}.`,
+          }
+        : {
+            subject: `Нова резервация — ${info.clubName}`,
+            body: `${info.customerName} резервира ${info.what} на ${info.when}. Общо: ${price}.`,
+          };
+    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+  }
+
+  /** Notify the selected coach of a new lesson booking (spec §19). */
+  async sendCoachBookingNotice(
+    to: string,
+    info: { clubName: string; when: string; customerName: string; serviceName?: string },
+    locale: ApiLocale = DEFAULT_LOCALE,
+  ): Promise<void> {
+    const service = info.serviceName ? ` (${info.serviceName})` : '';
+    const copy =
+      locale === 'en'
+        ? {
+            subject: `New lesson booked — ${info.when}`,
+            body: `${info.customerName} booked a lesson${service} with you at ${info.clubName} on ${info.when}.`,
+          }
+        : {
+            subject: `Нов урок — ${info.when}`,
+            body: `${info.customerName} резервира урок${service} при вас в ${info.clubName} на ${info.when}.`,
+          };
+    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+  }
+
+  /**
+   * Daily digest of a coach's lessons for the day (spec §19). `lessons` is
+   * already ordered by start time and localized to the club timezone.
+   */
+  async sendCoachDailySchedule(
+    to: string,
+    info: {
+      coachName: string;
+      date: string;
+      lessons: { time: string; clubName: string; customerName: string; serviceName?: string }[];
+    },
+    locale: ApiLocale = DEFAULT_LOCALE,
+  ): Promise<void> {
+    const first = info.coachName.trim().split(/\s+/)[0] || info.coachName;
+    const n = info.lessons.length;
+    const copy =
+      locale === 'en'
+        ? {
+            subject: `Your lessons today (${info.date}) — ${n}`,
+            greeting: `Good morning, ${first}!`,
+            intro:
+              n === 1
+                ? 'You have 1 lesson scheduled today:'
+                : `You have ${n} lessons scheduled today:`,
+          }
+        : {
+            subject: `Уроците ви днес (${info.date}) — ${n}`,
+            greeting: `Добро утро, ${first}!`,
+            intro: n === 1 ? 'Днес имате 1 насрочен урок:' : `Днес имате ${n} насрочени урока:`,
+          };
+    const line = (l: (typeof info.lessons)[number]) =>
+      `${l.time} — ${l.customerName}${l.serviceName ? ` (${l.serviceName})` : ''} @ ${l.clubName}`;
+    const textLines = info.lessons.map(line).join('\n');
+    const htmlLines = info.lessons.map((l) => `<li>${line(l)}</li>`).join('');
+    await this.send({
+      to,
+      subject: copy.subject,
+      text: `${copy.greeting}\n${copy.intro}\n${textLines}`,
+      html: emailShell(`<p>${copy.greeting}</p><p>${copy.intro}</p><ul>${htmlLines}</ul>`),
+    });
   }
 
   async sendCancellation(
@@ -136,6 +252,12 @@ export class MailService {
       text: `${copy.body}\n${link}`,
       html: emailShell(`<p>${copy.body}</p>${button(link, copy.cta)}<p>${link}</p>`),
     });
+  }
+
+  /** Build a locale-prefixed link into the web app (e.g. the clubs directory). */
+  private webLink(locale: ApiLocale, path: string): string {
+    const base = this.env.APP_BASE_URL.replace(/\/$/, '');
+    return `${base}/${locale}/${path.replace(/^\//, '')}`;
   }
 }
 

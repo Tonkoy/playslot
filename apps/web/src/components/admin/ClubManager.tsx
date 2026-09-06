@@ -5,6 +5,8 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { SPORTS } from '@playslot/contracts';
 import { Link, useRouter } from '@/i18n/navigation';
+import { EventManager } from './EventManager';
+import { MembershipManager } from './MembershipManager';
 import {
   type AdminCourt,
   type CourtInput,
@@ -201,6 +203,16 @@ export function ClubManager({ clubId }: { clubId: number }) {
           )}
         </div>
       </section>
+
+      {/* ── Memberships (Phase 9) ── */}
+      <MembershipManager clubId={clubId} currency={club?.currency ?? 'EUR'} />
+
+      {/* ── Events & tournaments (Phase 9) ── */}
+      <EventManager
+        clubId={clubId}
+        timezone={club?.timezone ?? 'Europe/Sofia'}
+        currency={club?.currency ?? 'EUR'}
+      />
     </div>
   );
 }

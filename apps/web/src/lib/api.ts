@@ -3,9 +3,14 @@ import type {
   CalendarResponse,
   ClubReviews,
   CoachListItem,
+  EventDto,
   FavoriteClub,
+  MembershipDto,
+  MembershipPlanDto,
   ReservationSummary,
   SearchResponse,
+  UpsertEventInput,
+  UpsertMembershipPlanInput,
 } from '@playslot/contracts';
 
 /**
@@ -320,6 +325,60 @@ export function searchAvailability(params: {
 
 export function getMyReservations(): Promise<ReservationSummary[]> {
   return apiFetch('/me/reservations');
+}
+
+// ── memberships (Phase 9 extras) ──
+export function getClubMembershipPlans(clubId: number): Promise<MembershipPlanDto[]> {
+  return apiFetch(`/clubs/${clubId}/membership-plans`);
+}
+export function getMyMemberships(): Promise<MembershipDto[]> {
+  return apiFetch('/me/memberships');
+}
+export function adminCreateMembershipPlan(
+  clubId: number,
+  input: UpsertMembershipPlanInput,
+): Promise<MembershipPlanDto> {
+  return apiFetch(`/clubs/${clubId}/membership-plans`, { method: 'POST', body: JSON.stringify(input) });
+}
+export function adminUpdateMembershipPlan(
+  clubId: number,
+  planId: number,
+  input: UpsertMembershipPlanInput,
+): Promise<MembershipPlanDto> {
+  return apiFetch(`/clubs/${clubId}/membership-plans/${planId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+export function adminGrantMembership(
+  clubId: number,
+  input: { userEmail: string; planId: number },
+): Promise<MembershipDto> {
+  return apiFetch(`/clubs/${clubId}/memberships`, { method: 'POST', body: JSON.stringify(input) });
+}
+
+// ── events / tournaments (Phase 9 extras) ──
+export function listEvents(clubId?: number): Promise<EventDto[]> {
+  return apiFetch(`/events${clubId ? `?clubId=${clubId}` : ''}`);
+}
+export function getEvent(id: number): Promise<EventDto> {
+  return apiFetch(`/events/${id}`);
+}
+export function registerEvent(id: number): Promise<{ ok: true; spotsLeft: number }> {
+  return apiFetch(`/events/${id}/register`, { method: 'POST' });
+}
+export function unregisterEvent(id: number): Promise<{ ok: true }> {
+  return apiFetch(`/events/${id}/register`, { method: 'DELETE' });
+}
+export function adminCreateEvent(clubId: number, input: UpsertEventInput): Promise<EventDto> {
+  return apiFetch(`/clubs/${clubId}/events`, { method: 'POST', body: JSON.stringify(input) });
+}
+export function adminUpdateEvent(
+  clubId: number,
+  eventId: number,
+  input: UpsertEventInput,
+): Promise<EventDto> {
+  return apiFetch(`/clubs/${clubId}/events/${eventId}`, { method: 'PATCH', body: JSON.stringify(input) });
 }
 
 export function cancelMyReservation(

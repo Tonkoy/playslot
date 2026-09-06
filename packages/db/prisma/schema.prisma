@@ -146,9 +146,77 @@ model User {
   oauthAccounts OAuthAccount[]
   favorites     Favorite[]
   reviews       Review[]
+  membershipSubscriptions Membership[]
+  eventRegistrations EventRegistration[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ── memberships (spec §9/§22 M9): member pricing ──
+
+model MembershipPlan {
+  id              Int          @id @default(autoincrement())
+  clubId          Int
+  name            String
+  priceCents      Int
+  durationDays    Int
+  discountPercent Int          @default(0) // 0–100 off bookings while active
+  active          Boolean      @default(true)
+  club            Club         @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  memberships     Membership[]
+
+  @@index([clubId])
+}
+
+model Membership {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  clubId    Int
+  planId    Int
+  validUntil DateTime
+  createdAt DateTime @default(now())
+
+  user User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  club Club           @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  plan MembershipPlan @relation(fields: [planId], references: [id])
+
+  @@index([userId])
+  @@index([clubId, userId])
+}
+
+// ── events / tournaments with public registration ──
+
+model Event {
+  id          Int             @id @default(autoincrement())
+  clubId      Int
+  type        ReservationType // EVENT | TOURNAMENT
+  title       String
+  description String?
+  startsAt    DateTime
+  endsAt      DateTime
+  capacity    Int
+  feeCents    Int             @default(0)
+  published   Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+
+  club          Club                @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  registrations EventRegistration[]
+
+  @@index([clubId])
+}
+
+model EventRegistration {
+  id        Int      @id @default(autoincrement())
+  eventId   Int
+  userId    Int
+  createdAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId])
 }
 
 // ── marketplace growth (spec §22 M9) ──
@@ -263,6 +331,9 @@ model Club {
   reservations Reservation[]
   favorites    Favorite[]
   reviews      Review[]
+  membershipPlans MembershipPlan[]
+  memberships     Membership[]
+  events          Event[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

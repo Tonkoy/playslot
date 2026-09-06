@@ -18,6 +18,7 @@ import {
   weekdayInZone,
 } from '@playslot/domain';
 import { AppException } from '../common/app-exception';
+import { applyDiscount, MembershipsService } from '../memberships/memberships.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 interface CoachAvail {
@@ -31,7 +32,10 @@ const OCCUPYING_STATUSES = ['CONFIRMED', 'PENDING_PAYMENT', 'HOLD'] as const;
 
 @Injectable()
 export class AvailabilityService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly memberships: MembershipsService,
+  ) {}
 
   async getAvailability(query: AvailabilityQuery, userId?: number): Promise<AvailabilityResponse> {
     const club = await this.prisma.club.findFirst({
@@ -114,6 +118,9 @@ export class AvailabilityService {
       active: r.active,
     }));
 
+    // Member pricing (spec §9): apply the caller's best active membership discount.
+    const memberDiscount = await this.memberships.discountPercent(query.clubId, userId);
+
     // Court-first "add coach": which coaches (linked to this club) are free at a
     // slot. Coach occupancy is global (one shared resource across clubs, §10).
     const coaches = await this.loadCoachAvailability(query.clubId, dayStart, dayEnd);
@@ -150,14 +157,17 @@ export class AvailabilityService {
       for (const slot of generated) {
         let priceCents: number | null = null;
         try {
-          priceCents = resolvePrice(priceRuleLikes, {
-            weekday,
-            slotStartMin: slot.startMin,
-            slotEndMin: slot.startMin + duration,
-            durationMin: duration,
-            date: slot.start,
-            resourceId: court.id,
-          }).priceCents;
+          priceCents = applyDiscount(
+            resolvePrice(priceRuleLikes, {
+              weekday,
+              slotStartMin: slot.startMin,
+              slotEndMin: slot.startMin + duration,
+              durationMin: duration,
+              date: slot.start,
+              resourceId: court.id,
+            }).priceCents,
+            memberDiscount,
+          );
         } catch (e) {
           if (!(e instanceof PricingError)) throw e;
           priceCents = null; // no rule matched; client shows "—" rather than a wrong price

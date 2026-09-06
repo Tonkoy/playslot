@@ -72,7 +72,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 28 }}>
             <Link
-              href="/clubs"
+              href="/search"
               style={{
                 background: 'var(--lime)',
                 color: 'var(--on-lime)',
@@ -87,7 +87,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
             >
               {t('searchCourt')}
             </Link>
-            <span
+            <Link
+              href="/coaches"
               style={{
                 background: 'var(--surface)',
                 color: 'var(--ink)',
@@ -98,10 +99,11 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                 minHeight: 44,
                 display: 'inline-flex',
                 alignItems: 'center',
+                textDecoration: 'none',
               }}
             >
               {t('searchLesson')}
-            </span>
+            </Link>
           </div>
 
           <p className="mono" style={{ color: 'var(--ink-3)', fontSize: 13, marginTop: 20 }}>

@@ -8,12 +8,14 @@ import { AuthModule } from './auth/auth.module';
 import { AvailabilityModule } from './availability/availability.module';
 import { ClubsModule } from './clubs/clubs.module';
 import { CoachingModule } from './coaching/coaching.module';
+import { CommunityModule } from './community/community.module';
 import { EventsModule } from './events/events.module';
 import { HealthModule } from './health/health.module';
 import { MailModule } from './mail/mail.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ReservationsModule } from './reservations/reservations.module';
 import { ResourcesModule } from './resources/resources.module';
+import { SearchModule } from './search/search.module';
 
 /**
  * Root of the PlaySlot modular monolith (spec §4): config, Prisma, mail, live
@@ -38,6 +40,8 @@ import { ResourcesModule } from './resources/resources.module';
     AvailabilityModule,
     ReservationsModule,
     CoachingModule,
+    SearchModule,
+    CommunityModule,
     HealthModule,
   ],
   providers: [

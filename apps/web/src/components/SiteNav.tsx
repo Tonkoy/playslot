@@ -32,6 +32,9 @@ export function SiteNav() {
       <Link href="/me/bookings" style={linkStyle} onClick={() => setOpen(false)}>
         {t('bookings')}
       </Link>
+      <Link href="/me/favorites" style={linkStyle} onClick={() => setOpen(false)}>
+        {t('favorites')}
+      </Link>
     </>
   );
 

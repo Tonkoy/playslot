@@ -1,8 +1,11 @@
 import type {
   AvailabilityResponse,
   CalendarResponse,
+  ClubReviews,
   CoachListItem,
+  FavoriteClub,
   ReservationSummary,
+  SearchResponse,
 } from '@playslot/contracts';
 
 /**
@@ -73,6 +76,10 @@ export function getCoaches(clubId?: number): Promise<CoachListItem[] | null> {
 
 export function getCoach(id: number): Promise<CoachListItem | null> {
   return getJson<CoachListItem>(`${SERVER_BASE}/api/coaches/${id}`);
+}
+
+export function getClubReviews(clubId: number): Promise<ClubReviews | null> {
+  return getJson<ClubReviews>(`${SERVER_BASE}/api/clubs/${clubId}/reviews`);
 }
 
 // ── client-side auth + admin (credentialed) ──
@@ -281,6 +288,34 @@ export function createReservation(input: {
 /** Coaches available at a club (for the court-first "add coach" flow). */
 export function coachesForClub(clubId: number): Promise<CoachListItem[]> {
   return apiFetch(`/coaches?clubId=${clubId}`);
+}
+
+// ── favorites + reviews (client) ──
+export function getFavorites(): Promise<FavoriteClub[]> {
+  return apiFetch('/me/favorites');
+}
+export function addFavorite(clubId: number): Promise<{ ok: true }> {
+  return apiFetch('/me/favorites', { method: 'POST', body: JSON.stringify({ clubId }) });
+}
+export function removeFavorite(clubId: number): Promise<{ ok: true }> {
+  return apiFetch(`/me/favorites/${clubId}`, { method: 'DELETE' });
+}
+export function submitReview(
+  clubId: number,
+  input: { rating: number; comment?: string },
+): Promise<{ id: number; rating: number }> {
+  return apiFetch(`/clubs/${clubId}/reviews`, { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function searchAvailability(params: {
+  date: string;
+  sport?: string;
+  duration?: number;
+}): Promise<SearchResponse> {
+  const qs = new URLSearchParams({ date: params.date });
+  if (params.sport) qs.set('sport', params.sport);
+  if (params.duration) qs.set('duration', String(params.duration));
+  return apiFetch(`/search?${qs.toString()}`);
 }
 
 export function getMyReservations(): Promise<ReservationSummary[]> {

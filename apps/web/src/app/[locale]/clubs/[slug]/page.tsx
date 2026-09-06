@@ -3,6 +3,8 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { SiteHeader } from '@/components/SiteHeader';
 import { AvailabilityGrid } from '@/components/availability/AvailabilityGrid';
+import { FavoriteButton } from '@/components/FavoriteButton';
+import { ReviewsSection } from '@/components/ReviewsSection';
 import { getClub, getClubCourts } from '@/lib/api';
 
 export async function generateMetadata({
@@ -54,7 +56,12 @@ export default async function ClubProfilePage({
         </Link>
 
         <header style={{ margin: '12px 0 20px' }}>
-          <h1 style={{ fontSize: 'clamp(26px, 5vw, 42px)', fontWeight: 800 }}>{club.name}</h1>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <h1 style={{ fontSize: 'clamp(26px, 5vw, 42px)', fontWeight: 800 }}>{club.name}</h1>
+            <span style={{ marginLeft: 'auto' }}>
+              <FavoriteButton clubId={club.id} />
+            </span>
+          </div>
           <p style={{ color: 'var(--ink-2)', marginTop: 6 }}>
             {club.city.name} · {club.address}
           </p>
@@ -77,6 +84,7 @@ export default async function ClubProfilePage({
           {t('availability')}
         </h2>
         <AvailabilityGrid clubId={club.id} />
+        <ReviewsSection clubId={club.id} />
       </main>
     </>
   );

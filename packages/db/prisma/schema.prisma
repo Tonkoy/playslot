@@ -144,9 +144,41 @@ model User {
   reservations  Reservation[]
   tokens        VerificationToken[]
   oauthAccounts OAuthAccount[]
+  favorites     Favorite[]
+  reviews       Review[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ── marketplace growth (spec §22 M9) ──
+
+model Favorite {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  clubId    Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clubId])
+  @@index([userId])
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  clubId    Int
+  userId    Int
+  rating    Int // 1–5
+  comment   String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@unique([clubId, userId]) // one review per user per club
+  @@index([clubId])
 }
 
 // Linked external identity providers (spec §13: OAuth accounts are pre-verified).
@@ -229,6 +261,8 @@ model Club {
   policies     CancellationPolicy[]
   priceRules   PriceRule[]
   reservations Reservation[]
+  favorites    Favorite[]
+  reviews      Review[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

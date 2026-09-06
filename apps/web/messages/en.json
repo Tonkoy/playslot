@@ -9,6 +9,7 @@
     "login": "Log in",
     "admin": "Manage",
     "bookings": "Bookings",
+    "favorites": "Favorites",
     "menu": "Menu",
     "register": "Sign up",
     "language": "Language"
@@ -136,6 +137,35 @@
     "supportedSports": "Supported sports: {count}",
     "legendTitle": "Slot states",
     "browseClubs": "Browse clubs"
+  },
+  "Favorites": {
+    "title": "Favorite clubs",
+    "save": "Save",
+    "saved": "Saved",
+    "empty": "You have no saved clubs."
+  },
+  "Reviews": {
+    "title": "Reviews",
+    "count": "{count} reviews",
+    "rating": "Rating",
+    "comment": "Comment",
+    "commentPlaceholder": "How was it?",
+    "submit": "Post",
+    "empty": "No reviews yet.",
+    "needBooking": "You can review after a completed booking at this club."
+  },
+  "Search": {
+    "title": "Find a court",
+    "subtitle": "Find free courts across clubs for a chosen date.",
+    "date": "Date",
+    "sport": "Sport",
+    "anySport": "Any sport",
+    "duration": "Duration",
+    "minutes": "min",
+    "empty": "No free courts for the selected criteria.",
+    "from": "from",
+    "freeSlots": "{count} free",
+    "search": "Search"
   },
   "Coaches": {
     "title": "Coaches",

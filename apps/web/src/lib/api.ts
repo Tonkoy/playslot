@@ -263,7 +263,10 @@ export function getMyReservations(): Promise<ReservationSummary[]> {
   return apiFetch('/me/reservations');
 }
 
-export function cancelMyReservation(id: number, reason?: string): Promise<{ status: string }> {
+export function cancelMyReservation(
+  id: number,
+  reason?: string,
+): Promise<{ status: string; refundCents: number; refundStatus: string }> {
   return apiFetch(`/reservations/${id}/cancel`, { method: 'POST', body: JSON.stringify({ reason }) });
 }
 

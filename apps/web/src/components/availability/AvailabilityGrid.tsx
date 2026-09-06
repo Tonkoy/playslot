@@ -2,11 +2,11 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { AvailabilitySlot, SlotState } from '@playslot/contracts';
 import { Link, usePathname } from '@/i18n/navigation';
 import { Modal } from '@/components/Modal';
-import { coachesForClub, createReservation, fetchAvailability, getMe } from '@/lib/api';
+import { CLIENT_BASE, coachesForClub, createReservation, fetchAvailability, getMe } from '@/lib/api';
 
 // State → design token + non-color cue (icon). Never color-only (spec §7/§20).
 const STATE_STYLE: Record<SlotState, { bg: string; fg: string; icon: string; bookable: boolean }> = {
@@ -75,6 +75,13 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
   });
 
   const me = useQuery({ queryKey: ['me'], queryFn: getMe, retry: false });
+
+  // Live updates (spec §20): refetch when another viewer books/cancels here.
+  useEffect(() => {
+    const es = new EventSource(`${CLIENT_BASE}/api/availability/stream?clubId=${clubId}`);
+    es.onmessage = () => qc.invalidateQueries({ queryKey: ['availability', clubId] });
+    return () => es.close();
+  }, [clubId, qc]);
 
   const book = useMutation({
     mutationFn: (paymentMethod: string) =>

@@ -11,6 +11,8 @@ export class FakeMail {
   sent: SendEmailInput[] = [];
   verifications: { to: string; link: string }[] = [];
   resets: { to: string; link: string }[] = [];
+  confirmations: { to: string }[] = [];
+  cancellations: { to: string; refundCents: number }[] = [];
 
   async send(input: SendEmailInput) {
     this.sent.push(input);
@@ -20,6 +22,16 @@ export class FakeMail {
   }
   async sendPasswordReset(to: string, link: string, _locale?: ApiLocale) {
     this.resets.push({ to, link });
+  }
+  async sendConfirmation(to: string, _info: unknown, _locale?: ApiLocale) {
+    this.confirmations.push({ to });
+  }
+  async sendCancellation(
+    to: string,
+    info: { refundCents: number },
+    _locale?: ApiLocale,
+  ) {
+    this.cancellations.push({ to, refundCents: info.refundCents });
   }
 
   tokenFrom(link: string): string {

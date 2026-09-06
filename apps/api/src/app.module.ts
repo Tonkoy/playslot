@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { AvailabilityModule } from './availability/availability.module';
 import { ClubsModule } from './clubs/clubs.module';
 import { CoachingModule } from './coaching/coaching.module';
+import { EventsModule } from './events/events.module';
 import { HealthModule } from './health/health.module';
 import { MailModule } from './mail/mail.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -23,6 +24,7 @@ import { ResourcesModule } from './resources/resources.module';
     AppConfigModule,
     PrismaModule,
     MailModule,
+    EventsModule,
     AuthModule,
     ClubsModule,
     ResourcesModule,

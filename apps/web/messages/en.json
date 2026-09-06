@@ -123,7 +123,10 @@
   "MyBookings": {
     "title": "My bookings",
     "empty": "You have no bookings yet.",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "upcoming": "Upcoming",
+    "past": "Past",
+    "refundNote": "Booking cancelled. Refund: {amount} €."
   },
   "SlotStates": {
     "FREE": "Free",

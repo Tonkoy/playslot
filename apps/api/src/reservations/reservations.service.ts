@@ -11,15 +11,21 @@ import {
 } from '@playslot/contracts';
 import { Prisma, type PaymentMethod, type ReservationSource, type ReservationType } from '@playslot/db';
 import {
+  computeRefund,
   formatInZone,
+  hoursUntil,
   instantFromDayMinutes,
   type PriceRuleLike,
+  type RefundTier,
   requiresOnlinePayment,
   resolvePrice,
   weekdayInZone,
 } from '@playslot/domain';
 import { AppException } from '../common/app-exception';
+import { normalizeLocale } from '../common/i18n';
 import { SERVER_ENV } from '../config/app-config.module';
+import { EventsService } from '../events/events.service';
+import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { HoldQueueService } from './hold-queue.service';
 
@@ -48,6 +54,8 @@ export class ReservationsService {
     @Inject(SERVER_ENV) private readonly env: ServerEnv,
     @Inject(forwardRef(() => HoldQueueService))
     private readonly holds: HoldQueueService,
+    private readonly events: EventsService,
+    private readonly mail: MailService,
   ) {}
 
   // ── player self-booking (spec §8) ──
@@ -99,6 +107,8 @@ export class ReservationsService {
     });
 
     if (online) await this.holds.scheduleExpiry(reservation.id, holdExpiresAt);
+    this.events.emitAvailabilityChanged(slot.clubId);
+    if (reservation.status === 'CONFIRMED') await this.sendConfirmationEmail(reservation.id);
 
     return {
       reservationId: reservation.id,
@@ -134,6 +144,8 @@ export class ReservationsService {
       holdExpiresAt: null,
       finalStatus: 'CONFIRMED',
     });
+    this.events.emitAvailabilityChanged(slot.clubId);
+    await this.sendConfirmationEmail(reservation.id);
     return { reservationId: reservation.id, status: reservation.status, priceCents, currency: slot.currency };
   }
 
@@ -160,6 +172,7 @@ export class ReservationsService {
       holdExpiresAt: null,
       finalStatus: 'CONFIRMED',
     });
+    this.events.emitAvailabilityChanged(slot.clubId);
     return { reservationId: reservation.id, status: reservation.status };
   }
 
@@ -215,6 +228,7 @@ export class ReservationsService {
         });
         return res;
       });
+      this.events.emitAvailabilityChanged(clubId);
       return { id: updated.id, startsAt: updated.startsAt.toISOString(), priceCents };
     } catch (e) {
       if (isExclusionViolation(e)) throw new AppException('availability_changed', { reason: 'overlap' });
@@ -248,6 +262,7 @@ export class ReservationsService {
     if (r.startsAt > new Date()) throw new AppException('policy_violation', { reason: 'not_started' });
     await this.prisma.reservation.update({ where: { id: reservationId }, data: { status: 'NO_SHOW' } });
     await this.audit(this.prisma, staffUserId, 'reservation.no_show', reservationId, {});
+    this.events.emitAvailabilityChanged(clubId);
     return { id: reservationId, status: 'NO_SHOW' as const };
   }
 
@@ -326,10 +341,24 @@ export class ReservationsService {
       where: { id: reservationId },
       data: { status: 'CANCELLED', cancellationReason: 'hold_expired' },
     });
+    this.events.emitAvailabilityChanged(r.clubId);
   }
 
+  /**
+   * Cancel a reservation and compute the refund from the club's stored policy
+   * (spec §12/§18). Releases inventory (via the isActive trigger), records the
+   * refund intent on the payment, emits a live update, and emails the customer.
+   * Actual PSP settlement of the refund is Phase 7.
+   */
   async cancel(reservationId: number, userId: number, roles: string[], reason?: string) {
-    const r = await this.prisma.reservation.findUnique({ where: { id: reservationId } });
+    const r = await this.prisma.reservation.findUnique({
+      where: { id: reservationId },
+      include: {
+        payment: true,
+        user: { select: { email: true, name: true, locale: true } },
+        club: { select: { name: true, timezone: true } },
+      },
+    });
     if (!r) throw new AppException('not_found');
     const isOwner = r.userId === userId;
     const isStaff = await this.isClubStaff(r.clubId, userId, roles);
@@ -337,11 +366,73 @@ export class ReservationsService {
     if (!['HOLD', 'PENDING_PAYMENT', 'CONFIRMED'].includes(r.status)) {
       throw new AppException('policy_violation', { reason: 'not_cancellable' });
     }
-    await this.prisma.reservation.update({
-      where: { id: reservationId },
-      data: { status: 'CANCELLED', cancellationReason: reason ?? 'user_cancelled' },
+
+    // Refund per the matching cancellation policy tier.
+    let refundCents = 0;
+    if (r.type === 'COURT' || r.type === 'LESSON') {
+      const policy = await this.prisma.cancellationPolicy.findFirst({
+        where: { clubId: r.clubId, appliesTo: r.type },
+      });
+      const tiers = (policy?.tiers as RefundTier[] | undefined) ?? [];
+      refundCents = computeRefund(tiers, hoursUntil(r.startsAt), r.priceCents).refundCents;
+    }
+
+    let refundStatus: 'NONE' | 'PENDING' = 'NONE';
+    await this.prisma.$transaction(async (tx) => {
+      await tx.reservation.update({
+        where: { id: reservationId },
+        data: { status: 'CANCELLED', cancellationReason: reason ?? 'user_cancelled' },
+      });
+      // Record refund intent on a captured online payment (PSP settlement is P7).
+      if (refundCents > 0 && r.payment && r.payment.status === 'CAPTURED') {
+        await tx.payment.update({
+          where: { reservationId },
+          data: {
+            status: refundCents >= r.payment.amountCents ? 'REFUNDED' : 'PARTIALLY_REFUNDED',
+            refundedAt: new Date(),
+          },
+        });
+        refundStatus = 'PENDING';
+      }
+      await this.audit(tx, userId, 'reservation.cancelled', reservationId, {
+        refundCents,
+        reason: reason ?? 'user_cancelled',
+      });
     });
-    return { status: 'CANCELLED' as const, refundCents: 0, refundStatus: 'NONE' as const };
+
+    this.events.emitAvailabilityChanged(r.clubId);
+
+    // Notify the customer (skip synthetic walk-in addresses).
+    if (r.user && !r.user.email.endsWith('@walkin.playslot.local')) {
+      const locale = normalizeLocale(r.user.locale);
+      const when = formatInZone(r.startsAt, r.club.timezone, 'yyyy-MM-dd HH:mm');
+      await this.mail
+        .sendCancellation(r.user.email, { clubName: r.club.name, when, refundCents, currency: r.currency }, locale)
+        .catch(() => undefined);
+    }
+
+    return { status: 'CANCELLED' as const, refundCents, refundStatus };
+  }
+
+  /** Load a confirmed reservation and email the customer (best-effort). */
+  private async sendConfirmationEmail(reservationId: number): Promise<void> {
+    const r = await this.prisma.reservation.findUnique({
+      where: { id: reservationId },
+      include: {
+        user: { select: { email: true, locale: true } },
+        club: { select: { name: true, timezone: true } },
+      },
+    });
+    if (!r || !r.user || r.user.email.endsWith('@walkin.playslot.local')) return;
+    const locale = normalizeLocale(r.user.locale);
+    const when = formatInZone(r.startsAt, r.club.timezone, 'yyyy-MM-dd HH:mm');
+    await this.mail
+      .sendConfirmation(
+        r.user.email,
+        { clubName: r.club.name, when, priceCents: r.priceCents, currency: r.currency },
+        locale,
+      )
+      .catch(() => undefined);
   }
 
   async listMine(userId: number): Promise<ReservationSummary[]> {

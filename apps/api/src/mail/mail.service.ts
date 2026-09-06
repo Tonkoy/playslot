@@ -75,6 +75,44 @@ export class MailService {
     });
   }
 
+  async sendConfirmation(
+    to: string,
+    info: { clubName: string; when: string; priceCents: number; currency: string },
+    locale: ApiLocale = DEFAULT_LOCALE,
+  ): Promise<void> {
+    const price = `${(info.priceCents / 100).toFixed(2)} ${info.currency}`;
+    const copy =
+      locale === 'en'
+        ? {
+            subject: `Booking confirmed — ${info.clubName}`,
+            body: `Your booking at ${info.clubName} on ${info.when} is confirmed. Total: ${price}.`,
+          }
+        : {
+            subject: `Потвърдена резервация — ${info.clubName}`,
+            body: `Резервацията ви в ${info.clubName} на ${info.when} е потвърдена. Общо: ${price}.`,
+          };
+    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+  }
+
+  async sendCancellation(
+    to: string,
+    info: { clubName: string; when: string; refundCents: number; currency: string },
+    locale: ApiLocale = DEFAULT_LOCALE,
+  ): Promise<void> {
+    const refund = `${(info.refundCents / 100).toFixed(2)} ${info.currency}`;
+    const copy =
+      locale === 'en'
+        ? {
+            subject: `Booking cancelled — ${info.clubName}`,
+            body: `Your booking at ${info.clubName} on ${info.when} was cancelled.${info.refundCents > 0 ? ` Refund: ${refund}.` : ''}`,
+          }
+        : {
+            subject: `Отменена резервация — ${info.clubName}`,
+            body: `Резервацията ви в ${info.clubName} на ${info.when} беше отменена.${info.refundCents > 0 ? ` Възстановена сума: ${refund}.` : ''}`,
+          };
+    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+  }
+
   async sendPasswordReset(
     to: string,
     link: string,

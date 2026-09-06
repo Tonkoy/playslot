@@ -2,10 +2,11 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { CalendarEntry } from '@playslot/contracts';
 import { Modal } from '@/components/Modal';
 import {
+  CLIENT_BASE,
   cancelReservationAsStaff,
   createBlock,
   createManualBooking,
@@ -55,6 +56,14 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
   const [durationMin, setDurationMin] = useState(60);
 
   const cal = useQuery({ queryKey: ['calendar', clubId, date], queryFn: () => getCalendar(clubId, date) });
+
+  // Live updates: refetch the calendar when bookings change for this club.
+  useEffect(() => {
+    const es = new EventSource(`${CLIENT_BASE}/api/availability/stream?clubId=${clubId}`);
+    es.onmessage = () => qc.invalidateQueries({ queryKey: ['calendar', clubId] });
+    return () => es.close();
+  }, [clubId, qc]);
+
   const tz = cal.data?.timezone ?? 'Europe/Sofia';
   const step = cal.data?.slotIntervalMin ?? 60;
 

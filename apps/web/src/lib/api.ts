@@ -133,6 +133,30 @@ export function getMe(): Promise<{ user: Me }> {
   return apiFetch('/auth/me');
 }
 
+export function register(input: {
+  name: string;
+  email: string;
+  password: string;
+  confirm: string;
+  acceptTerms: true;
+  subscribe?: boolean;
+  isVisible?: boolean;
+}): Promise<{ user: Me; message: string }> {
+  return apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function requestPasswordReset(email: string): Promise<{ message: string }> {
+  return apiFetch('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) });
+}
+
+export function resetPassword(token: string, password: string): Promise<{ message: string }> {
+  return apiFetch('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) });
+}
+
+export function verifyEmail(token: string): Promise<{ message: string }> {
+  return apiFetch('/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) });
+}
+
 export function getMyClubs(): Promise<MyClubMembership[]> {
   return apiFetch('/me/clubs');
 }

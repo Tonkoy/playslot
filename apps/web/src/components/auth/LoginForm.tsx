@@ -3,7 +3,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
-import { useRouter } from '@/i18n/navigation';
+import { Link, useRouter } from '@/i18n/navigation';
 import { googleLoginUrl, login } from '@/lib/api';
 
 export function LoginForm({ locale, returnTo }: { locale: string; returnTo: string }) {
@@ -74,6 +74,15 @@ export function LoginForm({ locale, returnTo }: { locale: string; returnTo: stri
       <a href={googleLoginUrl(returnTo)} style={googleBtn}>
         {t('google')}
       </a>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16, fontSize: 14 }}>
+        <Link href="/register" style={{ color: 'var(--teal)' }}>
+          {t('signUp')}
+        </Link>
+        <Link href="/forgot-password" style={{ color: 'var(--ink-3)' }}>
+          {t('forgot')}
+        </Link>
+      </div>
     </div>
   );
 }

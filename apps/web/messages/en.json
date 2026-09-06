@@ -20,7 +20,55 @@
     "password": "Password",
     "submit": "Log in",
     "or": "or",
-    "google": "Continue with Google"
+    "google": "Continue with Google",
+    "signUp": "No account? Sign up",
+    "forgot": "Forgot password?"
+  },
+  "Register": {
+    "title": "Sign up",
+    "subtitle": "Create an account to book courts and lessons.",
+    "name": "Name",
+    "email": "Email",
+    "password": "Password",
+    "confirm": "Confirm password",
+    "acceptTerms": "I accept the terms and privacy policy.",
+    "subscribe": "Send me news by email.",
+    "submit": "Sign up",
+    "or": "or",
+    "google": "Sign up with Google",
+    "haveAccount": "Already have an account?",
+    "logIn": "Log in",
+    "passwordMismatch": "Passwords do not match.",
+    "successTitle": "Registration successful!",
+    "successBody": "We sent a verification email. Confirm it before your first booking.",
+    "browseClubs": "Browse clubs"
+  },
+  "ForgotPassword": {
+    "title": "Forgot password",
+    "subtitle": "Enter your email and we'll send a reset link.",
+    "email": "Email",
+    "submit": "Send link",
+    "sent": "If the email exists, we sent a password reset link.",
+    "backToLogin": "Back to log in"
+  },
+  "ResetPassword": {
+    "title": "New password",
+    "subtitle": "Choose a new password for your account.",
+    "newPassword": "New password",
+    "confirm": "Confirm password",
+    "submit": "Save password",
+    "mismatch": "Passwords do not match.",
+    "success": "Your password was changed successfully.",
+    "toLogin": "Log in",
+    "backToLogin": "Back to log in",
+    "missingToken": "Missing or invalid reset token."
+  },
+  "VerifyEmail": {
+    "title": "Email verification",
+    "verifying": "Verifying…",
+    "ok": "Email verified!",
+    "toLogin": "Log in",
+    "error": "The link is invalid or expired."
   },
   "Admin": {
     "title": "Manage",

@@ -1,11 +1,15 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import type { ServerEnv } from '@playslot/config';
 import {
+  type BlockInput,
+  type CalendarResponse,
   type CreateReservationInput,
   type CreateReservationResponse,
+  type ManualBookingInput,
   type ReservationSummary,
+  type RescheduleInput,
 } from '@playslot/contracts';
-import { Prisma, type ReservationSource } from '@playslot/db';
+import { Prisma, type PaymentMethod, type ReservationSource, type ReservationType } from '@playslot/db';
 import {
   formatInZone,
   instantFromDayMinutes,
@@ -24,6 +28,19 @@ interface Actor {
   emailVerified: boolean;
 }
 
+interface ResolvedSlot {
+  clubId: number;
+  timezone: string;
+  currency: string;
+  slotIntervalMin: number;
+  start: Date;
+  end: Date;
+  weekday: number;
+  startMin: number;
+  endMin: number;
+  resourceIds: number[];
+}
+
 @Injectable()
 export class ReservationsService {
   constructor(
@@ -33,257 +50,284 @@ export class ReservationsService {
     private readonly holds: HoldQueueService,
   ) {}
 
-  /**
-   * Create a booking (spec §8). Runs the exact flow: validate → open txn → lock
-   * the resources → re-check overlap → insert HOLD + one ReservationResource per
-   * resource (the EXCLUDE constraint is the final guard) → confirm or start the
-   * payment path. Price is always recomputed server-side.
-   */
+  // ── player self-booking (spec §8) ──
   async createReservation(
     input: CreateReservationInput,
     actor: Actor,
     source: ReservationSource = 'WEB',
   ): Promise<CreateReservationResponse> {
-    const start = new Date(input.startsAt);
-    if (Number.isNaN(start.getTime())) {
-      throw new AppException('validation_failed', { fields: { startsAt: ['invalid'] } });
-    }
-    const end = new Date(start.getTime() + input.durationMin * 60_000);
-
-    const club = await this.prisma.club.findFirst({
-      where: { id: input.clubId, status: 'ACTIVE' },
-      select: { id: true, timezone: true, slotIntervalMin: true, currency: true },
-    });
-    if (!club) throw new AppException('not_found');
-
-    // Email must be verified before a first confirmed booking (spec §12).
     if (source === 'WEB' && !actor.emailVerified) {
       throw new AppException('policy_violation', { reason: 'email_not_verified' });
     }
 
-    // Timing policy (spec §12): no past bookings, respect max advance window.
-    const now = new Date();
-    if (start.getTime() <= now.getTime()) {
-      throw new AppException('policy_violation', { reason: 'in_past' });
-    }
-    const maxAdvanceMs = this.env.MAX_ADVANCE_DAYS * 24 * 60 * 60_000;
-    if (start.getTime() - now.getTime() > maxAdvanceMs) {
-      throw new AppException('policy_violation', { reason: 'beyond_max_advance' });
-    }
-
-    // Resolve the local grid position and validate alignment to the club slot time.
-    const tz = club.timezone;
-    const isoDate = formatInZone(start, tz, 'yyyy-MM-dd');
-    const hhmm = formatInZone(start, tz, 'HH:mm');
-    const [h, m] = hhmm.split(':').map(Number);
-    const startMin = h! * 60 + m!;
-    const endMin = startMin + input.durationMin;
-
-    if (instantFromDayMinutes(isoDate, startMin, tz).getTime() !== start.getTime()) {
-      throw new AppException('policy_violation', { reason: 'invalid_start' });
-    }
-    if (startMin % club.slotIntervalMin !== 0 || input.durationMin % club.slotIntervalMin !== 0) {
-      throw new AppException('policy_violation', { reason: 'misaligned_slot' });
-    }
-    if (endMin > 24 * 60) {
-      throw new AppException('policy_violation', { reason: 'crosses_midnight' });
-    }
-    const weekday = weekdayInZone(isoDate, tz);
-
-    // Resources must belong to the club, be ACTIVE, and be open at that time.
-    const resources = await this.prisma.resource.findMany({
-      where: { id: { in: input.resourceIds }, clubId: club.id, status: 'ACTIVE' },
-      include: { availabilityRules: true, exceptions: true },
+    const slot = await this.resolveSlot({
+      clubId: input.clubId,
+      startsAt: input.startsAt,
+      durationMin: input.durationMin,
+      resourceIds: input.resourceIds,
+      enforceHours: true,
     });
-    if (resources.length !== input.resourceIds.length) {
-      throw new AppException('not_found', { reason: 'resource' });
-    }
-    for (const r of resources) {
-      const open = r.availabilityRules.some(
-        (rule) => rule.weekday === weekday && rule.startMin <= startMin && rule.endMin >= endMin,
-      );
-      if (!open) throw new AppException('availability_changed', { reason: 'closed' });
-      if (input.durationMin < r.minReservationMin) {
-        throw new AppException('policy_violation', { reason: 'below_min_duration' });
-      }
-      const closed = r.exceptions.some((e) => e.startsAt < end && start < e.endsAt);
-      if (closed) throw new AppException('availability_changed', { reason: 'exception' });
-    }
 
-    // Recompute the price server-side (golden rule §2.2). Court booking prices on
-    // the resource; a single-resource booking prices that resource.
-    const priceRules = await this.loadPriceRules(club.id);
-    const priceResourceId = resources.length === 1 ? resources[0]!.id : undefined;
-    let priceCents: number;
-    try {
-      priceCents = resolvePrice(priceRules, {
-        weekday,
-        slotStartMin: startMin,
-        slotEndMin: endMin,
-        durationMin: input.durationMin,
-        date: start,
-        resourceId: priceResourceId,
-      }).priceCents;
-    } catch {
-      throw new AppException('policy_violation', { reason: 'no_price' });
-    }
-
+    const priceCents = this.priceFor(await this.loadPriceRules(slot.clubId), slot);
     const online = requiresOnlinePayment(input.paymentMethod);
-    const holdExpiresAt = new Date(now.getTime() + this.env.HOLD_TTL_MIN * 60_000);
+    const holdExpiresAt = new Date(Date.now() + this.env.HOLD_TTL_MIN * 60_000);
 
     const reservation = await this.runBookingTransaction({
-      clubId: club.id,
+      slot,
       userId: actor.userId,
+      actorUserId: actor.userId,
       type: input.type,
       source,
-      start,
-      end,
-      resourceIds: input.resourceIds,
       priceCents,
-      currency: club.currency,
       paymentMethod: input.paymentMethod,
       participants: input.participants ?? null,
       holdExpiresAt,
-      online,
+      finalStatus: online ? 'PENDING_PAYMENT' : 'CONFIRMED',
     });
 
-    // Only the payment path leaves a live hold to expire (spec §8/§19).
-    if (online) {
-      await this.holds.scheduleExpiry(reservation.id, holdExpiresAt);
-    }
+    if (online) await this.holds.scheduleExpiry(reservation.id, holdExpiresAt);
 
     return {
       reservationId: reservation.id,
       status: reservation.status,
       holdExpiresAt: reservation.holdExpiresAt ? reservation.holdExpiresAt.toISOString() : null,
       priceCents,
-      currency: club.currency,
+      currency: slot.currency,
       next: online ? { action: 'PAY' } : { action: 'CONFIRMED' },
     };
   }
 
-  private async runBookingTransaction(args: {
-    clubId: number;
-    userId: number;
-    type: 'COURT' | 'LESSON';
-    source: ReservationSource;
-    start: Date;
-    end: Date;
-    resourceIds: number[];
-    priceCents: number;
-    currency: string;
-    paymentMethod: CreateReservationInput['paymentMethod'];
-    participants: unknown;
-    holdExpiresAt: Date;
-    online: boolean;
-  }) {
-    try {
-      return await this.prisma.$transaction(async (tx) => {
-        // Serialize concurrent bookings for these resources (spec §8 step 4).
-        await tx.$queryRaw(
-          Prisma.sql`SELECT id FROM "Resource" WHERE id IN (${Prisma.join(args.resourceIds)}) AND "clubId" = ${args.clubId} FOR UPDATE`,
-        );
+  // ── staff manual/phone booking (spec §16) — same inventory, confirmed at once ──
+  async createManual(clubId: number, input: ManualBookingInput, staffUserId: number) {
+    const slot = await this.resolveSlot({
+      clubId,
+      startsAt: input.startsAt,
+      durationMin: input.durationMin,
+      resourceIds: input.resourceIds,
+      enforceHours: true,
+    });
+    const customerUserId = await this.resolveCustomer(clubId, input);
+    const priceCents = this.priceFor(await this.loadPriceRules(clubId), slot);
 
-        // Re-check overlap against active reservations/holds (step 5).
+    const reservation = await this.runBookingTransaction({
+      slot,
+      userId: customerUserId,
+      actorUserId: staffUserId,
+      type: input.type,
+      source: 'CLUB_STAFF',
+      priceCents,
+      paymentMethod: input.paymentMethod,
+      participants: input.customer ? { name: input.customer.name } : null,
+      holdExpiresAt: null,
+      finalStatus: 'CONFIRMED',
+    });
+    return { reservationId: reservation.id, status: reservation.status, priceCents, currency: slot.currency };
+  }
+
+  // ── block a resource (maintenance/closure) ──
+  async createBlock(clubId: number, input: BlockInput, staffUserId: number) {
+    const slot = await this.resolveSlot({
+      clubId,
+      startsAt: input.startsAt,
+      durationMin: input.durationMin,
+      resourceIds: input.resourceIds,
+      enforceHours: false, // staff may block outside operating hours
+      allowMidnightCross: true,
+    });
+
+    const reservation = await this.runBookingTransaction({
+      slot,
+      userId: staffUserId,
+      actorUserId: staffUserId,
+      type: 'BLOCK',
+      source: 'CLUB_STAFF',
+      priceCents: 0,
+      paymentMethod: 'FREE',
+      participants: input.reason ? { reason: input.reason } : null,
+      holdExpiresAt: null,
+      finalStatus: 'CONFIRMED',
+    });
+    return { reservationId: reservation.id, status: reservation.status };
+  }
+
+  // ── move / reschedule / change court (re-runs conflict logic) ──
+  async reschedule(clubId: number, reservationId: number, input: RescheduleInput, staffUserId: number) {
+    const existing = await this.prisma.reservation.findFirst({ where: { id: reservationId, clubId } });
+    if (!existing) throw new AppException('not_found');
+    if (!['HOLD', 'PENDING_PAYMENT', 'CONFIRMED'].includes(existing.status)) {
+      throw new AppException('policy_violation', { reason: 'not_reschedulable' });
+    }
+
+    const slot = await this.resolveSlot({
+      clubId,
+      startsAt: input.startsAt,
+      durationMin: input.durationMin,
+      resourceIds: input.resourceIds,
+      enforceHours: existing.type === 'COURT' || existing.type === 'LESSON',
+      allowMidnightCross: existing.type === 'BLOCK',
+    });
+    const priceCents =
+      existing.type === 'BLOCK' ? 0 : this.priceFor(await this.loadPriceRules(clubId), slot);
+
+    try {
+      const updated = await this.prisma.$transaction(async (tx) => {
+        // Drop old resource rows so they don't self-conflict, then re-insert.
+        await tx.$executeRaw(
+          Prisma.sql`DELETE FROM "ReservationResource" WHERE "reservationId" = ${reservationId}`,
+        );
+        await tx.$queryRaw(
+          Prisma.sql`SELECT id FROM "Resource" WHERE id IN (${Prisma.join(slot.resourceIds)}) AND "clubId" = ${clubId} FOR UPDATE`,
+        );
         const conflicts = await tx.$queryRaw<Array<{ one: number }>>(
           Prisma.sql`SELECT 1 as one FROM "ReservationResource"
-                     WHERE "isActive" AND "resourceId" IN (${Prisma.join(args.resourceIds)})
-                       AND period && tstzrange(${args.start}, ${args.end}, '[)') LIMIT 1`,
+                     WHERE "isActive" AND "resourceId" IN (${Prisma.join(slot.resourceIds)})
+                       AND period && tstzrange(${slot.start}, ${slot.end}, '[)') LIMIT 1`,
         );
-        if (conflicts.length > 0) {
-          throw new AppException('availability_changed', { reason: 'overlap' });
-        }
+        if (conflicts.length > 0) throw new AppException('availability_changed', { reason: 'overlap' });
 
-        const reservation = await tx.reservation.create({
-          data: {
-            clubId: args.clubId,
-            userId: args.userId,
-            type: args.type,
-            status: 'HOLD',
-            source: args.source,
-            startsAt: args.start,
-            endsAt: args.end,
-            priceCents: args.priceCents,
-            currency: args.currency,
-            paymentMethod: args.paymentMethod,
-            holdExpiresAt: args.holdExpiresAt,
-            participants: (args.participants ?? undefined) as Prisma.InputJsonValue | undefined,
-          },
-        });
-
-        // One ReservationResource per resource; the EXCLUDE constraint is the
-        // final guard — a concurrent overlapping insert throws 23P01 (step 7).
-        for (const resourceId of args.resourceIds) {
+        const active = ['HOLD', 'PENDING_PAYMENT', 'CONFIRMED', 'COMPLETED'].includes(existing.status);
+        for (const resourceId of slot.resourceIds) {
           await tx.$executeRaw(
             Prisma.sql`INSERT INTO "ReservationResource" ("reservationId", "resourceId", period, "isActive")
-                       VALUES (${reservation.id}, ${resourceId}, tstzrange(${args.start}, ${args.end}, '[)'), true)`,
+                       VALUES (${reservationId}, ${resourceId}, tstzrange(${slot.start}, ${slot.end}, '[)'), ${active})`,
           );
         }
-
-        // On-site/free/multisport confirm immediately; online waits for payment.
-        const nextStatus = args.online ? 'PENDING_PAYMENT' : 'CONFIRMED';
-        const updated = await tx.reservation.update({
-          where: { id: reservation.id },
-          data: {
-            status: nextStatus,
-            holdExpiresAt: args.online ? args.holdExpiresAt : null,
-          },
+        const res = await tx.reservation.update({
+          where: { id: reservationId },
+          data: { startsAt: slot.start, endsAt: slot.end, priceCents },
         });
-
-        await tx.auditLog.create({
-          data: {
-            actorUserId: args.userId,
-            action: `reservation.${nextStatus.toLowerCase()}`,
-            objectType: 'Reservation',
-            objectId: reservation.id,
-            after: { status: nextStatus, priceCents: args.priceCents } as Prisma.InputJsonValue,
-          },
+        await this.audit(tx, staffUserId, 'reservation.rescheduled', reservationId, {
+          startsAt: slot.start.toISOString(),
+          resourceIds: slot.resourceIds,
         });
-
-        return updated;
+        return res;
       });
+      return { id: updated.id, startsAt: updated.startsAt.toISOString(), priceCents };
     } catch (e) {
-      if (isExclusionViolation(e)) {
-        throw new AppException('availability_changed', { reason: 'overlap' });
-      }
+      if (isExclusionViolation(e)) throw new AppException('availability_changed', { reason: 'overlap' });
       throw e;
     }
   }
 
-  /**
-   * Expire a hold if still unpaid (idempotent — safe to run twice). Called by the
-   * BullMQ worker; also directly callable/testable without Redis.
-   */
-  async expireHold(reservationId: number): Promise<void> {
-    const reservation = await this.prisma.reservation.findUnique({ where: { id: reservationId } });
-    if (!reservation) return;
-    if (reservation.status !== 'HOLD' && reservation.status !== 'PENDING_PAYMENT') return;
-    if (reservation.holdExpiresAt && reservation.holdExpiresAt > new Date()) return; // not due yet
+  async markPaid(clubId: number, reservationId: number, staffUserId: number) {
+    const r = await this.prisma.reservation.findFirst({ where: { id: reservationId, clubId } });
+    if (!r) throw new AppException('not_found');
+    await this.prisma.payment.upsert({
+      where: { reservationId },
+      create: {
+        reservationId,
+        provider: 'manual',
+        amountCents: r.priceCents,
+        currency: r.currency,
+        status: 'CAPTURED',
+        capturedAt: new Date(),
+      },
+      update: { status: 'CAPTURED', capturedAt: new Date() },
+    });
+    await this.audit(this.prisma, staffUserId, 'reservation.marked_paid', reservationId, {});
+    return { id: reservationId, paymentStatus: 'CAPTURED' as const };
+  }
 
+  async markNoShow(clubId: number, reservationId: number, staffUserId: number) {
+    const r = await this.prisma.reservation.findFirst({ where: { id: reservationId, clubId } });
+    if (!r) throw new AppException('not_found');
+    if (r.status !== 'CONFIRMED') throw new AppException('policy_violation', { reason: 'not_confirmed' });
+    if (r.startsAt > new Date()) throw new AppException('policy_violation', { reason: 'not_started' });
+    await this.prisma.reservation.update({ where: { id: reservationId }, data: { status: 'NO_SHOW' } });
+    await this.audit(this.prisma, staffUserId, 'reservation.no_show', reservationId, {});
+    return { id: reservationId, status: 'NO_SHOW' as const };
+  }
+
+  // ── calendar & customers ──
+  async getCalendar(clubId: number, isoDate: string): Promise<CalendarResponse> {
+    const club = await this.prisma.club.findFirst({
+      where: { id: clubId },
+      select: { timezone: true, slotIntervalMin: true },
+    });
+    if (!club) throw new AppException('not_found');
+    const tz = club.timezone;
+    const dayStart = instantFromDayMinutes(isoDate, 0, tz);
+    const dayEnd = instantFromDayMinutes(isoDate, 24 * 60, tz);
+
+    const [courts, reservations] = await Promise.all([
+      this.prisma.resource.findMany({
+        where: { clubId, type: 'COURT' },
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.reservation.findMany({
+        where: {
+          clubId,
+          status: { in: ['HOLD', 'PENDING_PAYMENT', 'CONFIRMED', 'COMPLETED', 'NO_SHOW'] },
+          startsAt: { lt: dayEnd },
+          endsAt: { gt: dayStart },
+        },
+        include: {
+          resources: { select: { resourceId: true } },
+          user: { select: { name: true } },
+          payment: { select: { status: true } },
+        },
+      }),
+    ]);
+
+    return {
+      date: isoDate,
+      timezone: tz,
+      slotIntervalMin: club.slotIntervalMin,
+      courts,
+      entries: reservations.map((r) => ({
+        id: r.id,
+        type: r.type,
+        status: r.status,
+        source: r.source,
+        // Offset-aware ISO so the UI reads local wall-clock from HH:mm (like /availability).
+        startsAt: formatInZone(r.startsAt, tz),
+        endsAt: formatInZone(r.endsAt, tz),
+        resourceIds: r.resources.map((x) => x.resourceId),
+        customerName: r.type === 'BLOCK' ? null : (r.user?.name ?? null),
+        priceCents: r.priceCents,
+        currency: r.currency,
+        paymentMethod: r.paymentMethod,
+        paymentStatus: r.payment?.status ?? null,
+      })),
+    };
+  }
+
+  async listCustomers(clubId: number) {
+    const rows = await this.prisma.reservation.findMany({
+      where: { clubId, type: { in: ['COURT', 'LESSON'] } },
+      distinct: ['userId'],
+      select: { user: { select: { id: true, name: true, email: true, phone: true } } },
+      orderBy: { userId: 'asc' },
+    });
+    return rows.map((r) => r.user);
+  }
+
+  // ── hold expiry + cancel + reads (spec §6) ──
+  async expireHold(reservationId: number): Promise<void> {
+    const r = await this.prisma.reservation.findUnique({ where: { id: reservationId } });
+    if (!r) return;
+    if (r.status !== 'HOLD' && r.status !== 'PENDING_PAYMENT') return;
+    if (r.holdExpiresAt && r.holdExpiresAt > new Date()) return;
     await this.prisma.reservation.update({
       where: { id: reservationId },
       data: { status: 'CANCELLED', cancellationReason: 'hold_expired' },
     });
-    // The isActive trigger releases the ReservationResource rows automatically.
   }
 
   async cancel(reservationId: number, userId: number, roles: string[], reason?: string) {
-    const reservation = await this.prisma.reservation.findUnique({ where: { id: reservationId } });
-    if (!reservation) throw new AppException('not_found');
-
-    const isOwner = reservation.userId === userId;
-    const isStaff = await this.isClubStaff(reservation.clubId, userId, roles);
+    const r = await this.prisma.reservation.findUnique({ where: { id: reservationId } });
+    if (!r) throw new AppException('not_found');
+    const isOwner = r.userId === userId;
+    const isStaff = await this.isClubStaff(r.clubId, userId, roles);
     if (!isOwner && !isStaff) throw new AppException('forbidden');
-
-    if (!['HOLD', 'PENDING_PAYMENT', 'CONFIRMED'].includes(reservation.status)) {
+    if (!['HOLD', 'PENDING_PAYMENT', 'CONFIRMED'].includes(r.status)) {
       throw new AppException('policy_violation', { reason: 'not_cancellable' });
     }
-
     await this.prisma.reservation.update({
       where: { id: reservationId },
       data: { status: 'CANCELLED', cancellationReason: reason ?? 'user_cancelled' },
     });
-    // Refund computation per policy is Phase 6; inventory is released by the trigger.
     return { status: 'CANCELLED' as const, refundCents: 0, refundStatus: 'NONE' as const };
   }
 
@@ -308,7 +352,200 @@ export class ReservationsService {
     return this.toSummary(r);
   }
 
-  // ── helpers ──
+  // ── shared internals ──
+  private async resolveSlot(opts: {
+    clubId: number;
+    startsAt: string;
+    durationMin: number;
+    resourceIds: number[];
+    enforceHours: boolean;
+    allowMidnightCross?: boolean;
+  }): Promise<ResolvedSlot> {
+    const start = new Date(opts.startsAt);
+    if (Number.isNaN(start.getTime())) {
+      throw new AppException('validation_failed', { fields: { startsAt: ['invalid'] } });
+    }
+    const end = new Date(start.getTime() + opts.durationMin * 60_000);
+
+    const club = await this.prisma.club.findFirst({
+      where: { id: opts.clubId, status: 'ACTIVE' },
+      select: { id: true, timezone: true, slotIntervalMin: true, currency: true },
+    });
+    if (!club) throw new AppException('not_found');
+
+    const now = new Date();
+    if (start.getTime() <= now.getTime()) throw new AppException('policy_violation', { reason: 'in_past' });
+    if (start.getTime() - now.getTime() > this.env.MAX_ADVANCE_DAYS * 86_400_000) {
+      throw new AppException('policy_violation', { reason: 'beyond_max_advance' });
+    }
+
+    const tz = club.timezone;
+    const isoDate = formatInZone(start, tz, 'yyyy-MM-dd');
+    const [h, m] = formatInZone(start, tz, 'HH:mm').split(':').map(Number);
+    const startMin = h! * 60 + m!;
+    const endMin = startMin + opts.durationMin;
+
+    if (instantFromDayMinutes(isoDate, startMin, tz).getTime() !== start.getTime()) {
+      throw new AppException('policy_violation', { reason: 'invalid_start' });
+    }
+    if (startMin % club.slotIntervalMin !== 0 || opts.durationMin % club.slotIntervalMin !== 0) {
+      throw new AppException('policy_violation', { reason: 'misaligned_slot' });
+    }
+    if (!opts.allowMidnightCross && endMin > 24 * 60) {
+      throw new AppException('policy_violation', { reason: 'crosses_midnight' });
+    }
+    const weekday = weekdayInZone(isoDate, tz);
+
+    const resources = await this.prisma.resource.findMany({
+      where: { id: { in: opts.resourceIds }, clubId: club.id, status: 'ACTIVE' },
+      include: { availabilityRules: true, exceptions: true },
+    });
+    if (resources.length !== opts.resourceIds.length) {
+      throw new AppException('not_found', { reason: 'resource' });
+    }
+    for (const r of resources) {
+      if (opts.enforceHours) {
+        const open = r.availabilityRules.some(
+          (rule) => rule.weekday === weekday && rule.startMin <= startMin && rule.endMin >= endMin,
+        );
+        if (!open) throw new AppException('availability_changed', { reason: 'closed' });
+        if (opts.durationMin < r.minReservationMin) {
+          throw new AppException('policy_violation', { reason: 'below_min_duration' });
+        }
+      }
+      if (r.exceptions.some((e) => e.startsAt < end && start < e.endsAt)) {
+        throw new AppException('availability_changed', { reason: 'exception' });
+      }
+    }
+
+    return {
+      clubId: club.id,
+      timezone: tz,
+      currency: club.currency,
+      slotIntervalMin: club.slotIntervalMin,
+      start,
+      end,
+      weekday,
+      startMin,
+      endMin,
+      resourceIds: opts.resourceIds,
+    };
+  }
+
+  private priceFor(rules: PriceRuleLike[], slot: ResolvedSlot): number {
+    try {
+      return resolvePrice(rules, {
+        weekday: slot.weekday,
+        slotStartMin: slot.startMin,
+        slotEndMin: slot.endMin,
+        durationMin: slot.endMin - slot.startMin,
+        date: slot.start,
+        resourceId: slot.resourceIds.length === 1 ? slot.resourceIds[0] : undefined,
+      }).priceCents;
+    } catch {
+      throw new AppException('policy_violation', { reason: 'no_price' });
+    }
+  }
+
+  private async runBookingTransaction(args: {
+    slot: ResolvedSlot;
+    userId: number;
+    actorUserId: number;
+    type: ReservationType;
+    source: ReservationSource;
+    priceCents: number;
+    paymentMethod: PaymentMethod;
+    participants: unknown;
+    holdExpiresAt: Date | null;
+    finalStatus: 'CONFIRMED' | 'PENDING_PAYMENT';
+  }) {
+    const { slot } = args;
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        await tx.$queryRaw(
+          Prisma.sql`SELECT id FROM "Resource" WHERE id IN (${Prisma.join(slot.resourceIds)}) AND "clubId" = ${slot.clubId} FOR UPDATE`,
+        );
+        const conflicts = await tx.$queryRaw<Array<{ one: number }>>(
+          Prisma.sql`SELECT 1 as one FROM "ReservationResource"
+                     WHERE "isActive" AND "resourceId" IN (${Prisma.join(slot.resourceIds)})
+                       AND period && tstzrange(${slot.start}, ${slot.end}, '[)') LIMIT 1`,
+        );
+        if (conflicts.length > 0) throw new AppException('availability_changed', { reason: 'overlap' });
+
+        const reservation = await tx.reservation.create({
+          data: {
+            clubId: slot.clubId,
+            userId: args.userId,
+            type: args.type,
+            status: 'HOLD',
+            source: args.source,
+            startsAt: slot.start,
+            endsAt: slot.end,
+            priceCents: args.priceCents,
+            currency: slot.currency,
+            paymentMethod: args.paymentMethod,
+            holdExpiresAt: args.holdExpiresAt,
+            participants: (args.participants ?? undefined) as Prisma.InputJsonValue | undefined,
+          },
+        });
+        for (const resourceId of slot.resourceIds) {
+          await tx.$executeRaw(
+            Prisma.sql`INSERT INTO "ReservationResource" ("reservationId", "resourceId", period, "isActive")
+                       VALUES (${reservation.id}, ${resourceId}, tstzrange(${slot.start}, ${slot.end}, '[)'), true)`,
+          );
+        }
+        const updated = await tx.reservation.update({
+          where: { id: reservation.id },
+          data: {
+            status: args.finalStatus,
+            holdExpiresAt: args.finalStatus === 'PENDING_PAYMENT' ? args.holdExpiresAt : null,
+          },
+        });
+        await this.audit(tx, args.actorUserId, `reservation.${args.finalStatus.toLowerCase()}`, reservation.id, {
+          status: args.finalStatus,
+          priceCents: args.priceCents,
+          source: args.source,
+        });
+        return updated;
+      });
+    } catch (e) {
+      if (isExclusionViolation(e)) throw new AppException('availability_changed', { reason: 'overlap' });
+      throw e;
+    }
+  }
+
+  private async resolveCustomer(clubId: number, input: ManualBookingInput): Promise<number> {
+    if (input.customerUserId) {
+      const u = await this.prisma.user.findUnique({ where: { id: input.customerUserId } });
+      if (!u) throw new AppException('not_found', { reason: 'customer' });
+      return u.id;
+    }
+    const c = input.customer!;
+    if (c.email) {
+      const existing = await this.prisma.user.findUnique({ where: { email: c.email.toLowerCase() } });
+      if (existing) return existing.id;
+      const created = await this.prisma.user.create({
+        data: {
+          email: c.email.toLowerCase(),
+          name: c.name,
+          phone: c.phone,
+          roles: { create: [{ role: 'PLAYER' }] },
+        },
+      });
+      return created.id;
+    }
+    // Walk-in with no email — synthesize a unique placeholder identity.
+    const created = await this.prisma.user.create({
+      data: {
+        email: `walkin-${clubId}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@walkin.playslot.local`,
+        name: c.name,
+        phone: c.phone,
+        roles: { create: [{ role: 'PLAYER' }] },
+      },
+    });
+    return created.id;
+  }
+
   private toSummary(r: {
     id: number;
     clubId: number;
@@ -363,12 +600,29 @@ export class ReservationsService {
       active: r.active,
     }));
   }
+
+  private audit(
+    db: Pick<PrismaService, 'auditLog'> | Prisma.TransactionClient,
+    actorUserId: number,
+    action: string,
+    objectId: number,
+    after: Record<string, unknown>,
+  ) {
+    return db.auditLog.create({
+      data: {
+        actorUserId,
+        action,
+        objectType: 'Reservation',
+        objectId,
+        after: after as Prisma.InputJsonValue,
+      },
+    });
+  }
 }
 
 /** Postgres exclusion_violation (23P01) surfaced through Prisma raw queries. */
 function isExclusionViolation(e: unknown): boolean {
   if (e instanceof Prisma.PrismaClientKnownRequestError) {
-    // P2010 = raw query failed; the DB code/message carries 23P01.
     const meta = e.meta as { code?: string; message?: string } | undefined;
     if (meta?.code === '23P01') return true;
     if (typeof meta?.message === 'string' && meta.message.includes('no_resource_overlap')) return true;

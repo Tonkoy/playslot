@@ -1,4 +1,4 @@
-import type { AvailabilityResponse } from '@playslot/contracts';
+import type { AvailabilityResponse, CalendarResponse, ReservationSummary } from '@playslot/contracts';
 
 /**
  * Thin typed client for the PlaySlot API. Server components use the server base
@@ -173,6 +173,77 @@ export function adminUpdateClubSettings(
     method: 'PATCH',
     body: JSON.stringify({ slotIntervalMin }),
   });
+}
+
+// ── Club OS (staff) ──
+export function getCalendar(clubId: number, date: string): Promise<CalendarResponse> {
+  return apiFetch(`/clubs/${clubId}/calendar?date=${date}`);
+}
+
+export function createManualBooking(
+  clubId: number,
+  input: { startsAt: string; durationMin: number; resourceIds: number[]; customer: { name: string }; paymentMethod?: string },
+): Promise<{ reservationId: number; status: string }> {
+  return apiFetch(`/clubs/${clubId}/reservations`, { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function createBlock(
+  clubId: number,
+  input: { startsAt: string; durationMin: number; resourceIds: number[]; reason?: string },
+): Promise<{ reservationId: number; status: string }> {
+  return apiFetch(`/clubs/${clubId}/blocks`, { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function rescheduleReservation(
+  clubId: number,
+  id: number,
+  input: { startsAt: string; durationMin: number; resourceIds: number[] },
+): Promise<{ id: number }> {
+  return apiFetch(`/clubs/${clubId}/reservations/${id}`, { method: 'PATCH', body: JSON.stringify(input) });
+}
+
+export function cancelReservationAsStaff(clubId: number, id: number, reason?: string): Promise<{ status: string }> {
+  return apiFetch(`/clubs/${clubId}/reservations/${id}/cancel`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export function markReservationPaid(clubId: number, id: number): Promise<{ paymentStatus: string }> {
+  return apiFetch(`/clubs/${clubId}/reservations/${id}/mark-paid`, { method: 'POST' });
+}
+
+export function markReservationNoShow(clubId: number, id: number): Promise<{ status: string }> {
+  return apiFetch(`/clubs/${clubId}/reservations/${id}/no-show`, { method: 'POST' });
+}
+
+// ── consumer booking ──
+export interface CreateReservationResult {
+  reservationId: number;
+  status: string;
+  holdExpiresAt: string | null;
+  priceCents: number;
+  currency: string;
+  next: { action: 'PAY' | 'CONFIRMED'; checkoutUrl?: string };
+}
+
+export function createReservation(input: {
+  clubId: number;
+  type: 'COURT' | 'LESSON';
+  startsAt: string;
+  durationMin: number;
+  paymentMethod: string;
+  resourceIds: number[];
+}): Promise<CreateReservationResult> {
+  return apiFetch('/reservations', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function getMyReservations(): Promise<ReservationSummary[]> {
+  return apiFetch('/me/reservations');
+}
+
+export function cancelMyReservation(id: number, reason?: string): Promise<{ status: string }> {
+  return apiFetch(`/reservations/${id}/cancel`, { method: 'POST', body: JSON.stringify({ reason }) });
 }
 
 // ── client-side read (grid) ──

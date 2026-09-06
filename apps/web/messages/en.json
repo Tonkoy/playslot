@@ -46,7 +46,33 @@
     "surface": "Surface",
     "indoor": "Indoor",
     "outdoor": "Outdoor",
-    "lights": "Lights"
+    "lights": "Lights",
+    "openCalendar": "Calendar"
+  },
+  "Calendar": {
+    "title": "Calendar",
+    "time": "Time",
+    "date": "Date",
+    "today": "Today",
+    "prevDay": "Previous day",
+    "nextDay": "Next day",
+    "blockMode": "Block mode",
+    "block": "Blocked",
+    "booking": "Booking",
+    "error": "The calendar could not be loaded.",
+    "freeCell": "Free slot — {court} at {time}",
+    "newBooking": "New booking — {court} at {time}",
+    "customer": "Customer",
+    "duration": "Duration",
+    "minutes": "min",
+    "book": "Book",
+    "cancel": "Cancel",
+    "close": "Close",
+    "markPaid": "Mark paid",
+    "noShow": "No-show",
+    "move": "Move",
+    "movePrompt": "Moving “{name}” — pick a free slot.",
+    "cancelMove": "Cancel move"
   },
   "Home": {
     "eyebrow": "Sofia · tennis · and more sports",
@@ -60,6 +86,25 @@
     "supportedSports": "Supported sports: {count}",
     "legendTitle": "Slot states",
     "browseClubs": "Browse clubs"
+  },
+  "Booking": {
+    "title": "Book this slot",
+    "bookThisSlot": "Book this slot",
+    "confirmedTitle": "Booking confirmed!",
+    "confirmedBody": "Reservation reference: #{ref}.",
+    "myBookings": "My bookings",
+    "close": "Close",
+    "loginRequired": "Log in to book.",
+    "logIn": "Log in",
+    "verifyRequired": "Please verify your email before booking.",
+    "payOnSiteNote": "Pay on site at the club. Online payment is coming soon.",
+    "confirmOnSite": "Confirm booking",
+    "cancel": "Cancel"
+  },
+  "MyBookings": {
+    "title": "My bookings",
+    "empty": "You have no bookings yet.",
+    "cancel": "Cancel"
   },
   "SlotStates": {
     "FREE": "Free",

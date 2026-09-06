@@ -1,10 +1,11 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import type { AvailabilitySlot, SlotState } from '@playslot/contracts';
-import { fetchAvailability } from '@/lib/api';
+import { Link, usePathname } from '@/i18n/navigation';
+import { createReservation, fetchAvailability, getMe } from '@/lib/api';
 
 // State → design token + non-color cue (icon). Never color-only (spec §7/§20).
 const STATE_STYLE: Record<SlotState, { bg: string; fg: string; icon: string; bookable: boolean }> = {
@@ -34,16 +35,48 @@ function todayIso(): string {
 /** HH:mm from an ISO string carrying the club offset (local wall-clock time). */
 const hhmm = (iso: string) => iso.slice(11, 16);
 
+interface SelectedSlot {
+  resourceId: number;
+  start: string;
+  courtName: string;
+  priceCents: number | null;
+  time: string;
+}
+
 export function AvailabilityGrid({ clubId }: { clubId: number }) {
   const t = useTranslations('Grid');
   const st = useTranslations('SlotStates');
+  const bk = useTranslations('Booking');
   const locale = useLocale();
+  const pathname = usePathname();
+  const qc = useQueryClient();
   const [date, setDate] = useState(todayIso());
   const [duration, setDuration] = useState(60);
+  const [selected, setSelected] = useState<SelectedSlot | null>(null);
+  const [confirmedRef, setConfirmedRef] = useState<number | null>(null);
 
   const query = useQuery({
     queryKey: ['availability', clubId, date, duration],
     queryFn: () => fetchAvailability({ clubId, date, duration }),
+  });
+
+  const me = useQuery({ queryKey: ['me'], queryFn: getMe, retry: false });
+
+  const book = useMutation({
+    mutationFn: (paymentMethod: string) =>
+      createReservation({
+        clubId,
+        type: 'COURT',
+        startsAt: selected!.start,
+        durationMin: duration,
+        paymentMethod,
+        resourceIds: [selected!.resourceId],
+      }),
+    onSuccess: (res) => {
+      setConfirmedRef(res.reservationId);
+      setSelected(null);
+      qc.invalidateQueries({ queryKey: ['availability', clubId] });
+    },
   });
 
   const money = useMemo(
@@ -169,34 +202,57 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
                     const slot = byKey.get(`${c.id}@${time}`);
                     if (!slot) return <td key={c.id} style={{ ...cell, background: 'var(--ground)' }} aria-hidden />;
                     const s = STATE_STYLE[slot.state];
+                    const inner = (
+                      <>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          <span aria-hidden className="mono" style={{ color: s.fg, fontWeight: 700 }}>
+                            {s.icon}
+                          </span>
+                          <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{st(slot.state)}</span>
+                        </span>
+                        {s.bookable && slot.priceCents != null && (
+                          <span style={{ fontWeight: 700, fontSize: 14 }}>
+                            {money.format(slot.priceCents / 100)}
+                          </span>
+                        )}
+                      </>
+                    );
+                    const boxStyle: React.CSSProperties = {
+                      background: s.bg,
+                      border: '1px solid var(--line)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '8px 8px',
+                      minHeight: 52,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2,
+                      width: '100%',
+                      textAlign: 'left',
+                    };
                     return (
                       <td key={c.id} style={cell}>
-                        <div
-                          title={st(slot.state)}
-                          style={{
-                            background: s.bg,
-                            border: '1px solid var(--line)',
-                            borderRadius: 'var(--radius-sm)',
-                            padding: '8px 8px',
-                            minHeight: 52,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 2,
-                            cursor: s.bookable ? 'pointer' : 'default',
-                          }}
-                        >
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                            <span aria-hidden className="mono" style={{ color: s.fg, fontWeight: 700 }}>
-                              {s.icon}
-                            </span>
-                            <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{st(slot.state)}</span>
-                          </span>
-                          {s.bookable && slot.priceCents != null && (
-                            <span style={{ fontWeight: 700, fontSize: 14 }}>
-                              {money.format(slot.priceCents / 100)}
-                            </span>
-                          )}
-                        </div>
+                        {s.bookable ? (
+                          <button
+                            type="button"
+                            title={bk('bookThisSlot')}
+                            onClick={() =>
+                              setSelected({
+                                resourceId: c.id,
+                                start: slot.start,
+                                courtName: c.name,
+                                priceCents: slot.priceCents,
+                                time,
+                              })
+                            }
+                            style={{ ...boxStyle, cursor: 'pointer', color: 'var(--ink)' }}
+                          >
+                            {inner}
+                          </button>
+                        ) : (
+                          <div title={st(slot.state)} style={boxStyle}>
+                            {inner}
+                          </div>
+                        )}
                       </td>
                     );
                   })}
@@ -206,9 +262,96 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
           </table>
         </div>
       )}
+
+      {/* Confirmation */}
+      {confirmedRef !== null && (
+        <div role="status" style={bookingPanel}>
+          <strong style={{ display: 'block', marginBottom: 4 }}>{bk('confirmedTitle')}</strong>
+          <span style={{ color: 'var(--ink-2)' }}>{bk('confirmedBody', { ref: confirmedRef })}</span>
+          <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+            <Link href="/me/bookings" style={{ ...pillBtn, background: 'var(--lime)', color: 'var(--on-lime)' }}>
+              {bk('myBookings')}
+            </Link>
+            <button type="button" onClick={() => setConfirmedRef(null)} style={pillBtn}>
+              {bk('close')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Checkout panel for a selected free slot */}
+      {selected && confirmedRef === null && (
+        <div style={bookingPanel}>
+          <h3 style={{ fontWeight: 700, marginBottom: 6 }}>{bk('title')}</h3>
+          <p className="mono" style={{ color: 'var(--ink-2)', fontSize: 13, marginBottom: 12 }}>
+            {selected.courtName} · {date} · {selected.time} · {duration} {t('minutes')}
+            {selected.priceCents != null ? ` · ${money.format(selected.priceCents / 100)}` : ''}
+          </p>
+
+          {me.isLoading ? (
+            <p style={{ color: 'var(--ink-3)' }}>…</p>
+          ) : !me.data ? (
+            <div>
+              <p style={{ color: 'var(--ink-2)', marginBottom: 10 }}>{bk('loginRequired')}</p>
+              <Link
+                href={`/login?returnTo=${encodeURIComponent(pathname)}`}
+                style={{ ...pillBtn, background: 'var(--lime)', color: 'var(--on-lime)' }}
+              >
+                {bk('logIn')}
+              </Link>
+            </div>
+          ) : !me.data.user.emailVerified ? (
+            <p style={{ color: 'var(--clay)' }}>{bk('verifyRequired')}</p>
+          ) : (
+            <div>
+              <p style={{ color: 'var(--ink-3)', fontSize: 13, marginBottom: 12 }}>{bk('payOnSiteNote')}</p>
+              {book.isError && (
+                <p role="alert" style={{ color: 'var(--clay)', fontSize: 13, marginBottom: 8 }}>
+                  {(book.error as Error).message}
+                </p>
+              )}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  disabled={book.isPending}
+                  onClick={() => book.mutate('ON_SITE')}
+                  style={{ ...pillBtn, background: 'var(--lime)', color: 'var(--on-lime)', fontWeight: 700 }}
+                >
+                  {book.isPending ? '…' : bk('confirmOnSite')}
+                </button>
+                <button type="button" onClick={() => setSelected(null)} style={pillBtn}>
+                  {bk('cancel')}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }
+
+const bookingPanel: React.CSSProperties = {
+  marginTop: 16,
+  background: 'var(--surface)',
+  border: '1px solid var(--line)',
+  borderRadius: 'var(--radius)',
+  padding: 18,
+  boxShadow: 'var(--shadow-sm)',
+};
+const pillBtn: React.CSSProperties = {
+  minHeight: 44,
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '0 16px',
+  border: '1px solid var(--line-2)',
+  background: 'var(--surface)',
+  color: 'var(--ink)',
+  borderRadius: 'var(--radius-sm)',
+  cursor: 'pointer',
+  textDecoration: 'none',
+  fontWeight: 600,
+};
 
 function GridSkeleton() {
   return (

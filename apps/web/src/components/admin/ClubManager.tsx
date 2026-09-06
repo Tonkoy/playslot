@@ -81,7 +81,23 @@ export function ClubManager({ clubId }: { clubId: number }) {
       <Link href="/admin" style={{ color: 'var(--teal)', fontSize: 14 }}>
         ← {t('back')}
       </Link>
-      <h1 style={{ fontSize: 'clamp(22px, 4vw, 32px)', fontWeight: 800 }}>{club?.name}</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <h1 style={{ fontSize: 'clamp(22px, 4vw, 32px)', fontWeight: 800 }}>{club?.name}</h1>
+        <Link
+          href={`/admin/clubs/${clubId}/calendar`}
+          style={{
+            marginLeft: 'auto',
+            background: 'var(--ink)',
+            color: 'var(--lime)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '10px 16px',
+            fontWeight: 700,
+            textDecoration: 'none',
+          }}
+        >
+          {t('openCalendar')}
+        </Link>
+      </div>
 
       {/* ── Slot time (club-wide) ── */}
       <section style={card}>

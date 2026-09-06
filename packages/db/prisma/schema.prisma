@@ -256,7 +256,7 @@ model ClubMember {
 
 model Resource {
   id                Int            @id @default(autoincrement())
-  clubId            Int
+  clubId            Int? // null for COACH resources (shared across clubs via CoachClub, spec §10)
   type              ResourceType
   name              String
   status            ResourceStatus @default(ACTIVE)
@@ -269,7 +269,7 @@ model Resource {
   allowHalfHour     Boolean        @default(false)
   coachProfileId    Int? // when type = COACH
 
-  club                 Club                  @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  club                 Club?                 @relation(fields: [clubId], references: [id], onDelete: Cascade)
   coachProfile         CoachProfile?         @relation(fields: [coachProfileId], references: [id])
   availabilityRules    AvailabilityRule[]
   exceptions           ResourceException[]

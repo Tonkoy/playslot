@@ -75,11 +75,10 @@ export class ClubsService {
 
   async getCoachesPublic(idOrSlug: string) {
     const club = await this.getPublic(idOrSlug);
-    return this.prisma.resource.findMany({
-      where: { clubId: club.id, type: 'COACH', status: 'ACTIVE' },
+    // Coaches link to clubs via CoachClub (one shared resource per coach, §10).
+    const links = await this.prisma.coachClub.findMany({
+      where: { clubId: club.id },
       select: {
-        id: true,
-        name: true,
         coachProfile: {
           select: {
             id: true,
@@ -87,14 +86,26 @@ export class ClubsService {
             photoUrl: true,
             languages: true,
             levels: true,
+            user: { select: { name: true } },
             services: {
               select: { id: true, name: true, durationMin: true, priceCents: true, maxPlayers: true },
             },
           },
         },
       },
-      orderBy: { name: 'asc' },
     });
+    return links
+      .map((l) => l.coachProfile)
+      .filter((c): c is NonNullable<typeof c> => !!c)
+      .map((c) => ({
+        coachProfileId: c.id,
+        name: c.user?.name ?? 'Coach',
+        bio: c.bio,
+        photoUrl: c.photoUrl,
+        languages: c.languages,
+        levels: c.levels,
+        services: c.services,
+      }));
   }
 
   // ── admin: update own club (guarded by ClubMembershipGuard) ──

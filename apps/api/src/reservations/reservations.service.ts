@@ -68,7 +68,20 @@ export class ReservationsService {
       enforceHours: true,
     });
 
-    const priceCents = this.priceFor(await this.loadPriceRules(slot.clubId), slot);
+    // Coaching (spec §7/§10): a lesson reserves the court AND the coach in ONE
+    // transaction. The coach is a single shared resource, so the §8 constraint
+    // also prevents cross-club double-booking.
+    let priceCents: number;
+    let type = input.type;
+    if (input.coachProfileId) {
+      type = 'LESSON';
+      const coachResourceId = await this.resolveCoachResource(input.coachProfileId, slot);
+      slot.resourceIds = [...slot.resourceIds, coachResourceId];
+      priceCents = await this.lessonPrice(input.coachProfileId, input.serviceId, slot);
+    } else {
+      priceCents = this.priceFor(await this.loadPriceRules(slot.clubId), slot);
+    }
+
     const online = requiresOnlinePayment(input.paymentMethod);
     const holdExpiresAt = new Date(Date.now() + this.env.HOLD_TTL_MIN * 60_000);
 
@@ -76,7 +89,7 @@ export class ReservationsService {
       slot,
       userId: actor.userId,
       actorUserId: actor.userId,
-      type: input.type,
+      type,
       source,
       priceCents,
       paymentMethod: input.paymentMethod,
@@ -445,6 +458,41 @@ export class ReservationsService {
     } catch {
       throw new AppException('policy_violation', { reason: 'no_price' });
     }
+  }
+
+  /** Resolve + validate the coach's single shared resource for a lesson slot. */
+  private async resolveCoachResource(coachProfileId: number, slot: ResolvedSlot): Promise<number> {
+    const link = await this.prisma.coachClub.findFirst({
+      where: { coachProfileId, clubId: slot.clubId },
+    });
+    if (!link) throw new AppException('not_found', { reason: 'coach_not_at_club' });
+
+    const coach = await this.prisma.resource.findFirst({
+      where: { coachProfileId, type: 'COACH', status: 'ACTIVE' },
+      include: { availabilityRules: true },
+    });
+    if (!coach) throw new AppException('not_found', { reason: 'coach_resource' });
+
+    const available = coach.availabilityRules.some(
+      (r) => r.weekday === slot.weekday && r.startMin <= slot.startMin && r.endMin >= slot.endMin,
+    );
+    if (!available) throw new AppException('availability_changed', { reason: 'coach_closed' });
+    return coach.id;
+  }
+
+  private async lessonPrice(
+    coachProfileId: number,
+    serviceId: number | undefined,
+    slot: ResolvedSlot,
+  ): Promise<number> {
+    if (serviceId) {
+      const service = await this.prisma.coachService.findFirst({
+        where: { id: serviceId, coachProfileId },
+      });
+      if (!service) throw new AppException('not_found', { reason: 'service' });
+      return service.priceCents;
+    }
+    return this.priceFor(await this.loadPriceRules(slot.clubId), slot);
   }
 
   private async runBookingTransaction(args: {

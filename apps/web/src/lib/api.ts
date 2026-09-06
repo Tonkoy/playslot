@@ -1,4 +1,9 @@
-import type { AvailabilityResponse, CalendarResponse, ReservationSummary } from '@playslot/contracts';
+import type {
+  AvailabilityResponse,
+  CalendarResponse,
+  CoachListItem,
+  ReservationSummary,
+} from '@playslot/contracts';
 
 /**
  * Thin typed client for the PlaySlot API. Server components use the server base
@@ -59,6 +64,15 @@ export function getClub(slug: string): Promise<ClubPublic | null> {
 
 export function getClubCourts(slug: string): Promise<CourtPublic[] | null> {
   return getJson<CourtPublic[]>(`${SERVER_BASE}/api/clubs/${encodeURIComponent(slug)}/courts`);
+}
+
+export function getCoaches(clubId?: number): Promise<CoachListItem[] | null> {
+  const qs = clubId ? `?clubId=${clubId}` : '';
+  return getJson<CoachListItem[]>(`${SERVER_BASE}/api/coaches${qs}`);
+}
+
+export function getCoach(id: number): Promise<CoachListItem | null> {
+  return getJson<CoachListItem>(`${SERVER_BASE}/api/coaches/${id}`);
 }
 
 // ── client-side auth + admin (credentialed) ──
@@ -234,8 +248,15 @@ export function createReservation(input: {
   durationMin: number;
   paymentMethod: string;
   resourceIds: number[];
+  coachProfileId?: number;
+  serviceId?: number;
 }): Promise<CreateReservationResult> {
   return apiFetch('/reservations', { method: 'POST', body: JSON.stringify(input) });
+}
+
+/** Coaches available at a club (for the court-first "add coach" flow). */
+export function coachesForClub(clubId: number): Promise<CoachListItem[]> {
+  return apiFetch(`/coaches?clubId=${clubId}`);
 }
 
 export function getMyReservations(): Promise<ReservationSummary[]> {

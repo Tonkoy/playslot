@@ -272,20 +272,27 @@ async function main() {
     });
   }
 
-  // coach→club links + a COACH resource per (coach, club) with availability
-  async function linkCoachToClub(coachProfileId: number, clubId: number, name: string) {
-    await prisma.coachClub.create({ data: { coachProfileId, clubId } });
+  // ONE shared COACH resource per coach (clubId null); linked to clubs via
+  // CoachClub. A single resource means the §8 constraint prevents cross-club
+  // double-booking automatically (spec §10).
+  async function createCoachResource(coachProfileId: number, name: string) {
     const res = await prisma.resource.create({
-      data: { clubId, type: 'COACH', name, coachProfileId, minReservationMin: 60, slotIntervalMin: 30 },
+      data: { clubId: null, type: 'COACH', name, coachProfileId, minReservationMin: 60, slotIntervalMin: 30 },
     });
     await prisma.availabilityRule.createMany({
       data: weekWindows(540, 1260).map((w) => ({ ...w, resourceId: res.id })), // 09:00–21:00
     });
   }
-  await linkCoachToClub(coachProfiles[0]!.id, clubA.id, 'Мария Треньор');
-  await linkCoachToClub(coachProfiles[0]!.id, clubB.id, 'Мария Треньор'); // cross-club
-  await linkCoachToClub(coachProfiles[1]!.id, clubA.id, 'Георги Треньор');
-  await linkCoachToClub(coachProfiles[2]!.id, clubB.id, 'Елена Треньор');
+  const linkClub = (coachProfileId: number, clubId: number) =>
+    prisma.coachClub.create({ data: { coachProfileId, clubId } });
+
+  await createCoachResource(coachProfiles[0]!.id, 'Мария Треньор');
+  await linkClub(coachProfiles[0]!.id, clubA.id);
+  await linkClub(coachProfiles[0]!.id, clubB.id); // cross-club: same coach, one resource
+  await createCoachResource(coachProfiles[1]!.id, 'Георги Треньор');
+  await linkClub(coachProfiles[1]!.id, clubA.id);
+  await createCoachResource(coachProfiles[2]!.id, 'Елена Треньор');
+  await linkClub(coachProfiles[2]!.id, clubB.id);
 
   // ── cancellation policies (spec §12) ──
   for (const club of [clubA, clubB]) {

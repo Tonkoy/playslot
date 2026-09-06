@@ -57,7 +57,9 @@ export function SiteHeader() {
           <Link href="/clubs" style={{ color: 'var(--ink-2)', fontSize: 14, textDecoration: 'none' }}>
             {t('clubs')}
           </Link>
-          <span style={{ color: 'var(--ink-3)', fontSize: 14 }}>{t('coaches')}</span>
+          <Link href="/coaches" style={{ color: 'var(--ink-2)', fontSize: 14, textDecoration: 'none' }}>
+            {t('coaches')}
+          </Link>
           <Link href="/admin" style={{ color: 'var(--ink-2)', fontSize: 14, textDecoration: 'none' }}>
             {t('admin')}
           </Link>

@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import type { AvailabilitySlot, SlotState } from '@playslot/contracts';
 import { Link, usePathname } from '@/i18n/navigation';
-import { createReservation, fetchAvailability, getMe } from '@/lib/api';
+import { coachesForClub, createReservation, fetchAvailability, getMe } from '@/lib/api';
 
 // State → design token + non-color cue (icon). Never color-only (spec §7/§20).
 const STATE_STYLE: Record<SlotState, { bg: string; fg: string; icon: string; bookable: boolean }> = {
@@ -41,6 +41,7 @@ interface SelectedSlot {
   courtName: string;
   priceCents: number | null;
   time: string;
+  coachIds: number[];
 }
 
 export function AvailabilityGrid({ clubId }: { clubId: number }) {
@@ -54,6 +55,18 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
   const [duration, setDuration] = useState(60);
   const [selected, setSelected] = useState<SelectedSlot | null>(null);
   const [confirmedRef, setConfirmedRef] = useState<number | null>(null);
+  const [coachId, setCoachId] = useState<number | null>(null);
+  const [serviceId, setServiceId] = useState<number | null>(null);
+
+  const coaches = useQuery({
+    queryKey: ['clubCoaches', clubId],
+    queryFn: () => coachesForClub(clubId),
+  });
+  const selectableCoaches = (coaches.data ?? []).filter((c) =>
+    (selected?.coachIds ?? []).includes(c.coachProfileId),
+  );
+  const chosenCoach = selectableCoaches.find((c) => c.coachProfileId === coachId) ?? null;
+  const chosenService = chosenCoach?.services.find((s) => s.id === serviceId) ?? null;
 
   const query = useQuery({
     queryKey: ['availability', clubId, date, duration],
@@ -66,15 +79,19 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
     mutationFn: (paymentMethod: string) =>
       createReservation({
         clubId,
-        type: 'COURT',
+        type: chosenCoach ? 'LESSON' : 'COURT',
         startsAt: selected!.start,
         durationMin: duration,
         paymentMethod,
         resourceIds: [selected!.resourceId],
+        ...(chosenCoach ? { coachProfileId: chosenCoach.coachProfileId } : {}),
+        ...(chosenService ? { serviceId: chosenService.id } : {}),
       }),
     onSuccess: (res) => {
       setConfirmedRef(res.reservationId);
       setSelected(null);
+      setCoachId(null);
+      setServiceId(null);
       qc.invalidateQueries({ queryKey: ['availability', clubId] });
     },
   });
@@ -235,15 +252,18 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
                           <button
                             type="button"
                             title={bk('bookThisSlot')}
-                            onClick={() =>
+                            onClick={() => {
+                              setCoachId(null);
+                              setServiceId(null);
                               setSelected({
                                 resourceId: c.id,
                                 start: slot.start,
                                 courtName: c.name,
                                 priceCents: slot.priceCents,
                                 time,
-                              })
-                            }
+                                coachIds: slot.coachIds ?? [],
+                              });
+                            }}
                             style={{ ...boxStyle, cursor: 'pointer', color: 'var(--ink)' }}
                           >
                             {inner}
@@ -304,6 +324,51 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
             <p style={{ color: 'var(--clay)' }}>{bk('verifyRequired')}</p>
           ) : (
             <div>
+              {selectableCoaches.length > 0 && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--ink-2)' }}>
+                    {bk('coach')}
+                    <select
+                      value={coachId ?? ''}
+                      onChange={(e) => {
+                        const v = e.target.value ? Number(e.target.value) : null;
+                        setCoachId(v);
+                        const c = selectableCoaches.find((x) => x.coachProfileId === v);
+                        setServiceId(c?.services[0]?.id ?? null);
+                      }}
+                      style={{ ...pillBtn, cursor: 'pointer' }}
+                    >
+                      <option value="">{bk('noCoach')}</option>
+                      {selectableCoaches.map((c) => (
+                        <option key={c.coachProfileId} value={c.coachProfileId}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {chosenCoach && chosenCoach.services.length > 0 && (
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--ink-2)' }}>
+                      {bk('service')}
+                      <select
+                        value={serviceId ?? ''}
+                        onChange={(e) => setServiceId(e.target.value ? Number(e.target.value) : null)}
+                        style={{ ...pillBtn, cursor: 'pointer' }}
+                      >
+                        {chosenCoach.services.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name} · {money.format(s.priceCents / 100)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
+              )}
+              {chosenService && (
+                <p style={{ fontWeight: 700, marginBottom: 8 }}>
+                  {bk('withCoach')}: {chosenCoach!.name} · {money.format(chosenService.priceCents / 100)}
+                </p>
+              )}
               <p style={{ color: 'var(--ink-3)', fontSize: 13, marginBottom: 12 }}>{bk('payOnSiteNote')}</p>
               {book.isError && (
                 <p role="alert" style={{ color: 'var(--clay)', fontSize: 13, marginBottom: 8 }}>

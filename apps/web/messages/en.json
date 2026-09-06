@@ -87,8 +87,25 @@
     "legendTitle": "Slot states",
     "browseClubs": "Browse clubs"
   },
+  "Coaches": {
+    "title": "Coaches",
+    "subtitle": "Pick a coach for a private or group lesson.",
+    "empty": "No coaches registered yet.",
+    "from": "from",
+    "services": "Services",
+    "clubs": "Clubs",
+    "min": "min",
+    "players": "players",
+    "notFound": "Coach not found",
+    "backToCoaches": "All coaches",
+    "bookHint": "Pick a club and time from the grid to book a lesson with a coach."
+  },
   "Booking": {
     "title": "Book this slot",
+    "withCoach": "With a coach",
+    "noCoach": "No coach",
+    "coach": "Coach",
+    "service": "Service",
     "bookThisSlot": "Book this slot",
     "confirmedTitle": "Booking confirmed!",
     "confirmedBody": "Reservation reference: #{ref}.",

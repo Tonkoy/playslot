@@ -9,7 +9,8 @@ export const createReservationSchema = z.object({
   durationMin: z.number().int().min(15).max(240),
   paymentMethod: z.enum(PAYMENT_METHODS),
   resourceIds: z.array(z.number().int().positive()).min(1).max(4),
-  coachProfileId: z.number().int().positive().optional(), // Phase 5
+  coachProfileId: z.number().int().positive().optional(), // lesson coach (Phase 5)
+  serviceId: z.number().int().positive().optional(), // coach service (prices the lesson)
   participants: z.array(z.object({ name: z.string().min(1).max(120) })).max(8).optional(),
   turnstileToken: z.string().optional(),
 });

@@ -4,6 +4,7 @@ import {
   type AvailabilityResponse,
   type AvailabilitySlot,
 } from '@playslot/contracts';
+import { Prisma } from '@playslot/db';
 import {
   type Occupancy,
   type OccupancyState,
@@ -12,11 +13,18 @@ import {
   formatInZone,
   generateSlots,
   instantFromDayMinutes,
+  intervalsOverlap,
   resolvePrice,
   weekdayInZone,
 } from '@playslot/domain';
 import { AppException } from '../common/app-exception';
 import { PrismaService } from '../prisma/prisma.service';
+
+interface CoachAvail {
+  coachProfileId: number;
+  rules: { weekday: number; startMin: number; endMin: number }[];
+  busy: { start: Date; end: Date }[];
+}
 
 // Reservation statuses that occupy inventory for availability (spec §7).
 const OCCUPYING_STATUSES = ['CONFIRMED', 'PENDING_PAYMENT', 'HOLD'] as const;
@@ -106,6 +114,10 @@ export class AvailabilityService {
       active: r.active,
     }));
 
+    // Court-first "add coach": which coaches (linked to this club) are free at a
+    // slot. Coach occupancy is global (one shared resource across clubs, §10).
+    const coaches = await this.loadCoachAvailability(query.clubId, dayStart, dayEnd);
+
     const slots: AvailabilitySlot[] = [];
     for (const court of courts) {
       const duration = query.duration ?? court.minReservationMin;
@@ -151,6 +163,21 @@ export class AvailabilityService {
           priceCents = null; // no rule matched; client shows "—" rather than a wrong price
         }
 
+        const coachIds =
+          slot.state === 'FREE'
+            ? coaches
+                .filter(
+                  (co) =>
+                    co.rules.some(
+                      (r) =>
+                        r.weekday === weekday &&
+                        r.startMin <= slot.startMin &&
+                        r.endMin >= slot.startMin + duration,
+                    ) && !co.busy.some((b) => intervalsOverlap(b, { start: slot.start, end: slot.end })),
+                )
+                .map((co) => co.coachProfileId)
+            : [];
+
         slots.push({
           resourceId: court.id,
           start: formatInZone(slot.start, tz),
@@ -158,7 +185,7 @@ export class AvailabilityService {
           state: slot.state,
           priceCents,
           durationsMin,
-          coachIds: [], // populated in Phase 5 (coaching)
+          coachIds,
           minReservationMin: court.minReservationMin,
           allowHalfHour,
         });
@@ -181,6 +208,53 @@ export class AvailabilityService {
       })),
       slots,
     };
+  }
+
+  private async loadCoachAvailability(
+    clubId: number,
+    dayStart: Date,
+    dayEnd: Date,
+  ): Promise<CoachAvail[]> {
+    const links = await this.prisma.coachClub.findMany({
+      where: { clubId },
+      select: { coachProfileId: true },
+    });
+    const coachProfileIds = links.map((l) => l.coachProfileId);
+    if (coachProfileIds.length === 0) return [];
+
+    const resources = await this.prisma.resource.findMany({
+      where: { type: 'COACH', status: 'ACTIVE', coachProfileId: { in: coachProfileIds } },
+      include: { availabilityRules: true },
+    });
+    const resourceIds = resources.map((r) => r.id);
+    const busyRows =
+      resourceIds.length === 0
+        ? []
+        : await this.prisma.$queryRaw<Array<{ resourceId: number; startsAt: Date; endsAt: Date }>>(
+            Prisma.sql`SELECT rr."resourceId" as "resourceId", r."startsAt" as "startsAt", r."endsAt" as "endsAt"
+                       FROM "ReservationResource" rr
+                       JOIN "Reservation" r ON r.id = rr."reservationId"
+                       WHERE rr."isActive" AND rr."resourceId" IN (${Prisma.join(resourceIds)})
+                         AND r."startsAt" < ${dayEnd} AND r."endsAt" > ${dayStart}`,
+          );
+    const busyByResource = new Map<number, { start: Date; end: Date }[]>();
+    for (const row of busyRows) {
+      const list = busyByResource.get(row.resourceId) ?? [];
+      list.push({ start: row.startsAt, end: row.endsAt });
+      busyByResource.set(row.resourceId, list);
+    }
+
+    return resources
+      .filter((r) => r.coachProfileId !== null)
+      .map((r) => ({
+        coachProfileId: r.coachProfileId!,
+        rules: r.availabilityRules.map((x) => ({
+          weekday: x.weekday,
+          startMin: x.startMin,
+          endMin: x.endMin,
+        })),
+        busy: busyByResource.get(r.id) ?? [],
+      }));
   }
 }
 

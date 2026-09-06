@@ -96,6 +96,11 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
         ...(chosenService ? { serviceId: chosenService.id } : {}),
       }),
     onSuccess: (res) => {
+      // Online payment → redirect to the hosted Stripe checkout.
+      if (res.next?.action === 'PAY' && res.next.checkoutUrl) {
+        window.location.href = res.next.checkoutUrl;
+        return;
+      }
       setConfirmedRef(res.reservationId);
       setSelected(null);
       setCoachId(null);
@@ -395,7 +400,6 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
                   {bk('withCoach')}: {chosenCoach!.name} · {money.format(chosenService.priceCents / 100)}
                 </p>
               )}
-              <p style={{ color: 'var(--ink-3)', fontSize: 13, marginBottom: 12 }}>{bk('payOnSiteNote')}</p>
               {book.isError && (
                 <p role="alert" style={{ color: 'var(--clay)', fontSize: 13, marginBottom: 8 }}>
                   {(book.error as Error).message}
@@ -405,15 +409,24 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
                 <button
                   type="button"
                   disabled={book.isPending}
-                  onClick={() => book.mutate('ON_SITE')}
+                  onClick={() => book.mutate('ONLINE')}
                   style={{ ...pillBtn, background: 'var(--lime)', color: 'var(--on-lime)', fontWeight: 700 }}
                 >
-                  {book.isPending ? '…' : bk('confirmOnSite')}
+                  {book.isPending ? '…' : bk('payOnline')}
+                </button>
+                <button
+                  type="button"
+                  disabled={book.isPending}
+                  onClick={() => book.mutate('ON_SITE')}
+                  style={pillBtn}
+                >
+                  {bk('confirmOnSite')}
                 </button>
                 <button type="button" onClick={() => setSelected(null)} style={pillBtn}>
                   {bk('cancel')}
                 </button>
               </div>
+              <p style={{ color: 'var(--ink-3)', fontSize: 12, marginTop: 10 }}>{bk('payOnSiteNote')}</p>
             </div>
           )}
           </>

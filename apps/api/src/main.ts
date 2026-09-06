@@ -17,7 +17,8 @@ async function bootstrap(): Promise<void> {
   // Fail fast on bad configuration (golden rule §21).
   const env = loadServerEnv();
 
-  const app = await NestFactory.create(AppModule);
+  // rawBody enables Stripe webhook signature verification (spec §17).
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   // Credentialed CORS: reflect the origin (can't use "*" with credentials). In
   // production, restrict to the web origin; in dev, reflect any localhost origin.
   app.enableCors({

@@ -60,7 +60,7 @@ export async function createTestApp(): Promise<TestApp> {
     .useValue(mail)
     .compile();
 
-  const app = moduleRef.createNestApplication();
+  const app = moduleRef.createNestApplication({ rawBody: true });
   app.use(cookieParser());
   await app.init();
 

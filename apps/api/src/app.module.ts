@@ -12,6 +12,7 @@ import { CommunityModule } from './community/community.module';
 import { EventsModule } from './events/events.module';
 import { HealthModule } from './health/health.module';
 import { MailModule } from './mail/mail.module';
+import { PaymentsModule } from './payments/payments.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ReservationsModule } from './reservations/reservations.module';
 import { ResourcesModule } from './resources/resources.module';
@@ -39,6 +40,7 @@ import { SearchModule } from './search/search.module';
     ResourcesModule,
     AvailabilityModule,
     ReservationsModule,
+    PaymentsModule,
     CoachingModule,
     SearchModule,
     CommunityModule,

@@ -194,8 +194,9 @@
     "loginRequired": "Log in to book.",
     "logIn": "Log in",
     "verifyRequired": "Please verify your email before booking.",
-    "payOnSiteNote": "Pay on site at the club. Online payment is coming soon.",
-    "confirmOnSite": "Confirm booking",
+    "payOnSiteNote": "Pay online by card, or pay on site at the club.",
+    "payOnline": "Pay online",
+    "confirmOnSite": "Pay on site",
     "cancel": "Cancel"
   },
   "MyBookings": {

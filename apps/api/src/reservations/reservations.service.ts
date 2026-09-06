@@ -27,6 +27,7 @@ import { TurnstileService } from '../common/turnstile.service';
 import { SERVER_ENV } from '../config/app-config.module';
 import { EventsService } from '../events/events.service';
 import { MailService } from '../mail/mail.service';
+import { PaymentsService } from '../payments/payments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { HoldQueueService } from './hold-queue.service';
 
@@ -58,6 +59,8 @@ export class ReservationsService {
     private readonly events: EventsService,
     private readonly mail: MailService,
     private readonly turnstile: TurnstileService,
+    @Inject(forwardRef(() => PaymentsService))
+    private readonly payments: PaymentsService,
   ) {}
 
   // ── player self-booking (spec §8) ──
@@ -111,9 +114,27 @@ export class ReservationsService {
       finalStatus: online ? 'PENDING_PAYMENT' : 'CONFIRMED',
     });
 
-    if (online) await this.holds.scheduleExpiry(reservation.id, holdExpiresAt);
     this.events.emitAvailabilityChanged(slot.clubId);
-    if (reservation.status === 'CONFIRMED') await this.sendConfirmationEmail(reservation.id);
+
+    let checkoutUrl: string | undefined;
+    if (online) {
+      await this.holds.scheduleExpiry(reservation.id, holdExpiresAt);
+      const u = await this.prisma.user.findUnique({
+        where: { id: actor.userId },
+        select: { email: true, locale: true },
+      });
+      const { url } = await this.payments.createCheckout({
+        reservationId: reservation.id,
+        amountCents: priceCents,
+        currency: slot.currency,
+        description: `PlaySlot booking #${reservation.id}`,
+        customerEmail: u?.email,
+        locale: normalizeLocale(u?.locale),
+      });
+      checkoutUrl = url;
+    } else {
+      await this.sendConfirmationEmail(reservation.id);
+    }
 
     return {
       reservationId: reservation.id,
@@ -121,7 +142,7 @@ export class ReservationsService {
       holdExpiresAt: reservation.holdExpiresAt ? reservation.holdExpiresAt.toISOString() : null,
       priceCents,
       currency: slot.currency,
-      next: online ? { action: 'PAY' } : { action: 'CONFIRMED' },
+      next: online ? { action: 'PAY', checkoutUrl } : { action: 'CONFIRMED' },
     };
   }
 
@@ -349,6 +370,38 @@ export class ReservationsService {
     this.events.emitAvailabilityChanged(r.clubId);
   }
 
+  /** Webhook: confirm a paid online reservation (idempotent, spec §17). */
+  async confirmPaidReservation(reservationId: number, paymentRef: string): Promise<void> {
+    const r = await this.prisma.reservation.findUnique({ where: { id: reservationId } });
+    if (!r || r.status !== 'PENDING_PAYMENT') return; // idempotent on replay
+    await this.prisma.$transaction([
+      this.prisma.reservation.update({
+        where: { id: reservationId },
+        data: { status: 'CONFIRMED', holdExpiresAt: null },
+      }),
+      this.prisma.payment.updateMany({
+        where: { reservationId },
+        data: { status: 'CAPTURED', providerRef: paymentRef, capturedAt: new Date() },
+      }),
+    ]);
+    this.events.emitAvailabilityChanged(r.clubId);
+    await this.sendConfirmationEmail(reservationId);
+  }
+
+  /** Webhook: a failed/expired online payment releases inventory (no phantom). */
+  async failPayment(reservationId: number): Promise<void> {
+    const r = await this.prisma.reservation.findUnique({ where: { id: reservationId } });
+    if (!r || r.status !== 'PENDING_PAYMENT') return;
+    await this.prisma.$transaction([
+      this.prisma.reservation.update({
+        where: { id: reservationId },
+        data: { status: 'CANCELLED', cancellationReason: 'payment_failed' },
+      }),
+      this.prisma.payment.updateMany({ where: { reservationId }, data: { status: 'FAILED' } }),
+    ]);
+    this.events.emitAvailabilityChanged(r.clubId);
+  }
+
   /**
    * Cancel a reservation and compute the refund from the club's stored policy
    * (spec §12/§18). Releases inventory (via the isActive trigger), records the
@@ -382,14 +435,13 @@ export class ReservationsService {
       refundCents = computeRefund(tiers, hoursUntil(r.startsAt), r.priceCents).refundCents;
     }
 
-    let refundStatus: 'NONE' | 'PENDING' = 'NONE';
+    const willRefund = refundCents > 0 && r.payment?.status === 'CAPTURED';
     await this.prisma.$transaction(async (tx) => {
       await tx.reservation.update({
         where: { id: reservationId },
         data: { status: 'CANCELLED', cancellationReason: reason ?? 'user_cancelled' },
       });
-      // Record refund intent on a captured online payment (PSP settlement is P7).
-      if (refundCents > 0 && r.payment && r.payment.status === 'CAPTURED') {
+      if (willRefund && r.payment) {
         await tx.payment.update({
           where: { reservationId },
           data: {
@@ -397,7 +449,6 @@ export class ReservationsService {
             refundedAt: new Date(),
           },
         });
-        refundStatus = 'PENDING';
       }
       await this.audit(tx, userId, 'reservation.cancelled', reservationId, {
         refundCents,
@@ -405,6 +456,16 @@ export class ReservationsService {
       });
     });
 
+    // Issue the actual PSP refund against the captured payment (spec §18).
+    if (willRefund && r.payment?.providerRef) {
+      try {
+        await this.payments.refund(r.payment.providerRef, refundCents);
+      } catch {
+        // Settlement failed; the refund intent is recorded — reconcile via runbook.
+      }
+    }
+
+    const refundStatus: 'NONE' | 'PENDING' = willRefund ? 'PENDING' : 'NONE';
     this.events.emitAvailabilityChanged(r.clubId);
 
     // Notify the customer (skip synthetic walk-in addresses).

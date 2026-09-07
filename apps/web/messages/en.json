@@ -12,7 +12,16 @@
     "favorites": "Favorites",
     "menu": "Menu",
     "register": "Sign up",
-    "language": "Language"
+    "language": "Language",
+    "account": "Account",
+    "logout": "Log out",
+    "themeLabel": "Theme: {mode}",
+    "theme_system": "system",
+    "theme_light": "light",
+    "theme_dark": "dark",
+    "menuAria": "Account & settings",
+    "settings": "Settings",
+    "theme": "Theme"
   },
   "Login": {
     "title": "Log in",
@@ -233,7 +242,13 @@
     "cancel": "Cancel",
     "upcoming": "Upcoming",
     "past": "Past",
-    "refundNote": "Booking cancelled. Refund: {amount} €."
+    "refundNote": "Booking cancelled. Refund: {amount} €.",
+    "bookingRef": "Booking no.",
+    "cancelConfirmTitle": "Cancel this booking?",
+    "cancelConfirmBody": "Booking {ref} at {club} on {when} will be cancelled.",
+    "cancelConfirmNote": "Any refund follows the club's cancellation policy. The customer, the club and the coach are notified.",
+    "keepBooking": "Keep booking",
+    "confirmCancel": "Cancel booking"
   },
   "SlotStates": {
     "FREE": "Free",
@@ -291,5 +306,31 @@
     "duration": "{days} days",
     "discount": "{percent}% off bookings",
     "howToJoin": "Ask the club to activate a membership for you — the discount then applies automatically."
+  },
+  "Account": {
+    "verified": "Email verified",
+    "notVerified": "Email not verified",
+    "rolePlatformAdmin": "Platform admin",
+    "roleClubAdmin": "Club admin",
+    "roleClubStaff": "Club staff",
+    "roleCoach": "Coach",
+    "rolePlayer": "Player",
+    "logout": "Log out",
+    "myBookings": "My bookings",
+    "myFavorites": "Favorites",
+    "manageClub": "Manage club",
+    "memberships": "My memberships",
+    "until": "until {date}"
+  },
+  "Toasts": {
+    "booked": "Booking confirmed",
+    "cancelled": "Booking cancelled",
+    "favoriteAdded": "Added to favorites",
+    "favoriteRemoved": "Removed from favorites",
+    "eventRegistered": "You're registered",
+    "eventUnregistered": "Registration cancelled",
+    "membershipGranted": "Membership granted",
+    "reviewSubmitted": "Review submitted",
+    "error": "Something went wrong"
   }
 }

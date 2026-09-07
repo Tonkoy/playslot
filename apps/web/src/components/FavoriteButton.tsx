@@ -4,17 +4,24 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { addFavorite, getFavorites, getMe, removeFavorite } from '@/lib/api';
+import { useToast } from './Toast';
 
 export function FavoriteButton({ clubId }: { clubId: number }) {
   const t = useTranslations('Favorites');
+  const tt = useTranslations('Toasts');
   const qc = useQueryClient();
+  const toast = useToast();
   const me = useQuery({ queryKey: ['me'], queryFn: getMe, retry: false });
   const favs = useQuery({ queryKey: ['favorites'], queryFn: getFavorites, enabled: me.isSuccess });
   const isFav = (favs.data ?? []).some((c) => c.id === clubId);
 
   const toggle = useMutation({
     mutationFn: () => (isFav ? removeFavorite(clubId) : addFavorite(clubId)),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['favorites'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['favorites'] });
+      toast(isFav ? tt('favoriteRemoved') : tt('favoriteAdded'));
+    },
+    onError: () => toast(tt('error'), 'error'),
   });
 
   const base: React.CSSProperties = {

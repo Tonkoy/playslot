@@ -2,17 +2,22 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import type { ReservationSummary } from '@playslot/contracts';
 import { useRouter } from '@/i18n/navigation';
 import { cancelMyReservation, getMe, getMyReservations } from '@/lib/api';
+import { Modal } from './Modal';
+import { useToast } from './Toast';
 
 const CANCELLABLE = ['HOLD', 'PENDING_PAYMENT', 'CONFIRMED'];
 
 export function MyBookings() {
   const t = useTranslations('MyBookings');
+  const tt = useTranslations('Toasts');
   const locale = useLocale();
   const router = useRouter();
   const qc = useQueryClient();
+  const toast = useToast();
 
   const me = useQuery({ queryKey: ['me'], queryFn: getMe, retry: false });
   useEffect(() => {
@@ -24,15 +29,19 @@ export function MyBookings() {
     queryFn: getMyReservations,
     enabled: me.isSuccess,
   });
+  const [pending, setPending] = useState<ReservationSummary | null>(null);
+
   const cancel = useMutation({
     mutationFn: (id: number) => cancelMyReservation(id),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['myReservations'] });
+      setPending(null);
+      toast(tt('cancelled'));
       if (res.refundCents > 0) {
         window.alert(t('refundNote', { amount: (res.refundCents / 100).toFixed(0) }));
       }
     },
-    onError: (e) => window.alert(e instanceof Error ? e.message : String(e)),
+    onError: (e) => toast(e instanceof Error ? e.message : tt('error'), 'error'),
   });
 
   const dtf = new Intl.DateTimeFormat(locale === 'bg' ? 'bg-BG' : 'en-US', {
@@ -74,6 +83,9 @@ export function MyBookings() {
         <div className="mono" style={{ color: 'var(--ink-3)', fontSize: 12 }}>
           {dtf.format(new Date(r.startsAt))} · {r.type} · {money(r.priceCents, r.currency)}
         </div>
+        <div className="mono" style={{ color: 'var(--ink-3)', fontSize: 12, marginTop: 2 }}>
+          {t('bookingRef')}: <strong>#{r.id}</strong>
+        </div>
       </div>
       <span
         className="mono"
@@ -90,8 +102,7 @@ export function MyBookings() {
       {CANCELLABLE.includes(r.status) && (
         <button
           type="button"
-          onClick={() => cancel.mutate(r.id)}
-          disabled={cancel.isPending}
+          onClick={() => setPending(r)}
           style={{
             marginLeft: 'auto',
             minHeight: 40,
@@ -126,6 +137,56 @@ export function MyBookings() {
           <div style={{ display: 'grid', gap: 12 }}>{past.map(row)}</div>
         </section>
       )}
+
+      <Modal open={pending !== null} onClose={() => setPending(null)} title={t('cancelConfirmTitle')}>
+        {pending && (
+          <div style={{ display: 'grid', gap: 16 }}>
+            <p style={{ color: 'var(--ink-2)' }}>
+              {t('cancelConfirmBody', {
+                ref: `#${pending.id}`,
+                club: pending.clubName ?? `#${pending.clubId}`,
+                when: dtf.format(new Date(pending.startsAt)),
+              })}
+            </p>
+            <p style={{ color: 'var(--ink-3)', fontSize: 13 }}>{t('cancelConfirmNote')}</p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setPending(null)}
+                style={{
+                  minHeight: 44,
+                  padding: '0 18px',
+                  border: '1px solid var(--line-2)',
+                  background: 'var(--surface)',
+                  color: 'var(--ink)',
+                  borderRadius: 'var(--radius-sm)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                {t('keepBooking')}
+              </button>
+              <button
+                type="button"
+                onClick={() => cancel.mutate(pending.id)}
+                disabled={cancel.isPending}
+                style={{
+                  minHeight: 44,
+                  padding: '0 18px',
+                  border: 'none',
+                  background: 'var(--clay)',
+                  color: '#fff',
+                  borderRadius: 'var(--radius-sm)',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                }}
+              >
+                {cancel.isPending ? '…' : t('confirmCancel')}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

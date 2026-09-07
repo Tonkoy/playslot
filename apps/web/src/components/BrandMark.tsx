@@ -10,7 +10,9 @@ export function BrandMark({ size = 34 }: { size?: number }) {
         width: size,
         height: size,
         borderRadius: 9,
-        background: 'var(--ink)',
+        background: 'var(--brand-tile-bg)',
+        border: '1px solid var(--brand-tile-ring)',
+        boxSizing: 'border-box',
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
         gridTemplateRows: '1fr 1fr',
@@ -18,10 +20,10 @@ export function BrandMark({ size = 34 }: { size?: number }) {
         padding: 6,
       }}
     >
-      <i style={{ borderRadius: 2, background: 'var(--booked)' }} />
+      <i style={{ borderRadius: 2, background: 'var(--brand-off)' }} />
       <i style={{ borderRadius: 2, background: 'var(--lime)' }} />
-      <i style={{ borderRadius: 2, background: 'var(--booked)' }} />
-      <i style={{ borderRadius: 2, background: 'var(--booked)' }} />
+      <i style={{ borderRadius: 2, background: 'var(--brand-off)' }} />
+      <i style={{ borderRadius: 2, background: 'var(--brand-off)' }} />
     </span>
   );
 }

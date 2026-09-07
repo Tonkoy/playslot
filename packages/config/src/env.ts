@@ -63,6 +63,13 @@ export const serverEnvSchema = coreEnvSchema.extend({
 
   // email / storage / maps / observability
   RESEND_API_KEY: optionalString,
+  SENDGRID_API_KEY: optionalString,
+  // Explicit transport override; auto-selected by key presence when unset.
+  MAIL_PROVIDER: z.enum(['resend', 'sendgrid', 'console']).optional(),
+  // From-address shared by every provider (RFC 5322 "Name <addr>" or bare addr).
+  MAIL_FROM: optionalString.pipe(
+    z.string().default('PlaySlot <no-reply@playslot.app>'),
+  ),
   S3_ENDPOINT: optionalString,
   S3_BUCKET: optionalString,
   S3_ACCESS_KEY_ID: optionalString,

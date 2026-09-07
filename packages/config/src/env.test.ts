@@ -50,6 +50,34 @@ describe('loadServerEnv', () => {
     });
     expect(env.STRIPE_SECRET_KEY).toBeUndefined();
   });
+
+  const baseServer = {
+    ...baseCore,
+    DATABASE_URL: 'postgresql://x',
+    AUTH_SECRET: 'a-sufficiently-long-secret',
+  };
+
+  it('defaults MAIL_FROM when unset or empty', () => {
+    expect(loadServerEnv(baseServer).MAIL_FROM).toBe('PlaySlot <no-reply@playslot.app>');
+    expect(loadServerEnv({ ...baseServer, MAIL_FROM: '' }).MAIL_FROM).toBe(
+      'PlaySlot <no-reply@playslot.app>',
+    );
+  });
+
+  it('keeps a custom MAIL_FROM', () => {
+    const env = loadServerEnv({ ...baseServer, MAIL_FROM: 'Courts <hi@example.com>' });
+    expect(env.MAIL_FROM).toBe('Courts <hi@example.com>');
+  });
+
+  it('accepts a MAIL_PROVIDER enum and rejects unknown values', () => {
+    expect(loadServerEnv({ ...baseServer, MAIL_PROVIDER: 'sendgrid' }).MAIL_PROVIDER).toBe(
+      'sendgrid',
+    );
+    expect(loadServerEnv(baseServer).MAIL_PROVIDER).toBeUndefined();
+    expect(() =>
+      loadServerEnv({ ...baseServer, MAIL_PROVIDER: 'ses' }),
+    ).toThrowError(/MAIL_PROVIDER/);
+  });
 });
 
 describe('loadWebEnv', () => {

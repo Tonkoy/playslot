@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { AvailabilitySlot, SlotState } from '@playslot/contracts';
 import { Link, usePathname } from '@/i18n/navigation';
 import { Modal } from '@/components/Modal';
+import { useToast } from '@/components/Toast';
 import { CLIENT_BASE, coachesForClub, createReservation, fetchAvailability, getMe } from '@/lib/api';
 
 // State → design token + non-color cue (icon). Never color-only (spec §7/§20).
@@ -49,6 +50,8 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
   const t = useTranslations('Grid');
   const st = useTranslations('SlotStates');
   const bk = useTranslations('Booking');
+  const tt = useTranslations('Toasts');
+  const toast = useToast();
   const locale = useLocale();
   const pathname = usePathname();
   const qc = useQueryClient();
@@ -106,7 +109,9 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
       setCoachId(null);
       setServiceId(null);
       qc.invalidateQueries({ queryKey: ['availability', clubId] });
+      toast(tt('booked'));
     },
+    onError: (e) => toast(e instanceof Error ? e.message : tt('error'), 'error'),
   });
 
   const money = useMemo(

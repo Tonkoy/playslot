@@ -1,55 +1,26 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { ServerEnv } from '@playslot/config';
 import { SERVER_ENV } from '../config/app-config.module';
 import { type ApiLocale, DEFAULT_LOCALE } from '../common/i18n';
+import { MAIL_PROVIDER, type MailProvider, type SendEmailInput } from './mail-provider';
 
-export interface SendEmailInput {
-  to: string;
-  subject: string;
-  html: string;
-  text?: string;
-}
+export type { SendEmailInput } from './mail-provider';
 
 /**
- * Transactional email (spec §19). Uses Resend's REST API when RESEND_API_KEY is
- * set; otherwise logs to the console so local dev works without a provider.
- * All jobs must be idempotent at the caller; this method just sends.
+ * Transactional email (spec §19). Delegates the actual transport to a
+ * {@link MailProvider} chosen from env (Resend / SendGrid / console) — this is
+ * the only transport seam, so the templated helpers below never change when the
+ * provider does. All jobs must be idempotent at the caller; this just sends.
  */
 @Injectable()
 export class MailService {
-  private readonly logger = new Logger('Mail');
-
-  constructor(@Inject(SERVER_ENV) private readonly env: ServerEnv) {}
+  constructor(
+    @Inject(SERVER_ENV) private readonly env: ServerEnv,
+    @Inject(MAIL_PROVIDER) private readonly provider: MailProvider,
+  ) {}
 
   async send(input: SendEmailInput): Promise<void> {
-    const apiKey = this.env.RESEND_API_KEY;
-    if (!apiKey) {
-      this.logger.log(
-        `[dev-mail] To: ${input.to} | Subject: ${input.subject}\n${input.text ?? input.html}`,
-      );
-      return;
-    }
-
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'PlaySlot <no-reply@playslot.app>',
-        to: input.to,
-        subject: input.subject,
-        html: input.html,
-        text: input.text,
-      }),
-    });
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      this.logger.error(`Resend failed (${res.status}): ${body}`);
-      throw new Error(`email_send_failed:${res.status}`);
-    }
+    await this.provider.send(input);
   }
 
   // ── templated helpers (localized; bg default) ──
@@ -208,6 +179,44 @@ export class MailService {
       text: `${copy.greeting}\n${copy.intro}\n${textLines}`,
       html: emailShell(`<p>${copy.greeting}</p><p>${copy.intro}</p><ul>${htmlLines}</ul>`),
     });
+  }
+
+  /** Notify club admins/staff that a booking was cancelled (spec §19). */
+  async sendStaffCancellationNotice(
+    to: string,
+    info: { clubName: string; when: string; customerName: string; what: string },
+    locale: ApiLocale = DEFAULT_LOCALE,
+  ): Promise<void> {
+    const copy =
+      locale === 'en'
+        ? {
+            subject: `Booking cancelled — ${info.clubName}`,
+            body: `${info.customerName}'s booking of ${info.what} on ${info.when} was cancelled. The slot is free again.`,
+          }
+        : {
+            subject: `Отменена резервация — ${info.clubName}`,
+            body: `Резервацията на ${info.customerName} за ${info.what} на ${info.when} беше отменена. Часът е свободен отново.`,
+          };
+    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+  }
+
+  /** Notify the coach that a lesson booked with them was cancelled (spec §19). */
+  async sendCoachCancellationNotice(
+    to: string,
+    info: { clubName: string; when: string; customerName: string },
+    locale: ApiLocale = DEFAULT_LOCALE,
+  ): Promise<void> {
+    const copy =
+      locale === 'en'
+        ? {
+            subject: `Lesson cancelled — ${info.when}`,
+            body: `The lesson with ${info.customerName} at ${info.clubName} on ${info.when} was cancelled.`,
+          }
+        : {
+            subject: `Отменен урок — ${info.when}`,
+            body: `Урокът с ${info.customerName} в ${info.clubName} на ${info.when} беше отменен.`,
+          };
+    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
   }
 
   async sendCancellation(

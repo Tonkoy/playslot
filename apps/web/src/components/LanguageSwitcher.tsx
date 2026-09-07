@@ -19,9 +19,6 @@ export function LanguageSwitcher() {
       className="mono"
       style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13 }}
     >
-      <span className="sr-only-visible" style={{ color: 'var(--ink-3)' }}>
-        {t('language')}
-      </span>
       <select
         aria-label={t('language')}
         value={locale}

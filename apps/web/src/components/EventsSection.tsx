@@ -6,6 +6,7 @@ import type { EventDto } from '@playslot/contracts';
 import { useRouter } from '@/i18n/navigation';
 import { getMe, listEvents, registerEvent, unregisterEvent } from '@/lib/api';
 import { formatInstant } from '@/lib/tz';
+import { useToast } from './Toast';
 
 /** Public events/tournaments for a club, with one-tap registration (spec §22 M9). */
 export function EventsSection({
@@ -18,19 +19,29 @@ export function EventsSection({
   timezone: string;
 }) {
   const t = useTranslations('Events');
+  const tt = useTranslations('Toasts');
   const qc = useQueryClient();
   const router = useRouter();
+  const toast = useToast();
 
   const me = useQuery({ queryKey: ['me'], queryFn: getMe, retry: false });
   const events = useQuery({ queryKey: ['events', clubId], queryFn: () => listEvents(clubId) });
 
   const regMut = useMutation({
     mutationFn: (id: number) => registerEvent(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['events', clubId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['events', clubId] });
+      toast(tt('eventRegistered'));
+    },
+    onError: (e) => toast(e instanceof Error ? e.message : tt('error'), 'error'),
   });
   const unregMut = useMutation({
     mutationFn: (id: number) => unregisterEvent(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['events', clubId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['events', clubId] });
+      toast(tt('eventUnregistered'));
+    },
+    onError: (e) => toast(e instanceof Error ? e.message : tt('error'), 'error'),
   });
 
   if (events.isSuccess && events.data.length === 0) return null;

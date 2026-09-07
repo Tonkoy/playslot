@@ -1,5 +1,6 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
+import { Avatar } from '@/components/Avatar';
 import { SiteHeader } from '@/components/SiteHeader';
 import { getCoach } from '@/lib/api';
 
@@ -34,21 +35,42 @@ export default async function CoachProfilePage({
         <Link href="/coaches" style={{ color: 'var(--teal)', fontSize: 14 }}>
           ← {t('backToCoaches')}
         </Link>
-        <h1 style={{ fontSize: 'clamp(26px, 5vw, 40px)', fontWeight: 800, margin: '10px 0 6px' }}>{coach.name}</h1>
-        {coach.bio && <p style={{ color: 'var(--ink-2)', maxWidth: '65ch' }}>{coach.bio}</p>}
-
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, margin: '14px 0' }}>
-          {coach.languages.map((l) => (
-            <span key={l} className="mono" style={chip}>
-              {l.toUpperCase()}
-            </span>
-          ))}
-          {coach.levels.map((l) => (
-            <span key={l} className="mono" style={{ ...chip, borderColor: 'var(--teal)', color: 'var(--teal)' }}>
-              {l}
-            </span>
-          ))}
-        </div>
+        {/* ── info box ── */}
+        <section
+          style={{
+            display: 'flex',
+            gap: 18,
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            background: 'var(--surface)',
+            border: '1px solid var(--line)',
+            borderRadius: 'var(--radius)',
+            padding: 20,
+            margin: '12px 0 8px',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <Avatar name={coach.name} photoUrl={coach.photoUrl} size={88} />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h1 style={{ fontSize: 'clamp(24px, 4vw, 34px)', fontWeight: 800 }}>{coach.name}</h1>
+            <div className="mono" style={{ color: 'var(--ink-3)', fontSize: 13, marginTop: 4 }}>
+              {coach.clubs.map((c) => c.name).join(' · ')}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+              {coach.languages.map((l) => (
+                <span key={l} className="mono" style={chip}>
+                  {l.toUpperCase()}
+                </span>
+              ))}
+              {coach.levels.map((l) => (
+                <span key={l} className="mono" style={{ ...chip, borderColor: 'var(--teal)', color: 'var(--teal)' }}>
+                  {l}
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
+        {coach.bio && <p style={{ color: 'var(--ink-2)', maxWidth: '65ch', marginTop: 12 }}>{coach.bio}</p>}
 
         <h2 style={{ fontSize: 20, fontWeight: 700, margin: '20px 0 10px' }}>{t('services')}</h2>
         <div style={{ display: 'grid', gap: 10 }}>

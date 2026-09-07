@@ -165,26 +165,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           </div>
         </section>
 
-        <section
-          style={{
-            borderTop: '1px solid var(--line)',
-            padding: '28px 0 64px',
-          }}
-        >
-          <div
-            role="note"
-            style={{
-              background: 'var(--surface)',
-              border: '1px dashed var(--line-2)',
-              borderRadius: 'var(--radius)',
-              padding: '18px 20px',
-              boxShadow: 'var(--shadow-sm)',
-            }}
-          >
-            <strong style={{ display: 'block', marginBottom: 4 }}>{t('phaseNoticeTitle')}</strong>
-            <span style={{ color: 'var(--ink-2)', fontSize: 15 }}>{t('phaseNotice')}</span>
-          </div>
-        </section>
+        <div style={{ paddingBottom: 64 }} />
       </main>
 
       <footer

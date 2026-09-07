@@ -10,6 +10,7 @@ import {
   adminUpdateMembershipPlan,
   getClubMembershipPlans,
 } from '@/lib/api';
+import { useToast } from '../Toast';
 
 type PlanDraft = { name: string; priceCents: number; durationDays: number; discountPercent: number };
 const EMPTY_PLAN: PlanDraft = { name: '', priceCents: 0, durationDays: 30, discountPercent: 10 };
@@ -17,7 +18,9 @@ const EMPTY_PLAN: PlanDraft = { name: '', priceCents: 0, durationDays: 30, disco
 /** Club-admin management of membership plans + granting memberships (spec §9). */
 export function MembershipManager({ clubId, currency }: { clubId: number; currency: string }) {
   const t = useTranslations('Admin');
+  const tt = useTranslations('Toasts');
   const qc = useQueryClient();
+  const toast = useToast();
 
   const plans = useQuery({
     queryKey: ['membershipPlans', clubId],
@@ -35,6 +38,8 @@ export function MembershipManager({ clubId, currency }: { clubId: number; curren
   });
   const grantMut = useMutation({
     mutationFn: (input: { userEmail: string; planId: number }) => adminGrantMembership(clubId, input),
+    onSuccess: () => toast(tt('membershipGranted')),
+    onError: (e) => toast(e instanceof Error ? e.message : tt('error'), 'error'),
   });
 
   const [draft, setDraft] = useState<PlanDraft>(EMPTY_PLAN);

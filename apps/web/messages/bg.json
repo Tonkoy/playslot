@@ -12,7 +12,16 @@
     "favorites": "Любими",
     "menu": "Меню",
     "register": "Регистрация",
-    "language": "Език"
+    "language": "Език",
+    "account": "Профил",
+    "logout": "Изход",
+    "themeLabel": "Тема: {mode}",
+    "theme_system": "системна",
+    "theme_light": "светла",
+    "theme_dark": "тъмна",
+    "menuAria": "Профил и настройки",
+    "settings": "Настройки",
+    "theme": "Тема"
   },
   "Login": {
     "title": "Вход",
@@ -233,7 +242,13 @@
     "cancel": "Откажи",
     "upcoming": "Предстоящи",
     "past": "Минали",
-    "refundNote": "Резервацията е отменена. Възстановена сума: {amount} €."
+    "refundNote": "Резервацията е отменена. Възстановена сума: {amount} €.",
+    "bookingRef": "Резервация №",
+    "cancelConfirmTitle": "Да отменим ли резервацията?",
+    "cancelConfirmBody": "Резервация {ref} в {club} на {when} ще бъде отменена.",
+    "cancelConfirmNote": "Възстановяването на сума следва правилата на клуба за анулиране. Клиентът, клубът и треньорът получават известие.",
+    "keepBooking": "Запази резервацията",
+    "confirmCancel": "Отмени резервацията"
   },
   "SlotStates": {
     "FREE": "Свободен",
@@ -291,5 +306,31 @@
     "duration": "{days} дни",
     "discount": "{percent}% отстъпка за резервации",
     "howToJoin": "Помолете клуба да активира абонамент за вас — отстъпката се прилага автоматично."
+  },
+  "Account": {
+    "verified": "Имейл потвърден",
+    "notVerified": "Имейл непотвърден",
+    "rolePlatformAdmin": "Платформен админ",
+    "roleClubAdmin": "Клубен админ",
+    "roleClubStaff": "Клубен персонал",
+    "roleCoach": "Треньор",
+    "rolePlayer": "Играч",
+    "logout": "Изход",
+    "myBookings": "Моите резервации",
+    "myFavorites": "Любими",
+    "manageClub": "Управление на клуб",
+    "memberships": "Моите абонаменти",
+    "until": "до {date}"
+  },
+  "Toasts": {
+    "booked": "Резервацията е потвърдена",
+    "cancelled": "Резервацията е отменена",
+    "favoriteAdded": "Добавено в любими",
+    "favoriteRemoved": "Премахнато от любими",
+    "eventRegistered": "Записахте се успешно",
+    "eventUnregistered": "Записването е отменено",
+    "membershipGranted": "Абонаментът е издаден",
+    "reviewSubmitted": "Отзивът е публикуван",
+    "error": "Нещо се обърка"
   }
 }

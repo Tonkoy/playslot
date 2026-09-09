@@ -12,7 +12,7 @@ import { CLIENT_BASE, coachesForClub, createReservation, fetchAvailability, getM
 // State → design token + non-color cue (icon). Never color-only (spec §7/§20).
 const STATE_STYLE: Record<SlotState, { bg: string; fg: string; icon: string; bookable: boolean }> = {
   FREE: { bg: 'var(--free-soft)', fg: 'var(--free)', icon: '✓', bookable: true },
-  RESERVED: { bg: 'var(--booked-soft)', fg: 'var(--booked)', icon: '×', bookable: false },
+  RESERVED: { bg: 'var(--reserved-soft)', fg: 'var(--reserved)', icon: '×', bookable: false },
   MINE: { bg: 'var(--teal-soft)', fg: 'var(--teal)', icon: '★', bookable: false },
   UNAVAILABLE: { bg: 'var(--booked-soft)', fg: 'var(--ink-3)', icon: '–', bookable: false },
   PAST: { bg: 'var(--booked-soft)', fg: 'var(--ink-3)', icon: '·', bookable: false },

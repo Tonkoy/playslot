@@ -6,7 +6,7 @@ import { Link } from '@/i18n/navigation';
 // Map each slot state to a design token + a non-color cue (icon), per spec §7/§20.
 const STATE_STYLE: Record<SlotState, { bg: string; fg: string; icon: string }> = {
   FREE: { bg: 'var(--free-soft)', fg: 'var(--free)', icon: '✓' },
-  RESERVED: { bg: 'var(--booked-soft)', fg: 'var(--booked)', icon: '×' },
+  RESERVED: { bg: 'var(--reserved-soft)', fg: 'var(--reserved)', icon: '×' },
   MINE: { bg: 'var(--teal-soft)', fg: 'var(--teal)', icon: '★' },
   UNAVAILABLE: { bg: 'var(--booked-soft)', fg: 'var(--ink-3)', icon: '–' },
   PAST: { bg: 'var(--booked-soft)', fg: 'var(--ink-3)', icon: '·' },

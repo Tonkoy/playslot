@@ -94,7 +94,12 @@ describe('Auth flow (e2e)', () => {
 
     await http().post('/auth/reset-password').send({ token: 'nope', password: 'Newpass123!' }).expect(422);
 
+    const pwChanges = ctx.mail.passwordChanges.length;
     await http().post('/auth/reset-password').send({ token, password: 'Newpass123!' }).expect(200);
+
+    // a security notice is sent confirming the password change
+    expect(ctx.mail.passwordChanges.length).toBe(pwChanges + 1);
+    expect(ctx.mail.passwordChanges.at(-1)?.to).toBe(email);
 
     // reused reset token now fails
     await http().post('/auth/reset-password').send({ token, password: 'Another123!' }).expect(422);

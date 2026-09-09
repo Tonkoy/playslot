@@ -169,6 +169,11 @@ export class AuthService {
         },
       }),
     ]);
+    // Security notice that the password changed (best-effort; never blocks reset).
+    const user = await this.prisma.user.findUnique({ where: { id: token.userId } });
+    if (user) {
+      await this.mail.sendPasswordChanged(user.email, normalizeLocale(user.locale)).catch(() => undefined);
+    }
   }
 
   // ── OAuth (Google) ───────────────────────────────────────────────────────────

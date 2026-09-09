@@ -179,4 +179,69 @@ describe('Notifications (e2e)', () => {
     expect(sent).toBe(0);
     expect(ctx.mail.coachSchedules.length).toBe(before);
   });
+
+  // ── staff lifecycle actions (Club OS) ──
+
+  const adminLogin = async () =>
+    (await http().post('/auth/login').send({ email: 'admin@notif.test', password }).expect(200))
+      .headers['set-cookie'] as unknown as string[];
+
+  it('rescheduling a booking notifies the player and the club staff of the new time', async () => {
+    const adminCookie = await adminLogin();
+    const created = (
+      await http()
+        .post('/reservations')
+        .set('Cookie', cookie)
+        .send({ clubId, type: 'COURT', startsAt: at(DAY, 480), durationMin: 60, paymentMethod: 'ON_SITE', resourceIds: [courtId] })
+        .expect(201)
+    ).body;
+
+    const p = ctx.mail.reschedules.length;
+    const s = ctx.mail.staffReschedules.length;
+    await http()
+      .patch(`/clubs/${clubId}/reservations/${created.reservationId}`)
+      .set('Cookie', adminCookie)
+      .send({ startsAt: at(DAY, 780), durationMin: 60, resourceIds: [courtId] }) // move 08:00 → 13:00
+      .expect(200);
+
+    expect(ctx.mail.reschedules.length).toBe(p + 1);
+    expect(ctx.mail.reschedules.at(-1)!.to).toBe('player@notif.test');
+    expect(ctx.mail.reschedules.at(-1)!.previousWhen).toContain('08:00');
+    expect(ctx.mail.staffReschedules.length).toBe(s + 2); // admin + staff
+  });
+
+  it('marking a booking paid emails the player a receipt', async () => {
+    const adminCookie = await adminLogin();
+    const created = (
+      await http()
+        .post('/reservations')
+        .set('Cookie', cookie)
+        .send({ clubId, type: 'COURT', startsAt: at(DAY, 900), durationMin: 60, paymentMethod: 'ON_SITE', resourceIds: [courtId] })
+        .expect(201)
+    ).body;
+    const before = ctx.mail.receipts.length;
+    await http().post(`/clubs/${clubId}/reservations/${created.reservationId}/mark-paid`).set('Cookie', adminCookie).expect(200);
+    expect(ctx.mail.receipts.length).toBe(before + 1);
+    expect(ctx.mail.receipts.at(-1)!.to).toBe('player@notif.test');
+  });
+
+  it('marking a no-show notifies the player', async () => {
+    const adminCookie = await adminLogin();
+    const created = (
+      await http()
+        .post('/reservations')
+        .set('Cookie', cookie)
+        .send({ clubId, type: 'COURT', startsAt: at(DAY, 960), durationMin: 60, paymentMethod: 'ON_SITE', resourceIds: [courtId] })
+        .expect(201)
+    ).body;
+    // No-show requires a started booking; pin its start into the past.
+    await ctx.prisma.reservation.update({
+      where: { id: created.reservationId },
+      data: { startsAt: new Date(Date.now() - 3_600_000) },
+    });
+    const before = ctx.mail.noShows.length;
+    await http().post(`/clubs/${clubId}/reservations/${created.reservationId}/no-show`).set('Cookie', adminCookie).expect(200);
+    expect(ctx.mail.noShows.length).toBe(before + 1);
+    expect(ctx.mail.noShows.at(-1)!.to).toBe('player@notif.test');
+  });
 });

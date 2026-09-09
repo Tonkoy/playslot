@@ -16,6 +16,14 @@ export class FakeMail {
   cancellations: { to: string; refundCents: number }[] = [];
   staffNotices: { to: string; customerName: string; what: string }[] = [];
   coachNotices: { to: string; customerName: string }[] = [];
+  staffCancellations: { to: string; customerName: string; what: string }[] = [];
+  coachCancellations: { to: string; customerName: string }[] = [];
+  reschedules: { to: string; previousWhen?: string }[] = [];
+  staffReschedules: { to: string; customerName: string }[] = [];
+  coachReschedules: { to: string; customerName: string }[] = [];
+  receipts: { to: string }[] = [];
+  noShows: { to: string }[] = [];
+  passwordChanges: { to: string }[] = [];
   coachSchedules: {
     to: string;
     coachName: string;
@@ -69,6 +77,34 @@ export class FakeMail {
     _locale?: ApiLocale,
   ) {
     this.coachSchedules.push({ to, ...info });
+  }
+  async sendStaffCancellationNotice(
+    to: string,
+    info: { customerName: string; what: string },
+    _locale?: ApiLocale,
+  ) {
+    this.staffCancellations.push({ to, customerName: info.customerName, what: info.what });
+  }
+  async sendCoachCancellationNotice(to: string, info: { customerName: string }, _locale?: ApiLocale) {
+    this.coachCancellations.push({ to, customerName: info.customerName });
+  }
+  async sendReschedule(to: string, info: { previousWhen?: string }, _locale?: ApiLocale) {
+    this.reschedules.push({ to, previousWhen: info.previousWhen });
+  }
+  async sendStaffRescheduleNotice(to: string, info: { customerName: string }, _locale?: ApiLocale) {
+    this.staffReschedules.push({ to, customerName: info.customerName });
+  }
+  async sendCoachRescheduleNotice(to: string, info: { customerName: string }, _locale?: ApiLocale) {
+    this.coachReschedules.push({ to, customerName: info.customerName });
+  }
+  async sendPaymentReceipt(to: string, _info: unknown, _locale?: ApiLocale) {
+    this.receipts.push({ to });
+  }
+  async sendNoShowNotice(to: string, _info: unknown, _locale?: ApiLocale) {
+    this.noShows.push({ to });
+  }
+  async sendPasswordChanged(to: string, _locale?: ApiLocale) {
+    this.passwordChanges.push({ to });
   }
 
   tokenFrom(link: string): string {

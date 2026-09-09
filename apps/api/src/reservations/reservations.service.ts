@@ -262,6 +262,11 @@ export class ReservationsService {
         return res;
       });
       this.events.emitAvailabilityChanged(clubId);
+      // Notify the parties the booking moved (not for maintenance BLOCKs).
+      if (existing.type !== 'BLOCK') {
+        const previousWhen = formatInZone(existing.startsAt, slot.timezone, 'yyyy-MM-dd HH:mm');
+        await this.sendRescheduleEmails(reservationId, previousWhen);
+      }
       return { id: updated.id, startsAt: updated.startsAt.toISOString(), priceCents };
     } catch (e) {
       if (isExclusionViolation(e)) throw new AppException('availability_changed', { reason: 'overlap' });
@@ -285,6 +290,7 @@ export class ReservationsService {
       update: { status: 'CAPTURED', capturedAt: new Date() },
     });
     await this.audit(this.prisma, staffUserId, 'reservation.marked_paid', reservationId, {});
+    await this.sendReceiptEmail(reservationId);
     return { id: reservationId, paymentStatus: 'CAPTURED' as const };
   }
 
@@ -296,6 +302,7 @@ export class ReservationsService {
     await this.prisma.reservation.update({ where: { id: reservationId }, data: { status: 'NO_SHOW' } });
     await this.audit(this.prisma, staffUserId, 'reservation.no_show', reservationId, {});
     this.events.emitAvailabilityChanged(clubId);
+    await this.sendNoShowEmail(reservationId);
     return { id: reservationId, status: 'NO_SHOW' as const };
   }
 
@@ -490,79 +497,35 @@ export class ReservationsService {
    *   3. for a LESSON, the selected coach — a new-lesson notice.
    */
   private async sendConfirmationEmail(reservationId: number): Promise<void> {
-    const r = await this.prisma.reservation.findUnique({
-      where: { id: reservationId },
-      include: {
-        user: { select: { email: true, locale: true, name: true } },
-        club: {
-          select: {
-            name: true,
-            timezone: true,
-            members: {
-              where: { status: 'ACTIVE', role: { in: ['CLUB_ADMIN', 'CLUB_STAFF'] } },
-              select: { user: { select: { email: true, locale: true } } },
-            },
-          },
-        },
-        resources: {
-          select: {
-            resource: {
-              select: {
-                type: true,
-                name: true,
-                coachProfile: { select: { user: { select: { email: true, locale: true } } } },
-              },
-            },
-          },
-        },
-      },
-    });
-    if (!r) return;
-
-    const when = formatInZone(r.startsAt, r.club.timezone, 'yyyy-MM-dd HH:mm');
-    const walkin = r.user?.email.endsWith('@walkin.playslot.local') ?? true;
-    const participantName = (r.participants as { name?: string } | null)?.name;
-    const customerName =
-      (!walkin ? r.user?.name : undefined) ?? participantName ?? 'PlaySlot customer';
-    const what = r.resources.map((x) => x.resource.name).join(' + ') || r.type;
-    const customerEmail = r.user?.email;
-
+    const p = await this.loadReservationParties(reservationId);
+    if (!p) return;
     // 1. customer (skip synthetic walk-in addresses)
-    if (r.user && !walkin) {
+    if (p.customer) {
       await this.mail
         .sendConfirmation(
-          r.user.email,
-          { clubName: r.club.name, when, priceCents: r.priceCents, currency: r.currency },
-          normalizeLocale(r.user.locale),
+          p.customer.email,
+          { clubName: p.clubName, when: p.when, priceCents: p.priceCents, currency: p.currency },
+          normalizeLocale(p.customer.locale),
         )
         .catch(() => undefined);
     }
-
-    // 2. club admins/staff (dedupe; don't double-notify the booking customer)
-    const staffSeen = new Set<string>();
-    for (const m of r.club.members) {
-      const email = m.user.email;
-      if (email === customerEmail || staffSeen.has(email)) continue;
-      staffSeen.add(email);
+    // 2. club admins/staff
+    for (const s of p.staff) {
       await this.mail
         .sendStaffBookingNotice(
-          email,
-          { clubName: r.club.name, when, customerName, what, priceCents: r.priceCents, currency: r.currency },
-          normalizeLocale(m.user.locale),
+          s.email,
+          { clubName: p.clubName, when: p.when, customerName: p.customerName, what: p.what, priceCents: p.priceCents, currency: p.currency },
+          normalizeLocale(s.locale),
         )
         .catch(() => undefined);
     }
-
     // 3. the coach on a lesson
-    const coachUser = r.resources
-      .map((x) => x.resource)
-      .find((res) => res.type === 'COACH' && res.coachProfile?.user)?.coachProfile?.user;
-    if (coachUser) {
+    if (p.coachUser) {
       await this.mail
         .sendCoachBookingNotice(
-          coachUser.email,
-          { clubName: r.club.name, when, customerName },
-          normalizeLocale(coachUser.locale),
+          p.coachUser.email,
+          { clubName: p.clubName, when: p.when, customerName: p.customerName },
+          normalizeLocale(p.coachUser.locale),
         )
         .catch(() => undefined);
     }
@@ -575,6 +538,109 @@ export class ReservationsService {
    *   3. for a LESSON, the selected coach — the lesson is off.
    */
   private async sendCancellationEmails(reservationId: number, refundCents: number): Promise<void> {
+    const p = await this.loadReservationParties(reservationId);
+    if (!p) return;
+    // 1. customer (skip synthetic walk-in addresses)
+    if (p.customer) {
+      await this.mail
+        .sendCancellation(
+          p.customer.email,
+          { clubName: p.clubName, when: p.when, refundCents, currency: p.currency },
+          normalizeLocale(p.customer.locale),
+        )
+        .catch(() => undefined);
+    }
+    // 2. club admins/staff
+    for (const s of p.staff) {
+      await this.mail
+        .sendStaffCancellationNotice(
+          s.email,
+          { clubName: p.clubName, when: p.when, customerName: p.customerName, what: p.what },
+          normalizeLocale(s.locale),
+        )
+        .catch(() => undefined);
+    }
+    // 3. the coach on a lesson
+    if (p.coachUser) {
+      await this.mail
+        .sendCoachCancellationNotice(
+          p.coachUser.email,
+          { clubName: p.clubName, when: p.when, customerName: p.customerName },
+          normalizeLocale(p.coachUser.locale),
+        )
+        .catch(() => undefined);
+    }
+  }
+
+  /**
+   * On a reschedule/move, notify the customer, admins/staff, and (for a LESSON)
+   * the coach that the booking shifted. Best-effort; skipped for BLOCKs.
+   */
+  private async sendRescheduleEmails(reservationId: number, previousWhen?: string): Promise<void> {
+    const p = await this.loadReservationParties(reservationId);
+    if (!p) return;
+    if (p.customer) {
+      await this.mail
+        .sendReschedule(
+          p.customer.email,
+          { clubName: p.clubName, when: p.when, previousWhen },
+          normalizeLocale(p.customer.locale),
+        )
+        .catch(() => undefined);
+    }
+    for (const s of p.staff) {
+      await this.mail
+        .sendStaffRescheduleNotice(
+          s.email,
+          { clubName: p.clubName, when: p.when, previousWhen, customerName: p.customerName, what: p.what },
+          normalizeLocale(s.locale),
+        )
+        .catch(() => undefined);
+    }
+    if (p.coachUser) {
+      await this.mail
+        .sendCoachRescheduleNotice(
+          p.coachUser.email,
+          { clubName: p.clubName, when: p.when, previousWhen, customerName: p.customerName },
+          normalizeLocale(p.coachUser.locale),
+        )
+        .catch(() => undefined);
+    }
+  }
+
+  /** Receipt to the customer once a booking is marked paid (best-effort). */
+  private async sendReceiptEmail(reservationId: number): Promise<void> {
+    const p = await this.loadReservationParties(reservationId);
+    if (!p?.customer) return;
+    await this.mail
+      .sendPaymentReceipt(
+        p.customer.email,
+        { clubName: p.clubName, when: p.when, priceCents: p.priceCents, currency: p.currency },
+        normalizeLocale(p.customer.locale),
+      )
+      .catch(() => undefined);
+  }
+
+  /** Notice to the customer that they were marked a no-show (best-effort). */
+  private async sendNoShowEmail(reservationId: number): Promise<void> {
+    const p = await this.loadReservationParties(reservationId);
+    if (!p?.customer) return;
+    await this.mail
+      .sendNoShowNotice(
+        p.customer.email,
+        { clubName: p.clubName, when: p.when },
+        normalizeLocale(p.customer.locale),
+      )
+      .catch(() => undefined);
+  }
+
+  /**
+   * Shared recipient resolution for booking notifications (spec §19): loads the
+   * reservation with its club staff and coach, and derives the display fields.
+   * Returns null if the reservation is gone. `customer` is null for synthetic
+   * walk-in bookings; `staff` is deduped and excludes the booking customer.
+   */
+  private async loadReservationParties(reservationId: number) {
     const r = await this.prisma.reservation.findUnique({
       where: { id: reservationId },
       include: {
@@ -602,7 +668,7 @@ export class ReservationsService {
         },
       },
     });
-    if (!r) return;
+    if (!r) return null;
 
     const when = formatInZone(r.startsAt, r.club.timezone, 'yyyy-MM-dd HH:mm');
     const walkin = r.user?.email.endsWith('@walkin.playslot.local') ?? true;
@@ -611,46 +677,29 @@ export class ReservationsService {
       (!walkin ? r.user?.name : undefined) ?? participantName ?? 'PlaySlot customer';
     const what = r.resources.map((x) => x.resource.name).join(' + ') || r.type;
     const customerEmail = r.user?.email;
+    const coachUser =
+      r.resources
+        .map((x) => x.resource)
+        .find((res) => res.type === 'COACH' && res.coachProfile?.user)?.coachProfile?.user ?? null;
 
-    // 1. customer (skip synthetic walk-in addresses)
-    if (r.user && !walkin) {
-      await this.mail
-        .sendCancellation(
-          r.user.email,
-          { clubName: r.club.name, when, refundCents, currency: r.currency },
-          normalizeLocale(r.user.locale),
-        )
-        .catch(() => undefined);
-    }
-
-    // 2. club admins/staff (dedupe; don't double-notify the booking customer)
-    const staffSeen = new Set<string>();
+    // Deduped club admins/staff, excluding the booking customer.
+    const staffByEmail = new Map<string, { email: string; locale: string }>();
     for (const m of r.club.members) {
-      const email = m.user.email;
-      if (email === customerEmail || staffSeen.has(email)) continue;
-      staffSeen.add(email);
-      await this.mail
-        .sendStaffCancellationNotice(
-          email,
-          { clubName: r.club.name, when, customerName, what },
-          normalizeLocale(m.user.locale),
-        )
-        .catch(() => undefined);
+      if (m.user.email === customerEmail) continue;
+      staffByEmail.set(m.user.email, m.user);
     }
 
-    // 3. the coach on a lesson
-    const coachUser = r.resources
-      .map((x) => x.resource)
-      .find((res) => res.type === 'COACH' && res.coachProfile?.user)?.coachProfile?.user;
-    if (coachUser) {
-      await this.mail
-        .sendCoachCancellationNotice(
-          coachUser.email,
-          { clubName: r.club.name, when, customerName },
-          normalizeLocale(coachUser.locale),
-        )
-        .catch(() => undefined);
-    }
+    return {
+      clubName: r.club.name,
+      when,
+      customer: !walkin && r.user ? r.user : null,
+      customerName,
+      what,
+      priceCents: r.priceCents,
+      currency: r.currency,
+      staff: [...staffByEmail.values()],
+      coachUser,
+    };
   }
 
   async listMine(userId: number): Promise<ReservationSummary[]> {

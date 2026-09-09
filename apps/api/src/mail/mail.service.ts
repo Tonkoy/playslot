@@ -219,6 +219,106 @@ export class MailService {
     await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
   }
 
+  /** Notify the customer their booking was moved to a new time/court (spec §19). */
+  async sendReschedule(
+    to: string,
+    info: { clubName: string; when: string; previousWhen?: string },
+    locale: ApiLocale = DEFAULT_LOCALE,
+  ): Promise<void> {
+    const copy =
+      locale === 'en'
+        ? {
+            subject: `Booking moved — ${info.clubName}`,
+            body: `Your booking at ${info.clubName} moved to ${info.when}${info.previousWhen ? ` (was ${info.previousWhen})` : ''}.`,
+          }
+        : {
+            subject: `Преместена резервация — ${info.clubName}`,
+            body: `Резервацията ви в ${info.clubName} е преместена за ${info.when}${info.previousWhen ? ` (беше ${info.previousWhen})` : ''}.`,
+          };
+    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+  }
+
+  /** Notify club admins/staff that a booking was moved (spec §19). */
+  async sendStaffRescheduleNotice(
+    to: string,
+    info: { clubName: string; when: string; previousWhen?: string; customerName: string; what: string },
+    locale: ApiLocale = DEFAULT_LOCALE,
+  ): Promise<void> {
+    const prev = info.previousWhen ? ` (was ${info.previousWhen})` : '';
+    const prevBg = info.previousWhen ? ` (беше ${info.previousWhen})` : '';
+    const copy =
+      locale === 'en'
+        ? {
+            subject: `Booking moved — ${info.clubName}`,
+            body: `${info.customerName}'s ${info.what} moved to ${info.when}${prev}.`,
+          }
+        : {
+            subject: `Преместена резервация — ${info.clubName}`,
+            body: `Резервацията на ${info.customerName} за ${info.what} е преместена за ${info.when}${prevBg}.`,
+          };
+    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+  }
+
+  /** Notify the coach that a lesson booked with them was moved (spec §19). */
+  async sendCoachRescheduleNotice(
+    to: string,
+    info: { clubName: string; when: string; previousWhen?: string; customerName: string },
+    locale: ApiLocale = DEFAULT_LOCALE,
+  ): Promise<void> {
+    const prev = info.previousWhen ? ` (was ${info.previousWhen})` : '';
+    const prevBg = info.previousWhen ? ` (беше ${info.previousWhen})` : '';
+    const copy =
+      locale === 'en'
+        ? {
+            subject: `Lesson moved — ${info.when}`,
+            body: `Your lesson with ${info.customerName} at ${info.clubName} moved to ${info.when}${prev}.`,
+          }
+        : {
+            subject: `Преместен урок — ${info.when}`,
+            body: `Урокът ви с ${info.customerName} в ${info.clubName} е преместен за ${info.when}${prevBg}.`,
+          };
+    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+  }
+
+  /** Payment receipt to the customer once a booking is marked paid (spec §19). */
+  async sendPaymentReceipt(
+    to: string,
+    info: { clubName: string; when: string; priceCents: number; currency: string },
+    locale: ApiLocale = DEFAULT_LOCALE,
+  ): Promise<void> {
+    const price = `${(info.priceCents / 100).toFixed(2)} ${info.currency}`;
+    const copy =
+      locale === 'en'
+        ? {
+            subject: `Payment received — ${info.clubName}`,
+            body: `We received your payment of ${price} for your booking at ${info.clubName} on ${info.when}. Thank you!`,
+          }
+        : {
+            subject: `Получено плащане — ${info.clubName}`,
+            body: `Получихме плащането ви от ${price} за резервацията в ${info.clubName} на ${info.when}. Благодарим!`,
+          };
+    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+  }
+
+  /** Notify the customer they were marked as a no-show (spec §19). */
+  async sendNoShowNotice(
+    to: string,
+    info: { clubName: string; when: string },
+    locale: ApiLocale = DEFAULT_LOCALE,
+  ): Promise<void> {
+    const copy =
+      locale === 'en'
+        ? {
+            subject: `Missed booking — ${info.clubName}`,
+            body: `You were marked as a no-show for your booking at ${info.clubName} on ${info.when}.`,
+          }
+        : {
+            subject: `Пропусната резервация — ${info.clubName}`,
+            body: `Отбелязани сте като неявили се за резервацията в ${info.clubName} на ${info.when}.`,
+          };
+    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+  }
+
   async sendCancellation(
     to: string,
     info: { clubName: string; when: string; refundCents: number; currency: string },
@@ -260,6 +360,32 @@ export class MailService {
       subject: copy.subject,
       text: `${copy.body}\n${link}`,
       html: emailShell(`<p>${copy.body}</p>${button(link, copy.cta)}<p>${link}</p>`),
+    });
+  }
+
+  /**
+   * Security notice sent after the password is successfully changed (spec §19).
+   * Links back to the reset flow so a user who didn't do this can re-secure.
+   */
+  async sendPasswordChanged(to: string, locale: ApiLocale = DEFAULT_LOCALE): Promise<void> {
+    const link = this.webLink(locale, 'forgot-password');
+    const copy =
+      locale === 'en'
+        ? {
+            subject: 'Your PlaySlot password was changed',
+            body: "Your password was just changed. If this wasn't you, reset it immediately and contact support.",
+            cta: 'Reset password',
+          }
+        : {
+            subject: 'Паролата ви в PlaySlot беше сменена',
+            body: 'Паролата ви току-що беше сменена. Ако не сте вие, сменете я веднага и се свържете с поддръжка.',
+            cta: 'Смени паролата',
+          };
+    await this.send({
+      to,
+      subject: copy.subject,
+      text: `${copy.body}\n${link}`,
+      html: emailShell(`<p>${copy.body}</p>${button(link, copy.cta)}`),
     });
   }
 

@@ -113,29 +113,20 @@ export function SiteNav() {
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 8,
+              justifyContent: 'center',
+              minWidth: 44,
               minHeight: 44,
-              padding: signedIn ? '0 10px 0 6px' : '0 12px',
-              background: 'var(--surface)',
+              padding: 0,
+              background: menuOpen ? 'var(--surface-2)' : 'var(--surface)',
               border: '1px solid var(--line-2)',
-              borderRadius: 999,
+              borderRadius: 'var(--radius-sm)',
               color: 'var(--ink)',
               cursor: 'pointer',
-              fontSize: 15,
-              fontWeight: 600,
+              fontSize: 22,
+              lineHeight: 1,
             }}
           >
-            {signedIn ? (
-              <>
-                <Avatar name={me.data.user.name} size={30} />
-                <span aria-hidden style={{ color: 'var(--ink-3)', fontSize: 11 }}>▾</span>
-              </>
-            ) : (
-              <>
-                <span aria-hidden style={{ fontSize: 16 }}>⚙</span>
-                <span aria-hidden style={{ color: 'var(--ink-3)', fontSize: 11 }}>▾</span>
-              </>
-            )}
+            <span aria-hidden>⋯</span>
           </button>
 
           {menuOpen && (

@@ -1,6 +1,11 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
-import { coachAvailabilityQuerySchema } from '@playslot/contracts';
+import { Body, Controller, Get, Param, Put, Query } from '@nestjs/common';
+import {
+  coachAvailabilityQuerySchema,
+  updateCoachHoursSchema,
+  type UpdateCoachHoursInput,
+} from '@playslot/contracts';
 import { CurrentUser, Public } from '../auth/decorators';
+import { ZodBody } from '../common/zod-validation.pipe';
 import { CoachingService } from './coaching.service';
 
 /** Public coach directory + coach-first availability (spec §7/§10/§15). */
@@ -13,6 +18,20 @@ export class CoachingController {
   @Get('me/schedule')
   mySchedule(@CurrentUser('id') userId: number, @Query('from') from?: string) {
     return this.coaching.getMySchedule(userId, from);
+  }
+
+  /** The signed-in coach's working hours (read + replace). */
+  @Get('me/hours')
+  myHours(@CurrentUser('id') userId: number) {
+    return this.coaching.getMyHours(userId);
+  }
+
+  @Put('me/hours')
+  updateHours(
+    @CurrentUser('id') userId: number,
+    @Body(new ZodBody(updateCoachHoursSchema)) body: UpdateCoachHoursInput,
+  ) {
+    return this.coaching.updateMyHours(userId, body);
   }
 
   @Public()

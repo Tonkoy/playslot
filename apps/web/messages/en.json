@@ -333,7 +333,8 @@
     "eventUnregistered": "Registration cancelled",
     "membershipGranted": "Membership granted",
     "reviewSubmitted": "Review submitted",
-    "error": "Something went wrong"
+    "error": "Something went wrong",
+    "hoursSaved": "Working hours saved"
   },
   "CoachSchedule": {
     "title": "My schedule",
@@ -344,6 +345,15 @@
     "nextWeek": "Next week",
     "thisWeek": "This week",
     "noLessons": "No lessons",
-    "lessonCount": "{count, plural, =0 {no lessons} one {# lesson} other {# lessons}} this week"
+    "lessonCount": "{count, plural, =0 {no lessons} one {# lesson} other {# lessons}} this week",
+    "export": "Export",
+    "lessonWith": "Lesson —"
+  },
+  "CoachHours": {
+    "title": "Working hours",
+    "dayOff": "Day off",
+    "noHours": "No working hours set.",
+    "save": "Save hours",
+    "invalidRange": "End time must be after start."
   }
 }

@@ -3,10 +3,12 @@ import {
   type CoachAvailabilityQuery,
   type CoachAvailabilityResponse,
   type CoachListItem,
+  type CoachHoursResponse,
   type CoachScheduleDay,
   type CoachScheduleLesson,
   type CoachScheduleResponse,
   type CoachSlot,
+  type UpdateCoachHoursInput,
 } from '@playslot/contracts';
 import { Prisma } from '@playslot/db';
 import {
@@ -269,6 +271,56 @@ export class CoachingService {
     }
 
     return { timezone: tz, from, to: toDate, days };
+  }
+
+  // ── coach's own working hours (spec §7: coach sets bookable time) ──
+
+  /** The signed-in coach's weekly working hours (only working days returned). */
+  async getMyHours(userId: number): Promise<CoachHoursResponse> {
+    const { tz, resourceId } = await this.coachResourceOf(userId);
+    const rules = await this.prisma.availabilityRule.findMany({
+      where: { resourceId },
+      orderBy: [{ weekday: 'asc' }, { startMin: 'asc' }],
+    });
+    return {
+      timezone: tz,
+      days: rules.map((r) => ({ weekday: r.weekday, startMin: r.startMin, endMin: r.endMin })),
+    };
+  }
+
+  /** Replace the coach's working hours (one interval per weekday; omit = day off). */
+  async updateMyHours(userId: number, input: UpdateCoachHoursInput): Promise<CoachHoursResponse> {
+    const { resourceId } = await this.coachResourceOf(userId);
+    // One interval per weekday for MVP — a later entry for the same day wins.
+    const byDay = new Map<number, { weekday: number; startMin: number; endMin: number }>();
+    for (const d of input.days) byDay.set(d.weekday, d);
+    await this.prisma.$transaction([
+      this.prisma.availabilityRule.deleteMany({ where: { resourceId } }),
+      this.prisma.availabilityRule.createMany({
+        data: [...byDay.values()].map((d) => ({
+          resourceId,
+          weekday: d.weekday,
+          startMin: d.startMin,
+          endMin: d.endMin,
+        })),
+      }),
+    ]);
+    return this.getMyHours(userId);
+  }
+
+  /** Resolve the signed-in user's shared COACH resource (throws if not a coach). */
+  private async coachResourceOf(userId: number): Promise<{ tz: string; resourceId: number }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { timezone: true, coachProfile: { select: { id: true } } },
+    });
+    if (!user?.coachProfile) throw new AppException('forbidden', { reason: 'not_a_coach' });
+    const resource = await this.prisma.resource.findFirst({
+      where: { coachProfileId: user.coachProfile.id, type: 'COACH' },
+      select: { id: true },
+    });
+    if (!resource) throw new AppException('not_found', { reason: 'coach_resource' });
+    return { tz: user.timezone || 'Europe/Sofia', resourceId: resource.id };
   }
 
   /** Active-reservation intervals per resource for a day (uses reservation bounds). */

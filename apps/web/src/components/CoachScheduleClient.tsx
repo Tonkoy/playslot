@@ -3,9 +3,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
-import type { CoachScheduleLesson } from '@playslot/contracts';
+import type { CoachScheduleDay, CoachScheduleLesson } from '@playslot/contracts';
 import { Link, useRouter } from '@/i18n/navigation';
 import { getMe, getMyCoachSchedule } from '@/lib/api';
+import { CoachHoursEditor } from './CoachHoursEditor';
 
 function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -19,6 +20,34 @@ function mondayOfThisWeek(): string {
 function addDays(iso: string, n: number): string {
   const [y, m, d] = iso.split('-').map(Number);
   return ymd(new Date(y!, m! - 1, d! + n));
+}
+
+// ── iCalendar (.ics) export ──
+function icsStamp(iso: string): string {
+  return new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+}
+function icsEscape(s: string): string {
+  return s.replace(/([,;\\])/g, '\\$1').replace(/\n/g, '\\n');
+}
+function buildIcs(days: CoachScheduleDay[], summaryLabel: (l: CoachScheduleLesson) => string): string {
+  const stamp = icsStamp(new Date().toISOString());
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//PlaySlot//Coach Schedule//EN', 'CALSCALE:GREGORIAN'];
+  for (const day of days) {
+    for (const l of day.lessons) {
+      lines.push(
+        'BEGIN:VEVENT',
+        `UID:playslot-lesson-${l.reservationId}@playslot`,
+        `DTSTAMP:${stamp}`,
+        `DTSTART:${icsStamp(l.startsAt)}`,
+        `DTEND:${icsStamp(l.endsAt)}`,
+        `SUMMARY:${icsEscape(summaryLabel(l))}`,
+        `LOCATION:${icsEscape([l.clubName, l.courtName].filter(Boolean).join(' · '))}`,
+        'END:VEVENT',
+      );
+    }
+  }
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
 }
 
 export function CoachScheduleClient() {
@@ -65,8 +94,24 @@ export function CoachScheduleClient() {
     new Date(`${addDays(weekStart, 6)}T00:00:00`),
   )}`;
 
+  const exportIcs = () => {
+    const ics = buildIcs(days, (l) => `${t('lessonWith')} ${l.customerName}`);
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `playslot-schedule-${weekStart}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div style={{ display: 'grid', gap: 16 }}>
+      {/* coach's own working hours */}
+      <CoachHoursEditor />
+
       {/* week navigation */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <button type="button" onClick={() => setWeekStart((w) => addDays(w, -7))} style={navBtn} aria-label={t('prevWeek')}>
@@ -79,7 +124,30 @@ export function CoachScheduleClient() {
         <button type="button" onClick={() => setWeekStart(mondayOfThisWeek())} style={{ ...navBtn, width: 'auto', padding: '0 14px' }}>
           {t('thisWeek')}
         </button>
-        <span className="mono" style={{ marginLeft: 'auto', color: 'var(--ink-3)', fontSize: 13 }}>
+        <button
+          type="button"
+          onClick={exportIcs}
+          disabled={total === 0}
+          style={{
+            marginLeft: 'auto',
+            minHeight: 44,
+            padding: '0 16px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            background: 'var(--surface)',
+            border: '1px solid var(--line-2)',
+            borderRadius: 'var(--radius-sm)',
+            color: 'var(--ink)',
+            cursor: total === 0 ? 'not-allowed' : 'pointer',
+            opacity: total === 0 ? 0.5 : 1,
+            fontWeight: 600,
+            fontSize: 14,
+          }}
+        >
+          <span aria-hidden>↓</span> {t('export')}
+        </button>
+        <span className="mono" style={{ color: 'var(--ink-3)', fontSize: 13 }}>
           {t('lessonCount', { count: total })}
         </span>
       </div>

@@ -72,3 +72,31 @@ export interface CoachScheduleResponse {
   to: string; // YYYY-MM-DD (exclusive)
   days: CoachScheduleDay[]; // exactly 7, ordered
 }
+
+/** A coach's working hours for one weekday (0=Sun … 6=Sat), minutes from midnight. */
+export interface CoachHoursDay {
+  weekday: number;
+  startMin: number;
+  endMin: number;
+}
+
+export interface CoachHoursResponse {
+  timezone: string;
+  days: CoachHoursDay[]; // only working days; a missing weekday means day off
+}
+
+/** Coach sets their own weekly working hours (one interval per working day). */
+export const updateCoachHoursSchema = z.object({
+  days: z
+    .array(
+      z
+        .object({
+          weekday: z.number().int().min(0).max(6),
+          startMin: z.number().int().min(0).max(24 * 60),
+          endMin: z.number().int().min(0).max(24 * 60),
+        })
+        .refine((d) => d.endMin > d.startMin, { message: 'endMin must be after startMin' }),
+    )
+    .max(7),
+});
+export type UpdateCoachHoursInput = z.infer<typeof updateCoachHoursSchema>;

@@ -2,6 +2,7 @@ import type {
   AvailabilityResponse,
   CalendarResponse,
   ClubReviews,
+  CoachHoursResponse,
   CoachListItem,
   CoachScheduleResponse,
   EventDto,
@@ -299,6 +300,16 @@ export function coachesForClub(clubId: number): Promise<CoachListItem[]> {
 /** The signed-in coach's own weekly schedule (from = YYYY-MM-DD, Monday of the week). */
 export function getMyCoachSchedule(from?: string): Promise<CoachScheduleResponse> {
   return apiFetch(`/coaches/me/schedule${from ? `?from=${from}` : ''}`);
+}
+
+/** The signed-in coach's weekly working hours. */
+export function getMyCoachHours(): Promise<CoachHoursResponse> {
+  return apiFetch('/coaches/me/hours');
+}
+export function updateMyCoachHours(
+  days: { weekday: number; startMin: number; endMin: number }[],
+): Promise<CoachHoursResponse> {
+  return apiFetch('/coaches/me/hours', { method: 'PUT', body: JSON.stringify({ days }) });
 }
 
 // ── favorites + reviews (client) ──

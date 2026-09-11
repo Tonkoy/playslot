@@ -186,4 +186,33 @@ describe('Coaching (e2e)', () => {
     expect(eleven.state).toBe('FREE');
     expect(eleven.compatibleCourtIds).toContain(courtAId);
   });
+
+  // Kept last: replaces the coach's availability rules, which would otherwise
+  // disturb the availability assertions above.
+  it('lets the coach set their own working hours; non-coaches are forbidden', async () => {
+    const coachCookie = (
+      await http().post('/auth/login').send({ email: 'coach@playslot.test', password }).expect(200)
+    ).headers['set-cookie'] as unknown as string[];
+
+    // Mon–Wed 08:00–18:00, Fri 08:00–12:00; Thu + weekend off.
+    const days = [
+      { weekday: 1, startMin: 480, endMin: 1080 },
+      { weekday: 2, startMin: 480, endMin: 1080 },
+      { weekday: 3, startMin: 480, endMin: 1080 },
+      { weekday: 5, startMin: 480, endMin: 720 },
+    ];
+    const put = await http().put('/coaches/me/hours').set('Cookie', coachCookie).send({ days }).expect(200);
+    expect(put.body.days).toEqual(days);
+
+    const get = await http().get('/coaches/me/hours').set('Cookie', coachCookie).expect(200);
+    expect(get.body.days).toEqual(days);
+
+    // endMin ≤ startMin is rejected (validation), and a non-coach cannot set hours.
+    await http()
+      .put('/coaches/me/hours')
+      .set('Cookie', coachCookie)
+      .send({ days: [{ weekday: 1, startMin: 600, endMin: 600 }] })
+      .expect(400);
+    await http().put('/coaches/me/hours').set('Cookie', cookie).send({ days }).expect(403);
+  });
 });

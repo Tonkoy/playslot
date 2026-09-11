@@ -73,6 +73,34 @@ export class MailService {
     });
   }
 
+  /** Invite an admin-created account (club admin, staff or coach) to set a password. */
+  async sendAccountInvite(
+    to: string,
+    link: string,
+    info: { clubName: string; role: string },
+    locale: ApiLocale = DEFAULT_LOCALE,
+  ): Promise<void> {
+    const roleLabel = ROLE_LABEL[locale][info.role] ?? info.role;
+    const copy =
+      locale === 'en'
+        ? {
+            subject: `You've been added to ${info.clubName} on PlaySlot`,
+            body: `You've been added as ${roleLabel} at ${info.clubName}. Set your password to get started:`,
+            cta: 'Set your password',
+          }
+        : {
+            subject: `Добавени сте към ${info.clubName} в PlaySlot`,
+            body: `Добавени сте като ${roleLabel} в ${info.clubName}. Задайте паролата си, за да започнете:`,
+            cta: 'Задай парола',
+          };
+    await this.send({
+      to,
+      subject: copy.subject,
+      text: `${copy.body}\n${link}`,
+      html: emailShell(`<p>${copy.body}</p>${button(link, copy.cta)}<p>${link}</p>`),
+    });
+  }
+
   async sendConfirmation(
     to: string,
     info: { clubName: string; when: string; priceCents: number; currency: string },
@@ -450,6 +478,11 @@ export class MailService {
     return `${base}/${locale}/${path.replace(/^\//, '')}`;
   }
 }
+
+const ROLE_LABEL: Record<ApiLocale, Record<string, string>> = {
+  en: { CLUB_ADMIN: 'club admin', CLUB_STAFF: 'staff', COACH: 'coach' },
+  bg: { CLUB_ADMIN: 'администратор на клуб', CLUB_STAFF: 'персонал', COACH: 'треньор' },
+};
 
 function button(href: string, label: string): string {
   return `<p><a href="${href}" style="display:inline-block;background:#14181b;color:#c7f000;padding:12px 20px;border-radius:9px;text-decoration:none;font-weight:700">${label}</a></p>`;

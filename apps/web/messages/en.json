@@ -407,5 +407,38 @@
     "mine": "Your sessions",
     "cancel": "Cancel",
     "cancelledTag": "Cancelled"
+  },
+  "Platform": {
+    "title": "Platform admin",
+    "subtitle": "Create clubs and assign club administrators across the whole system.",
+    "clubName": "Club name",
+    "city": "City",
+    "slot": "Slot",
+    "min": "min",
+    "createClub": "Create club",
+    "allClubs": "All clubs",
+    "adminsCount": "{n} admins",
+    "coachesCount": "{n} coaches",
+    "activate": "Activate",
+    "suspend": "Suspend",
+    "addAdmin": "Add admin"
+  },
+  "Team": {
+    "title": "Team",
+    "help": "Add coaches and staff to this club. New people get an email invite to set their password.",
+    "coaches": "Coaches",
+    "staff": "Staff",
+    "admins": "Admins",
+    "noCoaches": "No coaches yet.",
+    "noStaff": "No staff yet.",
+    "addCoach": "Add coach",
+    "addStaff": "Add staff",
+    "email": "Email",
+    "name": "Name (optional)",
+    "pending": "pending invite",
+    "invited": "Invited {email} — share the link below so they can set a password.",
+    "linked": "Linked existing user {email}.",
+    "copyLink": "Copy link",
+    "copied": "Copied!"
   }
 }

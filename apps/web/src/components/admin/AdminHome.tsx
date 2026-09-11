@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
 import { Link, useRouter } from '@/i18n/navigation';
 import { getMe, getMyClubs } from '@/lib/api';
+import { PlatformConsole } from './PlatformConsole';
 
 export function AdminHome() {
   const t = useTranslations('Admin');
@@ -18,12 +19,15 @@ export function AdminHome() {
   const clubs = useQuery({ queryKey: ['myClubs'], queryFn: getMyClubs, enabled: me.isSuccess });
 
   if (me.isLoading || me.isError) return <p style={{ color: 'var(--ink-3)' }}>…</p>;
+  const isPlatform = me.data!.user.roles.includes('PLATFORM_ADMIN');
 
   return (
     <div>
       <p style={{ color: 'var(--ink-2)', marginBottom: 20 }}>
         {t('signedInAs', { email: me.data!.user.email })}
       </p>
+
+      {isPlatform && <PlatformConsole />}
 
       <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>{t('yourClubs')}</h2>
 

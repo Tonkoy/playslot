@@ -140,6 +140,27 @@ export class AuthService {
     await this.mail.sendPasswordReset(user.email, this.link('reset-password', raw, locale), locale);
   }
 
+  /**
+   * Issue a set-password ("invite") link for an admin-created account, reusing
+   * the password-reset token so the recipient picks their own password. Returns
+   * the raw link so the caller can email it and hand it to the inviting admin.
+   */
+  async createInviteLink(userId: number, locale: ApiLocale): Promise<string> {
+    await this.prisma.verificationToken.deleteMany({
+      where: { userId, purpose: VerificationPurpose.PASSWORD_RESET, usedAt: null },
+    });
+    const { raw, hash } = issueToken();
+    await this.prisma.verificationToken.create({
+      data: {
+        userId,
+        tokenHash: hash,
+        purpose: VerificationPurpose.PASSWORD_RESET,
+        expiresAt: expiryFromNow(7 * 24 * 60), // 7 days to accept the invite
+      },
+    });
+    return this.link('reset-password', raw, locale);
+  }
+
   async resetPassword(rawToken: string, newPassword: string): Promise<void> {
     const token = await this.prisma.verificationToken.findUnique({
       where: { tokenHash: hashToken(rawToken) },

@@ -7,6 +7,7 @@ import { SPORTS } from '@playslot/contracts';
 import { Link, useRouter } from '@/i18n/navigation';
 import { EventManager } from './EventManager';
 import { MembershipManager } from './MembershipManager';
+import { TeamManager } from './TeamManager';
 import {
   type AdminCourt,
   type CourtInput,
@@ -203,6 +204,9 @@ export function ClubManager({ clubId }: { clubId: number }) {
           )}
         </div>
       </section>
+
+      {/* ── Team: coaches + staff ── */}
+      <TeamManager clubId={clubId} />
 
       {/* ── Memberships (Phase 9) ── */}
       <MembershipManager clubId={clubId} currency={club?.currency ?? 'EUR'} />

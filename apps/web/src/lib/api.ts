@@ -180,6 +180,42 @@ export function getMyClubs(): Promise<MyClubMembership[]> {
   return apiFetch('/me/clubs');
 }
 
+// ── platform admin (super admin) ──
+export function platformListClubs(): Promise<import('@playslot/contracts').PlatformClubDto[]> {
+  return apiFetch('/platform/clubs');
+}
+export function platformCreateClub(
+  input: import('@playslot/contracts').PlatformCreateClubInput,
+): Promise<import('@playslot/contracts').PlatformClubDto> {
+  return apiFetch('/platform/clubs', { method: 'POST', body: JSON.stringify(input) });
+}
+export function platformAddAdmin(
+  clubId: number,
+  input: import('@playslot/contracts').AddMemberInput,
+): Promise<import('@playslot/contracts').InviteResultDto> {
+  return apiFetch(`/platform/clubs/${clubId}/admins`, { method: 'POST', body: JSON.stringify(input) });
+}
+export function platformSetClubStatus(clubId: number, active: boolean): Promise<{ status: string }> {
+  return apiFetch(`/platform/clubs/${clubId}/${active ? 'activate' : 'suspend'}`, { method: 'POST' });
+}
+
+// ── club admin: team ──
+export function getClubTeam(clubId: number): Promise<import('@playslot/contracts').ClubTeamDto> {
+  return apiFetch(`/clubs/${clubId}/team`);
+}
+export function addClubCoach(
+  clubId: number,
+  input: import('@playslot/contracts').AddMemberInput,
+): Promise<import('@playslot/contracts').InviteResultDto> {
+  return apiFetch(`/clubs/${clubId}/coaches`, { method: 'POST', body: JSON.stringify(input) });
+}
+export function addClubStaff(
+  clubId: number,
+  input: import('@playslot/contracts').AddMemberInput,
+): Promise<import('@playslot/contracts').InviteResultDto> {
+  return apiFetch(`/clubs/${clubId}/staff`, { method: 'POST', body: JSON.stringify(input) });
+}
+
 export function googleLoginUrl(returnTo: string): string {
   return `${CLIENT_BASE}/api/auth/google?returnTo=${encodeURIComponent(returnTo)}`;
 }

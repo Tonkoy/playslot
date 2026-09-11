@@ -1,6 +1,13 @@
-import { Controller, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import {
+  addMemberSchema,
+  platformCreateClubSchema,
+  type AddMemberInput,
+  type PlatformCreateClubInput,
+} from '@playslot/contracts';
 import { Role } from '@playslot/db';
 import { CurrentUser, Roles } from '../auth/decorators';
+import { ZodBody } from '../common/zod-validation.pipe';
 import { ClubsService } from './clubs.service';
 
 /** Platform-admin operations (spec §13). Requires the PLATFORM_ADMIN role. */
@@ -8,6 +15,28 @@ import { ClubsService } from './clubs.service';
 @Roles(Role.PLATFORM_ADMIN)
 export class PlatformController {
   constructor(private readonly clubs: ClubsService) {}
+
+  @Get('clubs')
+  listClubs() {
+    return this.clubs.listAllClubs();
+  }
+
+  @Post('clubs')
+  createClub(
+    @Body(new ZodBody(platformCreateClubSchema)) body: PlatformCreateClubInput,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.clubs.createClubAsPlatform(body, userId);
+  }
+
+  @Post('clubs/:id/admins')
+  addAdmin(
+    @Param('id') id: string,
+    @Body(new ZodBody(addMemberSchema)) body: AddMemberInput,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.clubs.addClubAdmin(Number(id), body, userId);
+  }
 
   @Post('clubs/:id/activate')
   activate(@Param('id') id: string, @CurrentUser('id') userId: number) {

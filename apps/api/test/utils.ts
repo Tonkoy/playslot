@@ -32,6 +32,7 @@ export class FakeMail {
   }[] = [];
   groupInvites: { to: string; title: string }[] = [];
   groupCancellations: { to: string; title: string }[] = [];
+  accountInvites: { to: string; link: string; role: string }[] = [];
 
   async send(input: SendEmailInput) {
     this.sent.push(input);
@@ -113,6 +114,9 @@ export class FakeMail {
   }
   async sendGroupSessionCancelled(to: string, info: { title: string }, _locale?: ApiLocale) {
     this.groupCancellations.push({ to, title: info.title });
+  }
+  async sendAccountInvite(to: string, link: string, info: { role: string }, _locale?: ApiLocale) {
+    this.accountInvites.push({ to, link, role: info.role });
   }
 
   tokenFrom(link: string): string {

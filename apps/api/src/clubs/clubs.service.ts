@@ -1,7 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { type ClubJoinRequestInput, type UpsertClubInput } from '@playslot/contracts';
+import {
+  type AddMemberInput,
+  type ClubJoinRequestInput,
+  type ClubTeamDto,
+  type ClubTeamMemberDto,
+  type InviteResultDto,
+  type PlatformClubDto,
+  type PlatformCreateClubInput,
+  type UpsertClubInput,
+} from '@playslot/contracts';
 import { type Prisma, Role } from '@playslot/db';
 import { AppException } from '../common/app-exception';
+import { AuthService } from '../auth/auth.service';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { hashPassword } from '../auth/password';
@@ -41,6 +51,7 @@ export class ClubsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
+    private readonly auth: AuthService,
   ) {}
 
   // ── public reads (only ACTIVE clubs are visible) ──
@@ -234,6 +245,167 @@ export class ClubsService {
     });
     await this.audit(actorUserId, `club.${status.toLowerCase()}`, 'Club', clubId, before, club);
     return club;
+  }
+
+  // ── platform admin: full club roster + direct creation (spec §13) ──
+  async listAllClubs(): Promise<PlatformClubDto[]> {
+    const clubs = await this.prisma.club.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        status: true,
+        city: { select: { name: true } },
+        members: { where: { role: Role.CLUB_ADMIN, status: 'ACTIVE' }, select: { id: true } },
+      },
+    });
+    const coachCounts = await this.prisma.coachClub.groupBy({ by: ['clubId'], _count: { _all: true } });
+    const coachMap = new Map(coachCounts.map((c) => [c.clubId, c._count._all]));
+    return clubs.map((c) => ({
+      id: c.id,
+      slug: c.slug,
+      name: c.name,
+      city: c.city.name,
+      status: c.status,
+      adminCount: c.members.length,
+      coachCount: coachMap.get(c.id) ?? 0,
+    }));
+  }
+
+  async createClubAsPlatform(input: PlatformCreateClubInput, actorUserId: number): Promise<PlatformClubDto> {
+    const club = await this.prisma.$transaction(async (tx) => {
+      const city = await tx.city.upsert({ where: { name: input.city }, create: { name: input.city }, update: {} });
+      return tx.club.create({
+        data: {
+          slug: await this.uniqueSlug(tx, input.name),
+          name: input.name,
+          address: input.address ?? '—',
+          cityId: city.id,
+          status: 'ACTIVE',
+          timezone: input.timezone,
+          currency: input.currency,
+          slotIntervalMin: input.slotIntervalMin,
+        },
+        select: { id: true, slug: true, name: true, status: true, city: { select: { name: true } } },
+      });
+    });
+    await this.audit(actorUserId, 'club.created', 'Club', club.id, null, club);
+    return { id: club.id, slug: club.slug, name: club.name, city: club.city.name, status: club.status, adminCount: 0, coachCount: 0 };
+  }
+
+  async addClubAdmin(clubId: number, input: AddMemberInput, actorUserId: number): Promise<InviteResultDto> {
+    const club = await this.requireClub(clubId);
+    const { userId, name, created } = await this.ensureUser(input, Role.CLUB_ADMIN);
+    await this.prisma.clubMember.upsert({
+      where: { clubId_userId_role: { clubId, userId, role: Role.CLUB_ADMIN } },
+      create: { clubId, userId, role: Role.CLUB_ADMIN, status: 'ACTIVE' },
+      update: { status: 'ACTIVE' },
+    });
+    await this.audit(actorUserId, 'club.admin_added', 'Club', clubId, null, { userId });
+    return this.inviteResult(userId, input.email, name, 'CLUB_ADMIN', created, club.name);
+  }
+
+  // ── club admin: team (coaches + staff) ──
+  async getTeam(clubId: number): Promise<ClubTeamDto> {
+    const members = await this.prisma.clubMember.findMany({
+      where: { clubId, status: 'ACTIVE', role: { in: [Role.CLUB_ADMIN, Role.CLUB_STAFF] } },
+      select: { role: true, user: { select: { id: true, name: true, email: true, passwordHash: true } } },
+    });
+    const coaches = await this.prisma.coachClub.findMany({
+      where: { clubId },
+      select: { coachProfile: { select: { id: true, user: { select: { id: true, name: true, email: true, passwordHash: true } } } } },
+    });
+    const toMember = (
+      u: { id: number; name: string; email: string; passwordHash: string | null },
+      role: ClubTeamMemberDto['role'],
+      coachProfileId?: number,
+    ): ClubTeamMemberDto => ({ userId: u.id, coachProfileId, name: u.name, email: u.email, role, pending: u.passwordHash == null });
+    return {
+      admins: members.filter((m) => m.role === Role.CLUB_ADMIN).map((m) => toMember(m.user, 'CLUB_ADMIN')),
+      staff: members.filter((m) => m.role === Role.CLUB_STAFF).map((m) => toMember(m.user, 'CLUB_STAFF')),
+      coaches: coaches
+        .filter((c) => c.coachProfile.user)
+        .map((c) => toMember(c.coachProfile.user!, 'COACH', c.coachProfile.id)),
+    };
+  }
+
+  async addStaff(clubId: number, input: AddMemberInput, actorUserId: number): Promise<InviteResultDto> {
+    const club = await this.requireClub(clubId);
+    const { userId, name, created } = await this.ensureUser(input, Role.CLUB_STAFF);
+    await this.prisma.clubMember.upsert({
+      where: { clubId_userId_role: { clubId, userId, role: Role.CLUB_STAFF } },
+      create: { clubId, userId, role: Role.CLUB_STAFF, status: 'ACTIVE' },
+      update: { status: 'ACTIVE' },
+    });
+    await this.audit(actorUserId, 'club.staff_added', 'Club', clubId, null, { userId });
+    return this.inviteResult(userId, input.email, name, 'CLUB_STAFF', created, club.name);
+  }
+
+  async addCoach(clubId: number, input: AddMemberInput, actorUserId: number): Promise<InviteResultDto> {
+    const club = await this.requireClub(clubId);
+    const { userId, name, created } = await this.ensureUser(input, Role.COACH);
+
+    let profile = await this.prisma.coachProfile.findFirst({ where: { userId }, select: { id: true } });
+    if (!profile) {
+      profile = await this.prisma.coachProfile.create({ data: { userId, languages: [], levels: [] }, select: { id: true } });
+    }
+    const link = await this.prisma.coachClub.findFirst({ where: { coachProfileId: profile.id, clubId } });
+    if (!link) await this.prisma.coachClub.create({ data: { coachProfileId: profile.id, clubId } });
+
+    // One shared COACH resource per coach, with sensible default hours (Mon–Fri 09–21).
+    const resource = await this.prisma.resource.findFirst({ where: { coachProfileId: profile.id, type: 'COACH' }, select: { id: true } });
+    if (!resource) {
+      await this.prisma.resource.create({
+        data: {
+          clubId: null,
+          type: 'COACH',
+          name,
+          coachProfileId: profile.id,
+          minReservationMin: 60,
+          slotIntervalMin: 60,
+          availabilityRules: { create: [1, 2, 3, 4, 5].map((weekday) => ({ weekday, startMin: 540, endMin: 1260 })) },
+        },
+      });
+    }
+    await this.audit(actorUserId, 'club.coach_added', 'Club', clubId, null, { coachProfileId: profile.id, userId });
+    return this.inviteResult(userId, input.email, name, 'COACH', created, club.name);
+  }
+
+  private async requireClub(clubId: number): Promise<{ name: string }> {
+    const club = await this.prisma.club.findUnique({ where: { id: clubId }, select: { name: true } });
+    if (!club) throw new AppException('not_found');
+    return club;
+  }
+
+  /** Find a user by email (adding the role if missing) or create an unactivated one. */
+  private async ensureUser(input: AddMemberInput, role: Role): Promise<{ userId: number; name: string; created: boolean }> {
+    const email = input.email.toLowerCase();
+    const existing = await this.prisma.user.findUnique({ where: { email }, include: { roles: true } });
+    if (existing) {
+      if (!existing.roles.some((r) => r.role === role)) {
+        await this.prisma.userRole.create({ data: { userId: existing.id, role } });
+      }
+      return { userId: existing.id, name: existing.name, created: false };
+    }
+    const name = input.name ?? email.split('@')[0]!;
+    const created = await this.prisma.user.create({ data: { email, name, locale: 'bg', roles: { create: [{ role }] } } });
+    return { userId: created.id, name, created: true };
+  }
+
+  /** New accounts get an invite (set-password) link + email; existing users are just linked. */
+  private async inviteResult(
+    userId: number,
+    email: string,
+    name: string,
+    role: string,
+    created: boolean,
+    clubName: string,
+  ): Promise<InviteResultDto> {
+    if (!created) return { email, name, role, invited: false };
+    const link = await this.auth.createInviteLink(userId, 'bg');
+    await this.mail.sendAccountInvite(email, link, { clubName, role }, 'bg').catch(() => undefined);
+    return { email, name, role, invited: true, inviteLink: link };
   }
 
   // ── helpers ──

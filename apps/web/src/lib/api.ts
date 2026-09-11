@@ -3,6 +3,7 @@ import type {
   CalendarResponse,
   ClubReviews,
   CoachListItem,
+  CoachScheduleResponse,
   EventDto,
   FavoriteClub,
   MembershipDto,
@@ -293,6 +294,11 @@ export function createReservation(input: {
 /** Coaches available at a club (for the court-first "add coach" flow). */
 export function coachesForClub(clubId: number): Promise<CoachListItem[]> {
   return apiFetch(`/coaches?clubId=${clubId}`);
+}
+
+/** The signed-in coach's own weekly schedule (from = YYYY-MM-DD, Monday of the week). */
+export function getMyCoachSchedule(from?: string): Promise<CoachScheduleResponse> {
+  return apiFetch(`/coaches/me/schedule${from ? `?from=${from}` : ''}`);
 }
 
 // ── favorites + reviews (client) ──

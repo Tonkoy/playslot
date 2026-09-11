@@ -52,7 +52,14 @@ describe('Coaching (e2e)', () => {
 
     // A single coach resource (clubId null) linked to BOTH clubs.
     const coachUser = await prisma.user.create({
-      data: { email: 'coach@playslot.test', name: 'Maria Coach', roles: { create: [{ role: 'COACH' }] } },
+      data: {
+        email: 'coach@playslot.test',
+        name: 'Maria Coach',
+        passwordHash: hash,
+        emailVerifiedAt: new Date(),
+        timezone: tz,
+        roles: { create: [{ role: 'COACH' }] },
+      },
     });
     const profile = await prisma.coachProfile.create({
       data: { userId: coachUser.id, languages: ['bg', 'en'], levels: ['beginner'] },
@@ -131,6 +138,24 @@ describe('Coaching (e2e)', () => {
       JOIN "Reservation" r ON r.id = rr."reservationId"
       WHERE rr."isActive" AND r."userId" = (SELECT id FROM "User" WHERE email='lesson-player@playslot.test')`;
     expect(Number(rr[0]!.n)).toBe(2); // court + coach
+  });
+
+  it('shows the lesson on the coach’s own weekly schedule; non-coaches are forbidden', async () => {
+    const coachCookie = (
+      await http().post('/auth/login').send({ email: 'coach@playslot.test', password }).expect(200)
+    ).headers['set-cookie'] as unknown as string[];
+
+    const res = await http().get(`/coaches/me/schedule?from=${DAY}`).set('Cookie', coachCookie).expect(200);
+    expect(res.body.days).toHaveLength(7);
+    expect(res.body.from).toBe(DAY);
+    const today = res.body.days.find((d: { date: string }) => d.date === DAY);
+    expect(today.lessons).toHaveLength(1);
+    expect(today.lessons[0].time).toBe('10:00');
+    expect(today.lessons[0].customerName).toBe('Player');
+    expect(today.lessons[0].status).toBe('CONFIRMED');
+
+    // A player (no coach profile) is not allowed to view a coach schedule.
+    await http().get('/coaches/me/schedule').set('Cookie', cookie).expect(403);
   });
 
   it('THE GATE: the coach cannot be double-booked across clubs (§8 constraint)', async () => {

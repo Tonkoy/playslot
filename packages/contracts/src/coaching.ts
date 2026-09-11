@@ -46,3 +46,29 @@ export interface CoachAvailabilityResponse {
   currency: string;
   slots: CoachSlot[];
 }
+
+/** A coach's own lesson on their weekly schedule (spec §19). */
+export interface CoachScheduleLesson {
+  reservationId: number;
+  startsAt: string; // ISO, offset-aware
+  endsAt: string;
+  time: string; // HH:mm in the coach's timezone
+  clubName: string;
+  customerName: string;
+  courtName: string | null;
+  status: string;
+}
+
+/** One day column of the coach week (empty `lessons` when free). */
+export interface CoachScheduleDay {
+  date: string; // YYYY-MM-DD in the coach's timezone
+  weekday: number; // 0=Sun … 6=Sat
+  lessons: CoachScheduleLesson[];
+}
+
+export interface CoachScheduleResponse {
+  timezone: string;
+  from: string; // YYYY-MM-DD (inclusive)
+  to: string; // YYYY-MM-DD (exclusive)
+  days: CoachScheduleDay[]; // exactly 7, ordered
+}

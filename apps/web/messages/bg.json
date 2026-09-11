@@ -21,7 +21,8 @@
     "theme_dark": "тъмна",
     "menuAria": "Профил и настройки",
     "settings": "Настройки",
-    "theme": "Тема"
+    "theme": "Тема",
+    "schedule": "Моят график"
   },
   "Login": {
     "title": "Вход",
@@ -320,7 +321,8 @@
     "myFavorites": "Любими",
     "manageClub": "Управление на клуб",
     "memberships": "Моите абонаменти",
-    "until": "до {date}"
+    "until": "до {date}",
+    "mySchedule": "Моят график"
   },
   "Toasts": {
     "booked": "Резервацията е потвърдена",
@@ -332,5 +334,16 @@
     "membershipGranted": "Абонаментът е издаден",
     "reviewSubmitted": "Отзивът е публикуван",
     "error": "Нещо се обърка"
+  },
+  "CoachSchedule": {
+    "title": "Моят график",
+    "subtitle": "Вашите уроци за седмицата.",
+    "coachesOnly": "Тази страница е само за треньори.",
+    "backToAccount": "Към профила",
+    "prevWeek": "Предишна седмица",
+    "nextWeek": "Следваща седмица",
+    "thisWeek": "Тази седмица",
+    "noLessons": "Няма уроци",
+    "lessonCount": "{count, plural, =0 {няма уроци} one {# урок} other {# урока}} тази седмица"
   }
 }

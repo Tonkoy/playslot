@@ -43,6 +43,7 @@ export function AccountClient() {
   if (me.isLoading || me.isError) return <p style={{ color: 'var(--ink-3)' }}>…</p>;
   const user = me.data!.user;
   const isStaff = user.roles.some((r) => r === 'CLUB_ADMIN' || r === 'CLUB_STAFF');
+  const isCoach = user.roles.includes('COACH');
   const activeMemberships = (memberships.data ?? []).filter((m) => m.active);
 
   return (
@@ -96,6 +97,7 @@ export function AccountClient() {
 
       {/* quick links */}
       <section style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
+        {isCoach && <AccountLink href="/me/schedule" label={t('mySchedule')} />}
         <AccountLink href="/me/bookings" label={t('myBookings')} />
         <AccountLink href="/me/favorites" label={t('myFavorites')} />
         {isStaff && <AccountLink href="/admin" label={t('manageClub')} />}

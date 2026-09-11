@@ -28,6 +28,7 @@ export function SiteNav() {
   const me = useQuery({ queryKey: ['me'], queryFn: getMe, retry: false });
   const signedIn = me.isSuccess;
   const isStaff = me.data?.user.roles.some((r) => r === 'CLUB_ADMIN' || r === 'CLUB_STAFF') ?? false;
+  const isCoach = me.data?.user.roles.includes('COACH') ?? false;
 
   const logoutMut = useMutation({
     mutationFn: logout,
@@ -69,6 +70,11 @@ export function SiteNav() {
       {isStaff && (
         <Link href="/admin" style={linkStyle} onClick={close}>
           {t('admin')}
+        </Link>
+      )}
+      {isCoach && (
+        <Link href="/me/schedule" style={linkStyle} onClick={close}>
+          {t('schedule')}
         </Link>
       )}
       {signedIn && (

@@ -1,12 +1,19 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { coachAvailabilityQuerySchema } from '@playslot/contracts';
-import { Public } from '../auth/decorators';
+import { CurrentUser, Public } from '../auth/decorators';
 import { CoachingService } from './coaching.service';
 
 /** Public coach directory + coach-first availability (spec §7/§10/§15). */
 @Controller('coaches')
 export class CoachingController {
   constructor(private readonly coaching: CoachingService) {}
+
+  /** The signed-in coach's own weekly schedule (authenticated). Declared before
+   * the `:id` routes so the static path wins. */
+  @Get('me/schedule')
+  mySchedule(@CurrentUser('id') userId: number, @Query('from') from?: string) {
+    return this.coaching.getMySchedule(userId, from);
+  }
 
   @Public()
   @Get()

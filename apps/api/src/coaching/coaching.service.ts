@@ -3,6 +3,9 @@ import {
   type CoachAvailabilityQuery,
   type CoachAvailabilityResponse,
   type CoachListItem,
+  type CoachScheduleDay,
+  type CoachScheduleLesson,
+  type CoachScheduleResponse,
   type CoachSlot,
 } from '@playslot/contracts';
 import { Prisma } from '@playslot/db';
@@ -188,6 +191,84 @@ export class CoachingService {
       currency: club.currency,
       slots,
     };
+  }
+
+  /**
+   * The signed-in coach's own lessons for a 7-day window (spec §19). Times are
+   * bucketed into day columns in the coach's timezone. `from` defaults to today.
+   */
+  async getMySchedule(userId: number, fromDate?: string): Promise<CoachScheduleResponse> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { timezone: true, coachProfile: { select: { id: true } } },
+    });
+    if (!user?.coachProfile) throw new AppException('forbidden', { reason: 'not_a_coach' });
+    const tz = user.timezone || 'Europe/Sofia';
+    const from = fromDate ?? formatInZone(new Date(), tz, 'yyyy-MM-dd');
+
+    // Consecutive calendar dates for the labels (timezone-independent), plus the
+    // absolute window bounds anchored to local midnight in the coach timezone.
+    const [y, m, d] = from.split('-').map(Number);
+    const dateAt = (offset: number) => new Date(Date.UTC(y!, m! - 1, d! + offset)).toISOString().slice(0, 10);
+    const toDate = dateAt(7);
+    const start = instantFromDayMinutes(from, 0, tz);
+    const end = instantFromDayMinutes(toDate, 0, tz);
+
+    const coachResource = await this.prisma.resource.findFirst({
+      where: { coachProfileId: user.coachProfile.id, type: 'COACH' },
+      select: { id: true },
+    });
+
+    const rows = coachResource
+      ? await this.prisma.reservation.findMany({
+          where: {
+            type: 'LESSON',
+            status: { in: ['CONFIRMED', 'PENDING_PAYMENT'] },
+            startsAt: { gte: start, lt: end },
+            resources: { some: { resourceId: coachResource.id, isActive: true } },
+          },
+          orderBy: { startsAt: 'asc' },
+          include: {
+            club: { select: { name: true } },
+            user: { select: { name: true, email: true } },
+            resources: { select: { resource: { select: { type: true, name: true } } } },
+          },
+        })
+      : [];
+
+    const byDate = new Map<string, CoachScheduleLesson[]>();
+    for (const r of rows) {
+      const dateKey = formatInZone(r.startsAt, tz, 'yyyy-MM-dd');
+      const walkin = r.user?.email.endsWith('@walkin.playslot.local') ?? true;
+      const partName = (r.participants as { name?: string } | null)?.name;
+      const customerName = (!walkin ? r.user?.name : undefined) ?? partName ?? 'PlaySlot customer';
+      const courtName =
+        r.resources.map((x) => x.resource).find((res) => res.type === 'COURT')?.name ?? null;
+      const list = byDate.get(dateKey) ?? [];
+      list.push({
+        reservationId: r.id,
+        startsAt: r.startsAt.toISOString(),
+        endsAt: r.endsAt.toISOString(),
+        time: formatInZone(r.startsAt, tz, 'HH:mm'),
+        clubName: r.club.name,
+        customerName,
+        courtName,
+        status: r.status,
+      });
+      byDate.set(dateKey, list);
+    }
+
+    const days: CoachScheduleDay[] = [];
+    for (let i = 0; i < 7; i++) {
+      const date = dateAt(i);
+      days.push({
+        date,
+        weekday: new Date(`${date}T00:00:00Z`).getUTCDay(),
+        lessons: byDate.get(date) ?? [],
+      });
+    }
+
+    return { timezone: tz, from, to: toDate, days };
   }
 
   /** Active-reservation intervals per resource for a day (uses reservation bounds). */

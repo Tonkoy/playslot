@@ -4,11 +4,13 @@ import {
   type CoachAvailabilityResponse,
   type CoachListItem,
   type CoachHoursResponse,
+  type CoachProfileDto,
   type CoachScheduleDay,
   type CoachScheduleLesson,
   type CoachScheduleResponse,
   type CoachSlot,
   type UpdateCoachHoursInput,
+  type UpdateCoachProfileInput,
 } from '@playslot/contracts';
 import { Prisma } from '@playslot/db';
 import {
@@ -51,7 +53,19 @@ export class CoachingService {
     });
     if (!coach) throw new AppException('not_found');
     const [mapped] = await this.attachClubs([coach]);
-    return mapped!;
+    // Working hours from the coach's shared resource (public on the single view).
+    const resource = await this.prisma.resource.findFirst({
+      where: { coachProfileId, type: 'COACH' },
+      select: { availabilityRules: { orderBy: [{ weekday: 'asc' }, { startMin: 'asc' }] } },
+    });
+    return {
+      ...mapped!,
+      workingHours: (resource?.availabilityRules ?? []).map((r) => ({
+        weekday: r.weekday,
+        startMin: r.startMin,
+        endMin: r.endMin,
+      })),
+    };
   }
 
   private async attachClubs(
@@ -59,6 +73,7 @@ export class CoachingService {
       id: number;
       bio: string | null;
       photoUrl: string | null;
+      hourlyRateCents: number | null;
       languages: string[];
       levels: string[];
       user: { name: string } | null;
@@ -77,6 +92,7 @@ export class CoachingService {
       name: c.user?.name ?? 'Coach',
       bio: c.bio,
       photoUrl: c.photoUrl,
+      hourlyRateCents: c.hourlyRateCents,
       languages: c.languages,
       levels: c.levels,
       clubs: c.clubs.map((x) => byId.get(x.clubId)).filter((x): x is NonNullable<typeof x> => !!x),
@@ -242,8 +258,11 @@ export class CoachingService {
     for (const r of rows) {
       const dateKey = formatInZone(r.startsAt, tz, 'yyyy-MM-dd');
       const walkin = r.user?.email.endsWith('@walkin.playslot.local') ?? true;
-      const partName = (r.participants as { name?: string } | null)?.name;
-      const customerName = (!walkin ? r.user?.name : undefined) ?? partName ?? 'PlaySlot customer';
+      const part = r.participants as { name?: string; group?: boolean } | null;
+      // A coach-hosted group session is booked under the coach — show its title.
+      const customerName = part?.group
+        ? part.name ?? 'Group session'
+        : (!walkin ? r.user?.name : undefined) ?? part?.name ?? 'PlaySlot customer';
       const courtName =
         r.resources.map((x) => x.resource).find((res) => res.type === 'COURT')?.name ?? null;
       const list = byDate.get(dateKey) ?? [];
@@ -306,6 +325,35 @@ export class CoachingService {
       }),
     ]);
     return this.getMyHours(userId);
+  }
+
+  // ── coach's own public profile ──
+
+  async getMyProfile(userId: number): Promise<CoachProfileDto> {
+    const profile = await this.prisma.coachProfile.findFirst({ where: { userId } });
+    if (!profile) throw new AppException('forbidden', { reason: 'not_a_coach' });
+    return {
+      coachProfileId: profile.id,
+      bio: profile.bio,
+      photoUrl: profile.photoUrl,
+      hourlyRateCents: profile.hourlyRateCents,
+      languages: profile.languages,
+      levels: profile.levels,
+    };
+  }
+
+  async updateMyProfile(userId: number, input: UpdateCoachProfileInput): Promise<CoachProfileDto> {
+    const profile = await this.prisma.coachProfile.findFirst({ where: { userId }, select: { id: true } });
+    if (!profile) throw new AppException('forbidden', { reason: 'not_a_coach' });
+    await this.prisma.coachProfile.update({
+      where: { id: profile.id },
+      data: {
+        ...(input.bio !== undefined ? { bio: input.bio || null } : {}),
+        ...(input.photoUrl !== undefined ? { photoUrl: input.photoUrl || null } : {}),
+        ...(input.hourlyRateCents !== undefined ? { hourlyRateCents: input.hourlyRateCents ?? null } : {}),
+      },
+    });
+    return this.getMyProfile(userId);
   }
 
   /** Resolve the signed-in user's shared COACH resource (throws if not a coach). */

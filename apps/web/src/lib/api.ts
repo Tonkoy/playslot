@@ -3,8 +3,13 @@ import type {
   CalendarResponse,
   ClubReviews,
   CoachHoursResponse,
+  CoachAvailabilityResponse,
   CoachListItem,
+  CoachProfileDto,
   CoachScheduleResponse,
+  CreateGroupSessionInput,
+  GroupSessionDto,
+  UpdateCoachProfileInput,
   EventDto,
   FavoriteClub,
   MembershipDto,
@@ -310,6 +315,44 @@ export function updateMyCoachHours(
   days: { weekday: number; startMin: number; endMin: number }[],
 ): Promise<CoachHoursResponse> {
   return apiFetch('/coaches/me/hours', { method: 'PUT', body: JSON.stringify({ days }) });
+}
+
+// ── coach profile (self-service) ──
+export function getMyCoachProfile(): Promise<CoachProfileDto> {
+  return apiFetch('/coaches/me/profile');
+}
+export function updateMyCoachProfile(input: UpdateCoachProfileInput): Promise<CoachProfileDto> {
+  return apiFetch('/coaches/me/profile', { method: 'PUT', body: JSON.stringify(input) });
+}
+export function getCoachById(id: number): Promise<CoachListItem> {
+  return apiFetch(`/coaches/${id}`);
+}
+export function getCoachAvailability(
+  coachProfileId: number,
+  clubId: number,
+  date: string,
+): Promise<CoachAvailabilityResponse> {
+  return apiFetch(`/coaches/${coachProfileId}/availability?clubId=${clubId}&date=${date}`);
+}
+
+// ── group sessions ──
+export function listGroupSessions(clubId?: number): Promise<GroupSessionDto[]> {
+  return apiFetch(`/group-sessions${clubId ? `?clubId=${clubId}` : ''}`);
+}
+export function getMyGroupSessions(): Promise<GroupSessionDto[]> {
+  return apiFetch('/group-sessions/mine');
+}
+export function createGroupSession(input: CreateGroupSessionInput): Promise<GroupSessionDto> {
+  return apiFetch('/group-sessions', { method: 'POST', body: JSON.stringify(input) });
+}
+export function registerGroupSession(id: number): Promise<{ ok: true; spotsLeft: number }> {
+  return apiFetch(`/group-sessions/${id}/register`, { method: 'POST' });
+}
+export function unregisterGroupSession(id: number): Promise<{ ok: true }> {
+  return apiFetch(`/group-sessions/${id}/register`, { method: 'DELETE' });
+}
+export function cancelGroupSession(id: number): Promise<{ ok: true }> {
+  return apiFetch(`/group-sessions/${id}`, { method: 'DELETE' });
 }
 
 // ── favorites + reviews (client) ──

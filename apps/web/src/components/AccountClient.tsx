@@ -97,6 +97,7 @@ export function AccountClient() {
 
       {/* quick links */}
       <section style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
+        {isCoach && <AccountLink href="/me/coach" label={t('coachProfile')} />}
         {isCoach && <AccountLink href="/me/schedule" label={t('mySchedule')} />}
         <AccountLink href="/me/bookings" label={t('myBookings')} />
         <AccountLink href="/me/favorites" label={t('myFavorites')} />

@@ -2,7 +2,9 @@ import { Body, Controller, Get, Param, Put, Query } from '@nestjs/common';
 import {
   coachAvailabilityQuerySchema,
   updateCoachHoursSchema,
+  updateCoachProfileSchema,
   type UpdateCoachHoursInput,
+  type UpdateCoachProfileInput,
 } from '@playslot/contracts';
 import { CurrentUser, Public } from '../auth/decorators';
 import { ZodBody } from '../common/zod-validation.pipe';
@@ -32,6 +34,20 @@ export class CoachingController {
     @Body(new ZodBody(updateCoachHoursSchema)) body: UpdateCoachHoursInput,
   ) {
     return this.coaching.updateMyHours(userId, body);
+  }
+
+  /** The signed-in coach's own public profile (read + edit). */
+  @Get('me/profile')
+  myProfile(@CurrentUser('id') userId: number) {
+    return this.coaching.getMyProfile(userId);
+  }
+
+  @Put('me/profile')
+  updateProfile(
+    @CurrentUser('id') userId: number,
+    @Body(new ZodBody(updateCoachProfileSchema)) body: UpdateCoachProfileInput,
+  ) {
+    return this.coaching.updateMyProfile(userId, body);
   }
 
   @Public()

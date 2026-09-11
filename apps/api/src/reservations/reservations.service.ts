@@ -209,6 +209,55 @@ export class ReservationsService {
     return { reservationId: reservation.id, status: reservation.status };
   }
 
+  // ── coach-hosted group session: reserve coach + court (spec §10) ──
+  async createCoachBlockingReservation(args: {
+    coachProfileId: number;
+    coachUserId: number;
+    clubId: number;
+    startsAt: string;
+    durationMin: number;
+    courtId: number;
+    title: string;
+  }): Promise<{ reservationId: number; start: Date; end: Date; currency: string }> {
+    const slot = await this.resolveSlot({
+      clubId: args.clubId,
+      startsAt: args.startsAt,
+      durationMin: args.durationMin,
+      resourceIds: [args.courtId],
+      enforceHours: true,
+    });
+    const coachResourceId = await this.resolveCoachResource(args.coachProfileId, slot);
+    const full: ResolvedSlot = { ...slot, resourceIds: [args.courtId, coachResourceId] };
+    const reservation = await this.runBookingTransaction({
+      slot: full,
+      userId: args.coachUserId,
+      actorUserId: args.coachUserId,
+      type: 'LESSON',
+      source: 'COACH',
+      priceCents: 0,
+      paymentMethod: 'FREE',
+      participants: { group: true, name: args.title },
+      holdExpiresAt: null,
+      finalStatus: 'CONFIRMED',
+    });
+    this.events.emitAvailabilityChanged(full.clubId);
+    return { reservationId: reservation.id, start: full.start, end: full.end, currency: full.currency };
+  }
+
+  /** Cancel a reservation's hold on inventory (used when a group session is cancelled). */
+  async releaseReservation(reservationId: number, reason: string): Promise<void> {
+    const r = await this.prisma.reservation.findUnique({
+      where: { id: reservationId },
+      select: { clubId: true, status: true },
+    });
+    if (!r || r.status === 'CANCELLED') return;
+    await this.prisma.reservation.update({
+      where: { id: reservationId },
+      data: { status: 'CANCELLED', cancellationReason: reason },
+    });
+    this.events.emitAvailabilityChanged(r.clubId);
+  }
+
   // ── move / reschedule / change court (re-runs conflict logic) ──
   async reschedule(clubId: number, reservationId: number, input: RescheduleInput, staffUserId: number) {
     const existing = await this.prisma.reservation.findFirst({ where: { id: reservationId, clubId } });

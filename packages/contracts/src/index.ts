@@ -8,3 +8,4 @@ export * from './search';
 export * from './community';
 export * from './memberships';
 export * from './events';
+export * from './group-sessions';

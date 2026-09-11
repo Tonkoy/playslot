@@ -1,8 +1,12 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { Avatar } from '@/components/Avatar';
+import { GroupSessionsList } from '@/components/GroupSessionsList';
 import { SiteHeader } from '@/components/SiteHeader';
 import { getCoach } from '@/lib/api';
+import { minToHHMM } from '@/lib/tz';
+
+const WEEK = [1, 2, 3, 4, 5, 6, 0]; // Monday … Sunday
 
 export default async function CoachProfilePage({
   params,
@@ -69,8 +73,36 @@ export default async function CoachProfilePage({
               ))}
             </div>
           </div>
+          {coach.hourlyRateCents != null && (
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 26, fontWeight: 800 }}>{Math.round(coach.hourlyRateCents / 100)} €</div>
+              <div className="mono" style={{ color: 'var(--ink-3)', fontSize: 12 }}>/ {t('hour')}</div>
+            </div>
+          )}
         </section>
         {coach.bio && <p style={{ color: 'var(--ink-2)', maxWidth: '65ch', marginTop: 12 }}>{coach.bio}</p>}
+
+        {(coach.workingHours?.length ?? 0) > 0 && (
+          <>
+            <h2 style={{ fontSize: 20, fontWeight: 700, margin: '24px 0 10px' }}>{t('workingHours')}</h2>
+            <div style={{ display: 'grid', gap: 6, gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
+              {WEEK.map((w) => {
+                const d = coach.workingHours!.find((x) => x.weekday === w);
+                const name = new Intl.DateTimeFormat(locale === 'bg' ? 'bg-BG' : 'en-US', { weekday: 'long' }).format(
+                  new Date(Date.UTC(2024, 0, 7 + w)),
+                );
+                return (
+                  <div key={w} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', padding: '8px 12px', background: 'var(--surface)' }}>
+                    <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{name}</span>
+                    <span className="mono" style={{ color: d ? 'var(--ink-2)' : 'var(--ink-3)', fontSize: 13 }}>
+                      {d ? `${minToHHMM(d.startMin)}–${minToHHMM(d.endMin)}` : t('dayOff')}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
 
         <h2 style={{ fontSize: 20, fontWeight: 700, margin: '20px 0 10px' }}>{t('services')}</h2>
         <div style={{ display: 'grid', gap: 10 }}>
@@ -96,6 +128,8 @@ export default async function CoachProfilePage({
           ))}
         </div>
         <p style={{ color: 'var(--ink-3)', fontSize: 13, marginTop: 20 }}>{t('bookHint')}</p>
+
+        <GroupSessionsList coachProfileId={coach.coachProfileId} />
       </main>
     </>
   );

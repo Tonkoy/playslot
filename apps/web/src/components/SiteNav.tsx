@@ -67,9 +67,17 @@ export function SiteNav() {
       <Link href="/coaches" style={linkStyle} onClick={close}>
         {t('coaches')}
       </Link>
+      <Link href="/sessions" style={linkStyle} onClick={close}>
+        {t('sessions')}
+      </Link>
       {isStaff && (
         <Link href="/admin" style={linkStyle} onClick={close}>
           {t('admin')}
+        </Link>
+      )}
+      {isCoach && (
+        <Link href="/me/coach" style={linkStyle} onClick={close}>
+          {t('coachHub')}
         </Link>
       )}
       {isCoach && (

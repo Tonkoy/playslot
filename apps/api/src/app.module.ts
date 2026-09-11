@@ -10,6 +10,7 @@ import { ClubsModule } from './clubs/clubs.module';
 import { CoachingModule } from './coaching/coaching.module';
 import { CommunityModule } from './community/community.module';
 import { EventsModule } from './events/events.module';
+import { GroupSessionsModule } from './group-sessions/group-sessions.module';
 import { HealthModule } from './health/health.module';
 import { MailModule } from './mail/mail.module';
 import { MembershipsModule } from './memberships/memberships.module';
@@ -48,6 +49,7 @@ import { SearchModule } from './search/search.module';
     CommunityModule,
     MembershipsModule,
     ProgramsModule,
+    GroupSessionsModule,
     HealthModule,
   ],
   providers: [

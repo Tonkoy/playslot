@@ -22,7 +22,9 @@
     "menuAria": "Account & settings",
     "settings": "Settings",
     "theme": "Theme",
-    "schedule": "My schedule"
+    "schedule": "My schedule",
+    "sessions": "Sessions",
+    "coachHub": "Coach profile"
   },
   "Login": {
     "title": "Log in",
@@ -216,7 +218,10 @@
     "players": "players",
     "notFound": "Coach not found",
     "backToCoaches": "All coaches",
-    "bookHint": "Pick a club and time from the grid to book a lesson with a coach."
+    "bookHint": "Pick a club and time from the grid to book a lesson with a coach.",
+    "hour": "hour",
+    "workingHours": "Working hours",
+    "dayOff": "Off"
   },
   "Booking": {
     "title": "Book this slot",
@@ -322,7 +327,8 @@
     "manageClub": "Manage club",
     "memberships": "My memberships",
     "until": "until {date}",
-    "mySchedule": "My schedule"
+    "mySchedule": "My schedule",
+    "coachProfile": "Coach profile"
   },
   "Toasts": {
     "booked": "Booking confirmed",
@@ -334,7 +340,10 @@
     "membershipGranted": "Membership granted",
     "reviewSubmitted": "Review submitted",
     "error": "Something went wrong",
-    "hoursSaved": "Working hours saved"
+    "hoursSaved": "Working hours saved",
+    "profileSaved": "Profile saved",
+    "sessionCreated": "Session created — players invited",
+    "sessionCancelled": "Session cancelled"
   },
   "CoachSchedule": {
     "title": "My schedule",
@@ -355,5 +364,48 @@
     "noHours": "No working hours set.",
     "save": "Save hours",
     "invalidRange": "End time must be after start."
+  },
+  "CoachProfile": {
+    "title": "Public profile",
+    "preview": "Preview public page",
+    "photoUrl": "Photo URL",
+    "bio": "About you",
+    "hourlyRate": "Hourly rate (€)",
+    "save": "Save profile"
+  },
+  "CoachHub": {
+    "title": "Coach profile",
+    "subtitle": "Your public profile and group sessions.",
+    "coachesOnly": "This page is for coaches only.",
+    "backToAccount": "Back to account"
+  },
+  "GroupSessions": {
+    "title": "Group sessions",
+    "pageTitle": "Group sessions",
+    "pageSubtitle": "Open coaching sessions you can join.",
+    "badge": "Group",
+    "free": "Free",
+    "full": "Full",
+    "spotsLeft": "{n} spots left",
+    "join": "Join",
+    "leave": "Cancel spot",
+    "signInToJoin": "Sign in to join",
+    "createTitle": "Open a group session",
+    "createHelp": "Pick a free slot; it reserves you and a court, then invites players.",
+    "club": "Club",
+    "date": "Date",
+    "duration": "Duration",
+    "min": "min",
+    "pickSlot": "Pick a start time",
+    "noSlots": "No free slots that day.",
+    "sessionTitle": "Title",
+    "capacity": "Capacity",
+    "pricePerPlayer": "Price / player (€)",
+    "sessionDescription": "Description",
+    "createAndInvite": "Create & invite players",
+    "inviteNote": "All players with notifications on will be emailed an invitation.",
+    "mine": "Your sessions",
+    "cancel": "Cancel",
+    "cancelledTag": "Cancelled"
   }
 }

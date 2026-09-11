@@ -148,6 +148,7 @@ model User {
   reviews       Review[]
   membershipSubscriptions Membership[]
   eventRegistrations EventRegistration[]
+  groupSessionRegistrations GroupSessionRegistration[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -334,6 +335,7 @@ model Club {
   membershipPlans MembershipPlan[]
   memberships     Membership[]
   events          Event[]
+  groupSessions   GroupSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -391,17 +393,59 @@ model Resource {
 // ─── coaching ────────────────────────────────────────────────────────────────
 
 model CoachProfile {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @unique
-  bio       String?
-  photoUrl  String?
-  languages String[]
-  levels    String[]
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique
+  bio             String?
+  photoUrl        String?
+  hourlyRateCents Int? // headline rate shown on the public profile
+  languages       String[]
+  levels          String[]
 
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  services  CoachService[]
-  clubs     CoachClub[]
-  resources Resource[]
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  services      CoachService[]
+  clubs         CoachClub[]
+  resources     Resource[]
+  groupSessions GroupSession[]
+}
+
+// A coach-hosted open group session (spec §10/§22): backed by a real reservation
+// that blocks the coach + a court, with capacity-limited player registration.
+model GroupSession {
+  id             Int       @id @default(autoincrement())
+  coachProfileId Int
+  clubId         Int
+  reservationId  Int       @unique
+  title          String
+  description    String?
+  startsAt       DateTime // UTC
+  endsAt         DateTime
+  capacity       Int
+  priceCents     Int       @default(0)
+  currency       String    @default("EUR")
+  cancelledAt    DateTime?
+  createdAt      DateTime  @default(now())
+
+  coach         CoachProfile               @relation(fields: [coachProfileId], references: [id], onDelete: Cascade)
+  club          Club                       @relation(fields: [clubId], references: [id])
+  reservation   Reservation                @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  registrations GroupSessionRegistration[]
+
+  @@index([coachProfileId])
+  @@index([clubId])
+  @@index([startsAt])
+}
+
+model GroupSessionRegistration {
+  id             Int      @id @default(autoincrement())
+  groupSessionId Int
+  userId         Int
+  createdAt      DateTime @default(now())
+
+  session GroupSession @relation(fields: [groupSessionId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id])
+
+  @@unique([groupSessionId, userId])
+  @@index([groupSessionId])
 }
 
 model CoachClub {
@@ -500,10 +544,11 @@ model Reservation {
   cancellationReason String?
   participants       Json?
 
-  club      Club                  @relation(fields: [clubId], references: [id])
-  user      User                  @relation(fields: [userId], references: [id])
-  resources ReservationResource[]
-  payment   Payment?
+  club         Club                  @relation(fields: [clubId], references: [id])
+  user         User                  @relation(fields: [userId], references: [id])
+  resources    ReservationResource[]
+  payment      Payment?
+  groupSession GroupSession?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

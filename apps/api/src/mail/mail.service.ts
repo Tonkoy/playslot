@@ -319,6 +319,61 @@ export class MailService {
     await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
   }
 
+  /** Invite a player to a coach's new group session (spec §22). */
+  async sendGroupSessionInvite(
+    to: string,
+    info: {
+      coachName: string;
+      clubName: string;
+      when: string;
+      title: string;
+      spotsLeft: number;
+      priceCents: number;
+      currency: string;
+    },
+    link: string,
+    locale: ApiLocale = DEFAULT_LOCALE,
+  ): Promise<void> {
+    const price = info.priceCents > 0 ? `${(info.priceCents / 100).toFixed(2)} ${info.currency}` : null;
+    const copy =
+      locale === 'en'
+        ? {
+            subject: `New group session with ${info.coachName} — ${info.when}`,
+            body: `${info.coachName} is hosting “${info.title}” at ${info.clubName} on ${info.when}. ${info.spotsLeft} spots left${price ? `, ${price} per player` : ' (free)'}.`,
+            cta: 'View & join',
+          }
+        : {
+            subject: `Нова групова сесия с ${info.coachName} — ${info.when}`,
+            body: `${info.coachName} организира „${info.title}“ в ${info.clubName} на ${info.when}. Оставащи места: ${info.spotsLeft}${price ? `, ${price} на играч` : ' (безплатно)'}.`,
+            cta: 'Виж и се запиши',
+          };
+    await this.send({
+      to,
+      subject: copy.subject,
+      text: `${copy.body}\n${link}`,
+      html: emailShell(`<p>${copy.body}</p>${button(link, copy.cta)}`),
+    });
+  }
+
+  /** Tell a registered player their group session was cancelled (spec §19). */
+  async sendGroupSessionCancelled(
+    to: string,
+    info: { title: string; clubName: string; when: string },
+    locale: ApiLocale = DEFAULT_LOCALE,
+  ): Promise<void> {
+    const copy =
+      locale === 'en'
+        ? {
+            subject: `Group session cancelled — ${info.title}`,
+            body: `“${info.title}” at ${info.clubName} on ${info.when} was cancelled by the coach.`,
+          }
+        : {
+            subject: `Отменена групова сесия — ${info.title}`,
+            body: `„${info.title}“ в ${info.clubName} на ${info.when} беше отменена от треньора.`,
+          };
+    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+  }
+
   async sendCancellation(
     to: string,
     info: { clubName: string; when: string; refundCents: number; currency: string },

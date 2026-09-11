@@ -7,11 +7,31 @@ export interface CoachListItem {
   name: string;
   bio: string | null;
   photoUrl: string | null;
+  hourlyRateCents: number | null;
   languages: string[];
   levels: string[];
   clubs: { id: number; name: string; slug: string }[];
   services: CoachServiceDto[];
+  /** Weekly working hours (0=Sun…6=Sat); present on the single-coach view. */
+  workingHours?: { weekday: number; startMin: number; endMin: number }[];
 }
+
+/** The coach's own editable public profile. */
+export interface CoachProfileDto {
+  coachProfileId: number;
+  bio: string | null;
+  photoUrl: string | null;
+  hourlyRateCents: number | null;
+  languages: string[];
+  levels: string[];
+}
+
+export const updateCoachProfileSchema = z.object({
+  bio: z.string().max(2000).nullish(),
+  photoUrl: z.string().url().max(2000).nullish().or(z.literal('')),
+  hourlyRateCents: z.number().int().min(0).max(100_000_00).nullish(),
+});
+export type UpdateCoachProfileInput = z.infer<typeof updateCoachProfileSchema>;
 
 export interface CoachServiceDto {
   id: number;

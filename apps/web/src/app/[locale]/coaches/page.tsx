@@ -8,6 +8,8 @@ export default async function CoachesPage({ params }: { params: Promise<{ locale
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations('Coaches');
+  const lv = await getTranslations('Levels');
+  const level = (l: string) => (lv.has(l) ? lv(l) : l);
   const coaches = (await getCoaches()) ?? [];
 
   return (
@@ -46,7 +48,7 @@ export default async function CoachesPage({ params }: { params: Promise<{ locale
                 {(coach.levels.length > 0 || coach.languages.length > 0) && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
                     {coach.levels.map((l) => (
-                      <span key={l} className="mono" style={tag}>{l}</span>
+                      <span key={l} className="mono" style={tag}>{level(l)}</span>
                     ))}
                     {coach.languages.map((l) => (
                       <span key={l} className="mono" style={{ ...tag, color: 'var(--teal)', borderColor: 'var(--teal)' }}>{l}</span>

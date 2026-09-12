@@ -3,14 +3,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
+import { COACH_LEVELS } from '@playslot/contracts';
 import { Link } from '@/i18n/navigation';
 import { getMyCoachProfile, updateMyCoachProfile } from '@/lib/api';
 import { Avatar } from './Avatar';
 import { useToast } from './Toast';
 
+const LANGUAGES = ['bg', 'en'];
+
 /** The coach edits their public profile: photo, description and hourly rate. */
 export function CoachProfileEditor({ name }: { name: string }) {
   const t = useTranslations('CoachProfile');
+  const lv = useTranslations('Levels');
   const tt = useTranslations('Toasts');
   const qc = useQueryClient();
   const toast = useToast();
@@ -19,13 +23,20 @@ export function CoachProfileEditor({ name }: { name: string }) {
   const [photoUrl, setPhotoUrl] = useState('');
   const [bio, setBio] = useState('');
   const [rate, setRate] = useState<number | ''>('');
+  const [levels, setLevels] = useState<string[]>([]);
+  const [languages, setLanguages] = useState<string[]>([]);
 
   useEffect(() => {
     if (!profile.data) return;
     setPhotoUrl(profile.data.photoUrl ?? '');
     setBio(profile.data.bio ?? '');
     setRate(profile.data.hourlyRateCents != null ? profile.data.hourlyRateCents / 100 : '');
+    setLevels(profile.data.levels ?? []);
+    setLanguages(profile.data.languages ?? []);
   }, [profile.data]);
+
+  const toggle = (list: string[], set: (v: string[]) => void, value: string) =>
+    set(list.includes(value) ? list.filter((x) => x !== value) : [...list, value]);
 
   const save = useMutation({
     mutationFn: () =>
@@ -33,6 +44,8 @@ export function CoachProfileEditor({ name }: { name: string }) {
         photoUrl: photoUrl.trim(),
         bio: bio.trim(),
         hourlyRateCents: rate === '' ? null : Math.round(Number(rate) * 100),
+        levels,
+        languages,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['coachProfile'] });
@@ -88,6 +101,49 @@ export function CoachProfileEditor({ name }: { name: string }) {
         />
       </label>
 
+      {/* levels */}
+      <div style={{ marginTop: 16 }}>
+        <div style={{ ...fieldLabel, marginBottom: 8 }}>{t('levels')}</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {COACH_LEVELS.map((l) => {
+            const on = levels.includes(l);
+            return (
+              <button
+                key={l}
+                type="button"
+                onClick={() => toggle(levels, setLevels, l)}
+                aria-pressed={on}
+                style={chip(on)}
+              >
+                {lv(l)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* languages */}
+      <div style={{ marginTop: 14 }}>
+        <div style={{ ...fieldLabel, marginBottom: 8 }}>{t('languages')}</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {LANGUAGES.map((l) => {
+            const on = languages.includes(l);
+            return (
+              <button
+                key={l}
+                type="button"
+                onClick={() => toggle(languages, setLanguages, l)}
+                aria-pressed={on}
+                className="mono"
+                style={chip(on)}
+              >
+                {l.toUpperCase()}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <div style={{ marginTop: 16 }}>
         <button
           type="button"
@@ -100,6 +156,20 @@ export function CoachProfileEditor({ name }: { name: string }) {
       </div>
     </section>
   );
+}
+
+function chip(on: boolean): React.CSSProperties {
+  return {
+    minHeight: 40,
+    padding: '0 14px',
+    borderRadius: 999,
+    border: `1.5px solid ${on ? 'var(--ink)' : 'var(--line-2)'}`,
+    background: on ? 'var(--lime)' : 'var(--surface)',
+    color: on ? 'var(--on-lime)' : 'var(--ink-2)',
+    cursor: 'pointer',
+    fontSize: 14,
+    fontWeight: on ? 700 : 500,
+  };
 }
 
 const card: React.CSSProperties = {

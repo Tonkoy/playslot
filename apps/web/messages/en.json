@@ -372,7 +372,9 @@
     "photoUrl": "Photo URL",
     "bio": "About you",
     "hourlyRate": "Hourly rate (€)",
-    "save": "Save profile"
+    "save": "Save profile",
+    "levels": "Levels",
+    "languages": "Languages"
   },
   "CoachHub": {
     "title": "Coach profile",
@@ -444,5 +446,10 @@
   },
   "Legend": {
     "title": "Slot states"
+  },
+  "Levels": {
+    "beginner": "Beginner",
+    "intermediate": "Intermediate",
+    "advanced": "Advanced"
   }
 }

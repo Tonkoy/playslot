@@ -26,10 +26,16 @@ export interface CoachProfileDto {
   levels: string[];
 }
 
+/** Canonical coaching levels (translated for display). */
+export const COACH_LEVELS = ['beginner', 'intermediate', 'advanced'] as const;
+export type CoachLevel = (typeof COACH_LEVELS)[number];
+
 export const updateCoachProfileSchema = z.object({
   bio: z.string().max(2000).nullish(),
   photoUrl: z.string().url().max(2000).nullish().or(z.literal('')),
   hourlyRateCents: z.number().int().min(0).max(100_000_00).nullish(),
+  levels: z.array(z.string().min(1).max(40)).max(10).optional(),
+  languages: z.array(z.string().min(2).max(10)).max(10).optional(),
 });
 export type UpdateCoachProfileInput = z.infer<typeof updateCoachProfileSchema>;
 

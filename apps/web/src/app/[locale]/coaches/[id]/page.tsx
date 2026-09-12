@@ -16,6 +16,8 @@ export default async function CoachProfilePage({
   const { locale, id } = await params;
   setRequestLocale(locale);
   const t = await getTranslations('Coaches');
+  const lv = await getTranslations('Levels');
+  const level = (l: string) => (lv.has(l) ? lv(l) : l);
   const coach = await getCoach(Number(id));
 
   if (!coach) {
@@ -68,7 +70,7 @@ export default async function CoachProfilePage({
               ))}
               {coach.levels.map((l) => (
                 <span key={l} className="mono" style={{ ...chip, borderColor: 'var(--teal)', color: 'var(--teal)' }}>
-                  {l}
+                  {level(l)}
                 </span>
               ))}
             </div>

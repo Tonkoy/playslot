@@ -351,6 +351,8 @@ export class CoachingService {
         ...(input.bio !== undefined ? { bio: input.bio || null } : {}),
         ...(input.photoUrl !== undefined ? { photoUrl: input.photoUrl || null } : {}),
         ...(input.hourlyRateCents !== undefined ? { hourlyRateCents: input.hourlyRateCents ?? null } : {}),
+        ...(input.levels !== undefined ? { levels: input.levels } : {}),
+        ...(input.languages !== undefined ? { languages: input.languages } : {}),
       },
     });
     return this.getMyProfile(userId);

@@ -215,7 +215,8 @@
     "afternoon": "Afternoon (12:00–17:00)",
     "evening": "Evening (17:00–22:00)",
     "findCourt": "Find a court",
-    "optionalTag": "optional"
+    "optionalTag": "optional",
+    "anyDate": "Any date"
   },
   "Coaches": {
     "title": "Coaches",

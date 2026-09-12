@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { SPORTS } from '@playslot/contracts';
 import { Link } from '@/i18n/navigation';
 import { getCities, searchAvailability } from '@/lib/api';
+import { DatePicker } from './DatePicker';
 
 function todayIso(): string {
   const n = new Date();
@@ -135,7 +136,7 @@ export function SearchClient() {
           <span style={labelText}>
             {t('date')} <span style={optionalText}>({t('optionalTag')})</span>
           </span>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={ctrl} />
+          <DatePicker value={date} onChange={setDate} locale={locale} placeholder={t('anyDate')} />
         </label>
 
         {/* Time */}

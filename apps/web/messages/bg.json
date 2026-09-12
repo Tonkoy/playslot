@@ -215,7 +215,8 @@
     "afternoon": "Следобед (12:00–17:00)",
     "evening": "Вечер (17:00–22:00)",
     "findCourt": "Намери корт",
-    "optionalTag": "по избор"
+    "optionalTag": "по избор",
+    "anyDate": "Всяка дата"
   },
   "Coaches": {
     "title": "Треньори",

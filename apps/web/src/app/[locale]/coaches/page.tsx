@@ -9,7 +9,9 @@ export default async function CoachesPage({ params }: { params: Promise<{ locale
   setRequestLocale(locale);
   const t = await getTranslations('Coaches');
   const lv = await getTranslations('Levels');
+  const ag = await getTranslations('AgeGroups');
   const level = (l: string) => (lv.has(l) ? lv(l) : l);
+  const ageGroup = (g: string) => (ag.has(g) ? ag(g) : g);
   const coaches = (await getCoaches()) ?? [];
 
   return (
@@ -36,7 +38,12 @@ export default async function CoachesPage({ params }: { params: Promise<{ locale
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontFamily: 'var(--font-bricolage)', fontWeight: 700, fontSize: 19 }}>{coach.name}</div>
                     <div className="mono" style={{ color: 'var(--ink-3)', fontSize: 12, marginTop: 2 }}>
-                      {coach.clubs.map((c) => c.name).join(' · ')}
+                      {[
+                        coach.clubs.map((c) => c.name).join(' · '),
+                        coach.experienceYears != null ? t('yearsExp', { n: coach.experienceYears }) : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </div>
                   </div>
                 </div>
@@ -45,10 +52,13 @@ export default async function CoachesPage({ params }: { params: Promise<{ locale
                     {coach.bio}
                   </div>
                 )}
-                {(coach.levels.length > 0 || coach.languages.length > 0) && (
+                {(coach.levels.length > 0 || coach.languages.length > 0 || coach.worksWith.length > 0) && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
                     {coach.levels.map((l) => (
                       <span key={l} className="mono" style={tag}>{level(l)}</span>
+                    ))}
+                    {coach.worksWith.map((g) => (
+                      <span key={g} className="mono" style={{ ...tag, color: 'var(--clay)', borderColor: 'var(--clay)' }}>{ageGroup(g)}</span>
                     ))}
                     {coach.languages.map((l) => (
                       <span key={l} className="mono" style={{ ...tag, color: 'var(--teal)', borderColor: 'var(--teal)' }}>{l}</span>

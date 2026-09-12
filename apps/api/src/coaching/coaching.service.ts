@@ -74,8 +74,10 @@ export class CoachingService {
       bio: string | null;
       photoUrl: string | null;
       hourlyRateCents: number | null;
+      experienceYears: number | null;
       languages: string[];
       levels: string[];
+      worksWith: string[];
       user: { name: string } | null;
       services: { id: number; name: string; durationMin: number; minPlayers: number; maxPlayers: number; priceCents: number }[];
       clubs: { clubId: number }[];
@@ -93,8 +95,10 @@ export class CoachingService {
       bio: c.bio,
       photoUrl: c.photoUrl,
       hourlyRateCents: c.hourlyRateCents,
+      experienceYears: c.experienceYears,
       languages: c.languages,
       levels: c.levels,
+      worksWith: c.worksWith,
       clubs: c.clubs.map((x) => byId.get(x.clubId)).filter((x): x is NonNullable<typeof x> => !!x),
       services: c.services.map((s) => ({
         id: s.id,
@@ -337,8 +341,10 @@ export class CoachingService {
       bio: profile.bio,
       photoUrl: profile.photoUrl,
       hourlyRateCents: profile.hourlyRateCents,
+      experienceYears: profile.experienceYears,
       languages: profile.languages,
       levels: profile.levels,
+      worksWith: profile.worksWith,
     };
   }
 
@@ -351,8 +357,10 @@ export class CoachingService {
         ...(input.bio !== undefined ? { bio: input.bio || null } : {}),
         ...(input.photoUrl !== undefined ? { photoUrl: input.photoUrl || null } : {}),
         ...(input.hourlyRateCents !== undefined ? { hourlyRateCents: input.hourlyRateCents ?? null } : {}),
+        ...(input.experienceYears !== undefined ? { experienceYears: input.experienceYears ?? null } : {}),
         ...(input.levels !== undefined ? { levels: input.levels } : {}),
         ...(input.languages !== undefined ? { languages: input.languages } : {}),
+        ...(input.worksWith !== undefined ? { worksWith: input.worksWith } : {}),
       },
     });
     return this.getMyProfile(userId);

@@ -8,8 +8,10 @@ export interface CoachListItem {
   bio: string | null;
   photoUrl: string | null;
   hourlyRateCents: number | null;
+  experienceYears: number | null;
   languages: string[];
   levels: string[];
+  worksWith: string[];
   clubs: { id: number; name: string; slug: string }[];
   services: CoachServiceDto[];
   /** Weekly working hours (0=Sun…6=Sat); present on the single-coach view. */
@@ -22,20 +24,28 @@ export interface CoachProfileDto {
   bio: string | null;
   photoUrl: string | null;
   hourlyRateCents: number | null;
+  experienceYears: number | null;
   languages: string[];
   levels: string[];
+  worksWith: string[];
 }
 
-/** Canonical coaching levels (translated for display). */
+/** Canonical coaching levels (player levels taught; translated for display). */
 export const COACH_LEVELS = ['beginner', 'intermediate', 'advanced'] as const;
 export type CoachLevel = (typeof COACH_LEVELS)[number];
+
+/** Age groups a coach works with (translated for display). */
+export const WORKS_WITH = ['kids', 'juniors', 'adults', 'seniors'] as const;
+export type WorksWithGroup = (typeof WORKS_WITH)[number];
 
 export const updateCoachProfileSchema = z.object({
   bio: z.string().max(2000).nullish(),
   photoUrl: z.string().url().max(2000).nullish().or(z.literal('')),
   hourlyRateCents: z.number().int().min(0).max(100_000_00).nullish(),
+  experienceYears: z.number().int().min(0).max(80).nullish(),
   levels: z.array(z.string().min(1).max(40)).max(10).optional(),
   languages: z.array(z.string().min(2).max(10)).max(10).optional(),
+  worksWith: z.array(z.string().min(1).max(40)).max(10).optional(),
 });
 export type UpdateCoachProfileInput = z.infer<typeof updateCoachProfileSchema>;
 

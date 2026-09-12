@@ -17,7 +17,9 @@ export default async function CoachProfilePage({
   setRequestLocale(locale);
   const t = await getTranslations('Coaches');
   const lv = await getTranslations('Levels');
+  const ag = await getTranslations('AgeGroups');
   const level = (l: string) => (lv.has(l) ? lv(l) : l);
+  const ageGroup = (g: string) => (ag.has(g) ? ag(g) : g);
   const coach = await getCoach(Number(id));
 
   if (!coach) {
@@ -60,7 +62,12 @@ export default async function CoachProfilePage({
           <div style={{ minWidth: 0, flex: 1 }}>
             <h1 style={{ fontSize: 'clamp(24px, 4vw, 34px)', fontWeight: 800 }}>{coach.name}</h1>
             <div className="mono" style={{ color: 'var(--ink-3)', fontSize: 13, marginTop: 4 }}>
-              {coach.clubs.map((c) => c.name).join(' · ')}
+              {[
+                coach.clubs.map((c) => c.name).join(' · '),
+                coach.experienceYears != null ? t('yearsExp', { n: coach.experienceYears }) : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
               {coach.languages.map((l) => (
@@ -71,6 +78,11 @@ export default async function CoachProfilePage({
               {coach.levels.map((l) => (
                 <span key={l} className="mono" style={{ ...chip, borderColor: 'var(--teal)', color: 'var(--teal)' }}>
                   {level(l)}
+                </span>
+              ))}
+              {coach.worksWith.map((g) => (
+                <span key={g} className="mono" style={{ ...chip, borderColor: 'var(--clay)', color: 'var(--clay)' }}>
+                  {ageGroup(g)}
                 </span>
               ))}
             </div>

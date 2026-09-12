@@ -222,7 +222,9 @@
     "bookHint": "Pick a club and time from the grid to book a lesson with a coach.",
     "hour": "hour",
     "workingHours": "Working hours",
-    "dayOff": "Off"
+    "dayOff": "Off",
+    "yearsExp": "{n} yrs experience",
+    "worksWith": "Works with"
   },
   "Booking": {
     "title": "Book this slot",
@@ -374,7 +376,9 @@
     "hourlyRate": "Hourly rate (€)",
     "save": "Save profile",
     "levels": "Levels",
-    "languages": "Languages"
+    "languages": "Languages",
+    "experienceYears": "Years of experience",
+    "worksWith": "Works with"
   },
   "CoachHub": {
     "title": "Coach profile",
@@ -451,5 +455,11 @@
     "beginner": "Beginner",
     "intermediate": "Intermediate",
     "advanced": "Advanced"
+  },
+  "AgeGroups": {
+    "kids": "Kids",
+    "juniors": "Juniors",
+    "adults": "Adults",
+    "seniors": "Seniors"
   }
 }

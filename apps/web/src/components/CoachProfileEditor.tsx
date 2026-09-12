@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
-import { COACH_LEVELS } from '@playslot/contracts';
+import { COACH_LEVELS, WORKS_WITH } from '@playslot/contracts';
 import { Link } from '@/i18n/navigation';
 import { getMyCoachProfile, updateMyCoachProfile } from '@/lib/api';
 import { Avatar } from './Avatar';
@@ -15,6 +15,7 @@ const LANGUAGES = ['bg', 'en'];
 export function CoachProfileEditor({ name }: { name: string }) {
   const t = useTranslations('CoachProfile');
   const lv = useTranslations('Levels');
+  const ag = useTranslations('AgeGroups');
   const tt = useTranslations('Toasts');
   const qc = useQueryClient();
   const toast = useToast();
@@ -23,16 +24,20 @@ export function CoachProfileEditor({ name }: { name: string }) {
   const [photoUrl, setPhotoUrl] = useState('');
   const [bio, setBio] = useState('');
   const [rate, setRate] = useState<number | ''>('');
+  const [experience, setExperience] = useState<number | ''>('');
   const [levels, setLevels] = useState<string[]>([]);
   const [languages, setLanguages] = useState<string[]>([]);
+  const [worksWith, setWorksWith] = useState<string[]>([]);
 
   useEffect(() => {
     if (!profile.data) return;
     setPhotoUrl(profile.data.photoUrl ?? '');
     setBio(profile.data.bio ?? '');
     setRate(profile.data.hourlyRateCents != null ? profile.data.hourlyRateCents / 100 : '');
+    setExperience(profile.data.experienceYears ?? '');
     setLevels(profile.data.levels ?? []);
     setLanguages(profile.data.languages ?? []);
+    setWorksWith(profile.data.worksWith ?? []);
   }, [profile.data]);
 
   const toggle = (list: string[], set: (v: string[]) => void, value: string) =>
@@ -44,8 +49,10 @@ export function CoachProfileEditor({ name }: { name: string }) {
         photoUrl: photoUrl.trim(),
         bio: bio.trim(),
         hourlyRateCents: rate === '' ? null : Math.round(Number(rate) * 100),
+        experienceYears: experience === '' ? null : Number(experience),
         levels,
         languages,
+        worksWith,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['coachProfile'] });
@@ -89,17 +96,45 @@ export function CoachProfileEditor({ name }: { name: string }) {
         />
       </label>
 
-      <label style={{ ...fieldLabel, maxWidth: 220 }}>
-        {t('hourlyRate')}
-        <input
-          type="number"
-          min={0}
-          step="0.01"
-          value={rate}
-          onChange={(e) => setRate(e.target.value === '' ? '' : Number(e.target.value))}
-          style={fieldInput}
-        />
-      </label>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <label style={{ ...fieldLabel, maxWidth: 200 }}>
+          {t('hourlyRate')}
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            value={rate}
+            onChange={(e) => setRate(e.target.value === '' ? '' : Number(e.target.value))}
+            style={fieldInput}
+          />
+        </label>
+        <label style={{ ...fieldLabel, maxWidth: 200 }}>
+          {t('experienceYears')}
+          <input
+            type="number"
+            min={0}
+            max={80}
+            value={experience}
+            onChange={(e) => setExperience(e.target.value === '' ? '' : Number(e.target.value))}
+            style={fieldInput}
+          />
+        </label>
+      </div>
+
+      {/* works with (age groups) */}
+      <div style={{ marginTop: 16 }}>
+        <div style={{ ...fieldLabel, marginBottom: 8 }}>{t('worksWith')}</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {WORKS_WITH.map((g) => {
+            const on = worksWith.includes(g);
+            return (
+              <button key={g} type="button" onClick={() => toggle(worksWith, setWorksWith, g)} aria-pressed={on} style={chip(on)}>
+                {ag(g)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* levels */}
       <div style={{ marginTop: 16 }}>

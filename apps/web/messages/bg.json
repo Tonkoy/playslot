@@ -222,7 +222,9 @@
     "bookHint": "Изберете клуб и час от календара, за да резервирате урок с треньор.",
     "hour": "час",
     "workingHours": "Работно време",
-    "dayOff": "Почивен"
+    "dayOff": "Почивен",
+    "yearsExp": "{n} г. опит",
+    "worksWith": "Работи с"
   },
   "Booking": {
     "title": "Резервация",
@@ -374,7 +376,9 @@
     "hourlyRate": "Ставка на час (€)",
     "save": "Запази профила",
     "levels": "Нива",
-    "languages": "Езици"
+    "languages": "Езици",
+    "experienceYears": "Години опит",
+    "worksWith": "Работи с"
   },
   "CoachHub": {
     "title": "Профил на треньор",
@@ -451,5 +455,11 @@
     "beginner": "Начинаещи",
     "intermediate": "Средно ниво",
     "advanced": "Напреднали"
+  },
+  "AgeGroups": {
+    "kids": "Деца",
+    "juniors": "Юноши",
+    "adults": "Възрастни",
+    "seniors": "Ветерани"
   }
 }

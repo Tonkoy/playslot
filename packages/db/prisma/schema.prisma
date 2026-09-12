@@ -398,8 +398,10 @@ model CoachProfile {
   bio             String?
   photoUrl        String?
   hourlyRateCents Int? // headline rate shown on the public profile
+  experienceYears Int? // years coaching (the coach's own "level")
   languages       String[]
-  levels          String[]
+  levels          String[] // player levels taught (beginner/intermediate/advanced)
+  worksWith       String[] // age groups: kids/juniors/adults/seniors
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   services      CoachService[]

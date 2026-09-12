@@ -412,11 +412,21 @@ export function searchAvailability(params: {
   date: string;
   sport?: string;
   duration?: number;
+  cityId?: number;
+  startMin?: number;
+  endMin?: number;
 }): Promise<SearchResponse> {
   const qs = new URLSearchParams({ date: params.date });
   if (params.sport) qs.set('sport', params.sport);
   if (params.duration) qs.set('duration', String(params.duration));
+  if (params.cityId) qs.set('cityId', String(params.cityId));
+  if (params.startMin != null) qs.set('startMin', String(params.startMin));
+  if (params.endMin != null) qs.set('endMin', String(params.endMin));
   return apiFetch(`/search?${qs.toString()}`);
+}
+
+export function getCities(): Promise<import('@playslot/contracts').CityDto[]> {
+  return apiFetch('/cities');
 }
 
 export function getMyReservations(): Promise<ReservationSummary[]> {

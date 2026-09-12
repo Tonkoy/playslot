@@ -54,6 +54,15 @@ export class ClubsService {
     private readonly auth: AuthService,
   ) {}
 
+  /** Cities that have at least one active club (for the search location filter). */
+  listCities() {
+    return this.prisma.city.findMany({
+      where: { clubs: { some: { status: 'ACTIVE' } } },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    });
+  }
+
   // ── public reads (only ACTIVE clubs are visible) ──
   listPublic() {
     return this.prisma.club.findMany({

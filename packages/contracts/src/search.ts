@@ -30,3 +30,8 @@ export interface SearchResponse {
   date: string;
   results: SearchResultItem[];
 }
+
+export interface CityDto {
+  id: number;
+  name: string;
+}

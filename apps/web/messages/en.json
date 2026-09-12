@@ -176,7 +176,8 @@
     "phaseNotice": "This is the foundation. The reservation and payment engines come next.",
     "supportedSports": "Supported sports: {count}",
     "legendTitle": "Slot states",
-    "browseClubs": "Browse clubs"
+    "browseClubs": "Browse clubs",
+    "withCoachPrompt": "Want to play with a coach?"
   },
   "Favorites": {
     "title": "Favorite clubs",
@@ -269,7 +270,7 @@
     "title": "Clubs",
     "subtitle": "Pick a club to see its free courts.",
     "empty": "No clubs are available right now.",
-    "viewClub": "View availability"
+    "viewClub": "Check available times"
   },
   "ClubProfile": {
     "notFoundTitle": "Club not found",
@@ -440,5 +441,8 @@
     "linked": "Linked existing user {email}.",
     "copyLink": "Copy link",
     "copied": "Copied!"
+  },
+  "Legend": {
+    "title": "Slot states"
   }
 }

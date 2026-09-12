@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { SiteHeader } from '@/components/SiteHeader';
 import { AvailabilityGrid } from '@/components/availability/AvailabilityGrid';
+import { SlotLegend } from '@/components/SlotLegend';
 import { EventsSection } from '@/components/EventsSection';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { MembershipPlansSection } from '@/components/MembershipPlansSection';
@@ -85,6 +86,7 @@ export default async function ClubProfilePage({
         <h2 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 700, margin: '8px 0' }}>
           {t('availability')}
         </h2>
+        <SlotLegend />
         <AvailabilityGrid clubId={club.id} />
         <EventsSection clubId={club.id} currency={club.currency} timezone={club.timezone} />
         <MembershipPlansSection clubId={club.id} currency={club.currency} />

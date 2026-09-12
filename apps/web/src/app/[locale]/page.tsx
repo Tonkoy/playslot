@@ -1,24 +1,13 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
-import { SLOT_STATES, SPORTS, type SlotState } from '@playslot/contracts';
+import { SPORTS } from '@playslot/contracts';
 import { SiteHeader } from '@/components/SiteHeader';
+import { SearchClient } from '@/components/SearchClient';
 import { Link } from '@/i18n/navigation';
-
-// Map each slot state to a design token + a non-color cue (icon), per spec §7/§20.
-const STATE_STYLE: Record<SlotState, { bg: string; fg: string; icon: string }> = {
-  FREE: { bg: 'var(--free-soft)', fg: 'var(--free)', icon: '✓' },
-  RESERVED: { bg: 'var(--reserved-soft)', fg: 'var(--reserved)', icon: '×' },
-  MINE: { bg: 'var(--teal-soft)', fg: 'var(--teal)', icon: '★' },
-  UNAVAILABLE: { bg: 'var(--booked-soft)', fg: 'var(--ink-3)', icon: '–' },
-  PAST: { bg: 'var(--booked-soft)', fg: 'var(--ink-3)', icon: '·' },
-  EVENT: { bg: 'var(--event-soft)', fg: 'var(--event)', icon: '◆' },
-  TOURNAMENT: { bg: 'var(--event-soft)', fg: 'var(--event)', icon: '⚑' },
-};
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations('Home');
-  const st = await getTranslations('SlotStates');
   const c = await getTranslations('Common');
 
   const titleParts = t('title').split(t('titleHighlight'));
@@ -27,7 +16,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     <>
       <SiteHeader />
       <main style={{ maxWidth: 'var(--maxw)', margin: '0 auto', padding: '0 20px' }}>
-        <section style={{ padding: '56px 0 40px' }}>
+        <section style={{ padding: '48px 0 24px' }}>
           <span
             className="mono"
             style={{
@@ -44,128 +33,61 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
             {t('eyebrow')}
           </span>
 
-          <h1 style={{ fontSize: 'clamp(34px, 7vw, 66px)', fontWeight: 800, margin: '14px 0 0' }}>
+          <h1 style={{ fontSize: 'clamp(30px, 6vw, 56px)', fontWeight: 800, margin: '14px 0 0' }}>
             {titleParts[0]}
-            <mark
-              style={{
-                background: 'var(--lime)',
-                color: 'var(--on-lime)',
-                padding: '0 0.12em',
-                borderRadius: 8,
-              }}
-            >
+            <mark style={{ background: 'var(--lime)', color: 'var(--on-lime)', padding: '0 0.12em', borderRadius: 8 }}>
               {t('titleHighlight')}
             </mark>
             {titleParts[1]}
           </h1>
 
-          <p
-            style={{
-              maxWidth: '58ch',
-              color: 'var(--ink-2)',
-              fontSize: 'clamp(16px, 2.2vw, 20px)',
-              margin: '20px 0 0',
-            }}
-          >
+          <p style={{ maxWidth: '58ch', color: 'var(--ink-2)', fontSize: 'clamp(16px, 2.2vw, 20px)', margin: '18px 0 0' }}>
             {t('subtitle')}
-          </p>
-
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 28 }}>
-            <Link
-              href="/search"
-              style={{
-                background: 'var(--lime)',
-                color: 'var(--on-lime)',
-                borderRadius: 'var(--radius-sm)',
-                padding: '12px 20px',
-                fontWeight: 700,
-                minHeight: 44,
-                display: 'inline-flex',
-                alignItems: 'center',
-                textDecoration: 'none',
-              }}
-            >
-              {t('searchCourt')}
-            </Link>
-            <Link
-              href="/coaches"
-              style={{
-                background: 'var(--surface)',
-                color: 'var(--ink)',
-                border: '1px solid var(--line-2)',
-                borderRadius: 'var(--radius-sm)',
-                padding: '12px 20px',
-                fontWeight: 600,
-                minHeight: 44,
-                display: 'inline-flex',
-                alignItems: 'center',
-                textDecoration: 'none',
-              }}
-            >
-              {t('searchLesson')}
-            </Link>
-          </div>
-
-          <p className="mono" style={{ color: 'var(--ink-3)', fontSize: 13, marginTop: 20 }}>
-            {t('supportedSports', { count: SPORTS.length })}
           </p>
         </section>
 
+        {/* The search itself — find a free court to play. */}
+        <section>
+          <h2 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 700, marginBottom: 14 }}>{t('searchCourt')}</h2>
+          <SearchClient />
+        </section>
+
+        {/* With a coach. */}
         <section
           style={{
             borderTop: '1px solid var(--line)',
-            padding: '32px 0',
+            marginTop: 28,
+            padding: '20px 0',
+            display: 'flex',
+            gap: 14,
+            alignItems: 'center',
+            flexWrap: 'wrap',
           }}
         >
-          <h2 style={{ fontSize: 'clamp(18px, 3vw, 24px)', fontWeight: 700, marginBottom: 16 }}>
-            {t('legendTitle')}
-          </h2>
-          <div
+          <span style={{ color: 'var(--ink-2)', fontSize: 16 }}>{t('withCoachPrompt')}</span>
+          <Link
+            href="/coaches"
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-              gap: 10,
+              background: 'var(--surface)',
+              color: 'var(--ink)',
+              border: '1px solid var(--line-2)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '10px 18px',
+              fontWeight: 700,
+              minHeight: 44,
+              display: 'inline-flex',
+              alignItems: 'center',
+              textDecoration: 'none',
             }}
           >
-            {SLOT_STATES.map((state) => {
-              const s = STATE_STYLE[state];
-              return (
-                <div
-                  key={state}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    background: s.bg,
-                    border: '1px solid var(--line)',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '10px 12px',
-                  }}
-                >
-                  <span
-                    aria-hidden="true"
-                    className="mono"
-                    style={{
-                      width: 24,
-                      height: 24,
-                      display: 'inline-grid',
-                      placeItems: 'center',
-                      borderRadius: 6,
-                      background: 'var(--surface)',
-                      color: s.fg,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {s.icon}
-                  </span>
-                  <span style={{ fontSize: 14, color: 'var(--ink)' }}>{st(state)}</span>
-                </div>
-              );
-            })}
-          </div>
+            {t('searchLesson')} →
+          </Link>
+          <span className="mono" style={{ color: 'var(--ink-3)', fontSize: 13, marginLeft: 'auto' }}>
+            {t('supportedSports', { count: SPORTS.length })}
+          </span>
         </section>
 
-        <div style={{ paddingBottom: 64 }} />
+        <div style={{ paddingBottom: 48 }} />
       </main>
 
       <footer

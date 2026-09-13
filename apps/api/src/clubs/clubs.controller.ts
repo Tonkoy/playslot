@@ -1,7 +1,9 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import {
   clubJoinRequestSchema,
   clubSettingsSchema,
+  createClubClosureSchema,
+  deleteClubClosureSchema,
   updateClubProfileSchema,
   upsertClubSchema,
 } from '@playslot/contracts';
@@ -68,6 +70,36 @@ export class ClubsController {
     @CurrentUser('id') userId: number,
   ) {
     return this.clubs.updateClubProfile(Number(clubId), body, userId);
+  }
+
+  // ── special days: club closures / downtime ──
+  @Get(':clubId/closures')
+  @UseGuards(ClubMembershipGuard)
+  @ClubRoles(Role.CLUB_STAFF, Role.CLUB_ADMIN)
+  listClosures(@Param('clubId') clubId: string) {
+    return this.clubs.listClosures(Number(clubId));
+  }
+
+  @Post(':clubId/closures')
+  @UseGuards(ClubMembershipGuard)
+  @ClubRoles(Role.CLUB_ADMIN)
+  createClosure(
+    @Param('clubId') clubId: string,
+    @Body(new ZodBody(createClubClosureSchema)) body: import('@playslot/contracts').CreateClubClosureInput,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.clubs.createClosure(Number(clubId), body, userId);
+  }
+
+  @Delete(':clubId/closures')
+  @UseGuards(ClubMembershipGuard)
+  @ClubRoles(Role.CLUB_ADMIN)
+  deleteClosure(
+    @Param('clubId') clubId: string,
+    @Body(new ZodBody(deleteClubClosureSchema)) body: import('@playslot/contracts').DeleteClubClosureInput,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.clubs.deleteClosure(Number(clubId), body.startsAt, body.endsAt, userId);
   }
 
   @Patch(':clubId/settings')

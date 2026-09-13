@@ -292,6 +292,23 @@ export function adminUpdateClubProfile(
   return apiFetch(`/clubs/${clubId}/profile`, { method: 'PATCH', body: JSON.stringify(input) });
 }
 
+// ── special days: club closures ──
+export function getClubClosures(clubId: number): Promise<import('@playslot/contracts').ClubClosureDto[]> {
+  return apiFetch(`/clubs/${clubId}/closures`);
+}
+export function createClubClosure(
+  clubId: number,
+  input: import('@playslot/contracts').CreateClubClosureInput,
+): Promise<import('@playslot/contracts').ClubClosureDto> {
+  return apiFetch(`/clubs/${clubId}/closures`, { method: 'POST', body: JSON.stringify(input) });
+}
+export function deleteClubClosure(
+  clubId: number,
+  input: import('@playslot/contracts').DeleteClubClosureInput,
+): Promise<{ deleted: number }> {
+  return apiFetch(`/clubs/${clubId}/closures`, { method: 'DELETE', body: JSON.stringify(input) });
+}
+
 // ── Club OS (staff) ──
 export function getCalendar(clubId: number, date: string): Promise<CalendarResponse> {
   return apiFetch(`/clubs/${clubId}/calendar?date=${date}`);

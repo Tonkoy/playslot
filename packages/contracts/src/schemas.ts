@@ -104,6 +104,35 @@ export const clubSettingsSchema = z.object({
 });
 export type ClubSettingsInput = z.infer<typeof clubSettingsSchema>;
 
+/** Special days: a club closure / downtime window applied to all the club's courts. */
+export const createClubClosureSchema = z
+  .object({
+    fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'fromDate must be YYYY-MM-DD'),
+    toDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'toDate must be YYYY-MM-DD'),
+    allDay: z.boolean().default(true),
+    startMin: z.number().int().min(0).max(24 * 60).optional(),
+    endMin: z.number().int().min(0).max(24 * 60).optional(),
+    reason: z.string().min(1).max(200),
+  })
+  .refine((v) => v.toDate >= v.fromDate, { message: 'toDate must not be before fromDate' })
+  .refine((v) => v.allDay || (v.startMin != null && v.endMin != null && v.endMin > v.startMin), {
+    message: 'a timed closure needs start < end',
+  });
+export type CreateClubClosureInput = z.infer<typeof createClubClosureSchema>;
+
+export const deleteClubClosureSchema = z.object({
+  startsAt: z.string().datetime({ offset: true }),
+  endsAt: z.string().datetime({ offset: true }),
+});
+export type DeleteClubClosureInput = z.infer<typeof deleteClubClosureSchema>;
+
+export interface ClubClosureDto {
+  startsAt: string; // ISO
+  endsAt: string;
+  reason: string;
+  courtCount: number;
+}
+
 export const surfaceEnum = z.enum([
   'CLAY',
   'HARD',

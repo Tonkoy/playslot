@@ -130,4 +130,35 @@ describe('Extras: memberships + events (e2e)', () => {
       await http().post(`/events/${eventId}/register`).set('Cookie', adminCookie).expect(200);
     });
   });
+
+  describe('special days (closures)', () => {
+    const CLOSE_DAY = formatInZone(new Date(Date.now() + 5 * 86_400_000), tz, 'yyyy-MM-dd');
+    const anyFree = (body: { slots: { state: string }[] }) => body.slots.some((s) => s.state === 'FREE');
+
+    it('an all-day closure blocks availability and can be removed (admin only)', async () => {
+      expect(anyFree((await http().get(`/availability?clubId=${clubId}&date=${CLOSE_DAY}`).expect(200)).body)).toBe(true);
+
+      // a non-admin cannot create a closure
+      await http().post(`/clubs/${clubId}/closures`).set('Cookie', playerCookie).send({ fromDate: CLOSE_DAY, toDate: CLOSE_DAY, reason: 'x' }).expect(403);
+
+      const created = await http()
+        .post(`/clubs/${clubId}/closures`)
+        .set('Cookie', adminCookie)
+        .send({ fromDate: CLOSE_DAY, toDate: CLOSE_DAY, allDay: true, reason: 'Holiday' })
+        .expect(201);
+      expect(created.body.courtCount).toBeGreaterThan(0);
+
+      // the whole day is now blocked, and the closure is listed
+      expect(anyFree((await http().get(`/availability?clubId=${clubId}&date=${CLOSE_DAY}`).expect(200)).body)).toBe(false);
+      expect((await http().get(`/clubs/${clubId}/closures`).set('Cookie', adminCookie).expect(200)).body).toHaveLength(1);
+
+      // removing it restores availability
+      await http()
+        .delete(`/clubs/${clubId}/closures`)
+        .set('Cookie', adminCookie)
+        .send({ startsAt: created.body.startsAt, endsAt: created.body.endsAt })
+        .expect(200);
+      expect(anyFree((await http().get(`/availability?clubId=${clubId}&date=${CLOSE_DAY}`).expect(200)).body)).toBe(true);
+    });
+  });
 });

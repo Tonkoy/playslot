@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { SPORTS } from '@playslot/contracts';
 import { Link, useRouter } from '@/i18n/navigation';
+import { ClosuresManager } from './ClosuresManager';
 import { ClubDetailsEditor } from './ClubDetailsEditor';
 import { EventManager } from './EventManager';
 import { MembershipManager } from './MembershipManager';
@@ -219,6 +220,9 @@ export function ClubManager({ clubId }: { clubId: number }) {
           )}
         </div>
       </section>
+
+      {/* ── Special days: closures / downtime ── */}
+      <ClosuresManager clubId={clubId} timezone={club?.timezone ?? 'Europe/Sofia'} />
 
       {/* ── Team: coaches + staff ── */}
       <TeamManager clubId={clubId} />

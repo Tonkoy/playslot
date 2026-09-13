@@ -362,7 +362,9 @@
     "profileSaved": "Profile saved",
     "sessionCreated": "Session created — players invited",
     "sessionCancelled": "Session cancelled",
-    "clubSaved": "Club profile saved"
+    "clubSaved": "Club profile saved",
+    "closureAdded": "Closure added",
+    "closureRemoved": "Closure removed"
   },
   "CoachSchedule": {
     "title": "My schedule",
@@ -500,5 +502,20 @@
     "newsletter": "Newsletter",
     "newsletterHelp": "Occasional news and offers, and group-session invites.",
     "save": "Save settings"
+  },
+  "Closures": {
+    "title": "Special days",
+    "help": "Close the club for holidays or downtime. Blocks bookings on all courts for the chosen period.",
+    "none": "No upcoming closures.",
+    "add": "Add closure",
+    "from": "From",
+    "to": "To",
+    "allDay": "All day",
+    "startTime": "From",
+    "endTime": "To",
+    "reason": "Reason",
+    "reasonPlaceholder": "e.g. National holiday, court maintenance",
+    "remove": "Remove",
+    "courtsAffected": "{n} courts"
   }
 }

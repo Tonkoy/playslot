@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import {
   type AddMemberInput,
+  type ClubClosureDto,
   type ClubJoinRequestInput,
+  type CreateClubClosureInput,
   type ClubTeamDto,
   type ClubTeamMemberDto,
   type InviteResultDto,
@@ -11,6 +13,7 @@ import {
   type UpsertClubInput,
 } from '@playslot/contracts';
 import { type Prisma, Role } from '@playslot/db';
+import { instantFromDayMinutes } from '@playslot/domain';
 import { AppException } from '../common/app-exception';
 import { AuthService } from '../auth/auth.service';
 import { MailService } from '../mail/mail.service';
@@ -186,6 +189,57 @@ export class ClubsService {
     });
     await this.audit(actorUserId, 'club.profile_update', 'Club', clubId, before, club);
     return club;
+  }
+
+  // ── special days: club closures / downtime (applied to all courts) ──
+
+  async listClosures(clubId: number): Promise<ClubClosureDto[]> {
+    const rows = await this.prisma.resourceException.findMany({
+      where: { resource: { clubId, type: 'COURT' }, endsAt: { gt: new Date() } },
+      select: { startsAt: true, endsAt: true, reason: true },
+      orderBy: { startsAt: 'asc' },
+    });
+    // Identical windows across courts collapse into one closure with a court count.
+    const map = new Map<string, ClubClosureDto>();
+    for (const r of rows) {
+      const key = `${r.startsAt.toISOString()}|${r.endsAt.toISOString()}|${r.reason}`;
+      const cur = map.get(key);
+      if (cur) cur.courtCount++;
+      else map.set(key, { startsAt: r.startsAt.toISOString(), endsAt: r.endsAt.toISOString(), reason: r.reason, courtCount: 1 });
+    }
+    return [...map.values()];
+  }
+
+  async createClosure(clubId: number, input: CreateClubClosureInput, actorUserId: number): Promise<ClubClosureDto> {
+    const club = await this.prisma.club.findUnique({ where: { id: clubId }, select: { timezone: true } });
+    if (!club) throw new AppException('not_found');
+    const tz = club.timezone;
+    const start = input.allDay
+      ? instantFromDayMinutes(input.fromDate, 0, tz)
+      : instantFromDayMinutes(input.fromDate, input.startMin!, tz);
+    const end = input.allDay
+      ? instantFromDayMinutes(input.toDate, 24 * 60, tz)
+      : instantFromDayMinutes(input.fromDate, input.endMin!, tz);
+    if (end <= start) throw new AppException('validation_failed', { fields: { toDate: ['must be after start'] } });
+
+    const courts = await this.prisma.resource.findMany({
+      where: { clubId, type: 'COURT', status: 'ACTIVE' },
+      select: { id: true },
+    });
+    if (courts.length === 0) throw new AppException('policy_violation', { reason: 'no_courts' });
+    await this.prisma.resourceException.createMany({
+      data: courts.map((c) => ({ resourceId: c.id, startsAt: start, endsAt: end, reason: input.reason })),
+    });
+    await this.audit(actorUserId, 'club.closure_created', 'Club', clubId, null, { start, end, reason: input.reason, courts: courts.length });
+    return { startsAt: start.toISOString(), endsAt: end.toISOString(), reason: input.reason, courtCount: courts.length };
+  }
+
+  async deleteClosure(clubId: number, startsAt: string, endsAt: string, actorUserId: number): Promise<{ deleted: number }> {
+    const res = await this.prisma.resourceException.deleteMany({
+      where: { resource: { clubId, type: 'COURT' }, startsAt: new Date(startsAt), endsAt: new Date(endsAt) },
+    });
+    await this.audit(actorUserId, 'club.closure_deleted', 'Club', clubId, { startsAt, endsAt }, null);
+    return { deleted: res.count };
   }
 
   /** Derived club opening hours: earliest open / latest close across active courts, per weekday. */

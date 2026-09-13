@@ -134,8 +134,11 @@ model User {
   emailVerifiedAt DateTime? // set when the verification link is used (OAuth = pre-verified)
   locale          String    @default("bg")
   timezone        String    @default("Europe/Sofia")
+  avatarUrl       String? // profile photo (URL)
+  bio             String? // short self-description
   isVisible       Boolean   @default(false) // player-directory opt-in (GDPR: default OFF)
-  subscribed      Boolean   @default(false)
+  subscribed      Boolean   @default(false) // newsletter / marketing opt-in
+  notifyByEmail   Boolean   @default(true) // transactional email notifications on/off
 
   roles         UserRole[]
   memberships   ClubMember[]

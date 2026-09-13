@@ -244,4 +244,20 @@ describe('Notifications (e2e)', () => {
     expect(ctx.mail.noShows.length).toBe(before + 1);
     expect(ctx.mail.noShows.at(-1)!.to).toBe('player@notif.test');
   });
+
+  it('respects the customer’s notifyByEmail=off (staff still notified)', async () => {
+    await ctx.prisma.user.update({ where: { email: 'player@notif.test' }, data: { notifyByEmail: false } });
+    const conf = ctx.mail.confirmations.length;
+    const staffBefore = ctx.mail.staffNotices.length;
+
+    await http()
+      .post('/reservations')
+      .set('Cookie', cookie)
+      .send({ clubId, type: 'COURT', startsAt: at(DAY, 1080), durationMin: 60, paymentMethod: 'ON_SITE', resourceIds: [courtId] })
+      .expect(201);
+
+    expect(ctx.mail.confirmations.length).toBe(conf); // customer email suppressed
+    expect(ctx.mail.staffNotices.length).toBe(staffBefore + 2); // club still notified
+    await ctx.prisma.user.update({ where: { email: 'player@notif.test' }, data: { notifyByEmail: true } });
+  });
 });

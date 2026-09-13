@@ -10,3 +10,4 @@ export * from './memberships';
 export * from './events';
 export * from './group-sessions';
 export * from './org';
+export * from './profile';

@@ -165,7 +165,7 @@ export function SiteNav() {
               {signedIn && (
                 <div style={{ padding: '8px 10px 10px', borderBottom: '1px solid var(--line)', marginBottom: 4 }}>
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <Avatar name={me.data.user.name} size={36} />
+                    <Avatar name={me.data.user.name} photoUrl={me.data.user.avatarUrl} size={36} />
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {me.data.user.name}

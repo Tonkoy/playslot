@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
 import { Link, useRouter } from '@/i18n/navigation';
 import { getMe, getMyMemberships, logout } from '@/lib/api';
+import { AccountProfileEditor } from './AccountProfileEditor';
 import { Avatar } from './Avatar';
 
 const ROLE_KEYS: Record<string, string> = {
@@ -51,7 +52,7 @@ export function AccountClient() {
       {/* identity card */}
       <section style={card}>
         <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-          <Avatar name={user.name} size={64} />
+          <Avatar name={user.name} photoUrl={user.avatarUrl} size={64} />
           <div style={{ minWidth: 0 }}>
             <h1 style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.1 }}>{user.name}</h1>
             <p style={{ color: 'var(--ink-2)', marginTop: 4, wordBreak: 'break-all' }}>{user.email}</p>
@@ -94,6 +95,9 @@ export function AccountClient() {
           {logoutMut.isPending ? '…' : t('logout')}
         </button>
       </section>
+
+      {/* account settings */}
+      <AccountProfileEditor />
 
       {/* quick links */}
       <section style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>

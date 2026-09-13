@@ -488,5 +488,16 @@
     "about": "About",
     "rules": "Rules",
     "save": "Save profile"
+  },
+  "AccountSettings": {
+    "title": "Account settings",
+    "avatarUrl": "Avatar URL",
+    "name": "Display name",
+    "bio": "About you",
+    "notify": "Email notifications",
+    "notifyHelp": "Booking confirmations, cancellations and reminders.",
+    "newsletter": "Newsletter",
+    "newsletterHelp": "Occasional news and offers, and group-session invites.",
+    "save": "Save settings"
   }
 }

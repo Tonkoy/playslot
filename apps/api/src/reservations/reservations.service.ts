@@ -693,7 +693,7 @@ export class ReservationsService {
     const r = await this.prisma.reservation.findUnique({
       where: { id: reservationId },
       include: {
-        user: { select: { email: true, locale: true, name: true } },
+        user: { select: { email: true, locale: true, name: true, notifyByEmail: true } },
         club: {
           select: {
             name: true,
@@ -741,7 +741,8 @@ export class ReservationsService {
     return {
       clubName: r.club.name,
       when,
-      customer: !walkin && r.user ? r.user : null,
+      // Skip the customer's own transactional email when they've turned notifications off.
+      customer: !walkin && r.user?.notifyByEmail ? r.user : null,
       customerName,
       what,
       priceCents: r.priceCents,

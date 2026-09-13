@@ -105,8 +105,18 @@ export interface Me {
   email: string;
   name: string;
   locale: string;
+  avatarUrl?: string | null;
   emailVerified: boolean;
   roles: string[];
+}
+
+export function getMyUserProfile(): Promise<import('@playslot/contracts').UserProfileDto> {
+  return apiFetch('/me/profile');
+}
+export function updateMyUserProfile(
+  input: import('@playslot/contracts').UpdateUserProfileInput,
+): Promise<import('@playslot/contracts').UserProfileDto> {
+  return apiFetch('/me/profile', { method: 'PUT', body: JSON.stringify(input) });
 }
 
 export interface AdminClub extends ClubPublic {

@@ -299,6 +299,7 @@ export class AuthService {
       email: user.email,
       name: user.name,
       locale: user.locale,
+      avatarUrl: user.avatarUrl,
       emailVerified: user.emailVerifiedAt !== null,
       roles: user.roles.map((r) => r.role),
     };

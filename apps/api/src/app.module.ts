@@ -15,6 +15,7 @@ import { HealthModule } from './health/health.module';
 import { MailModule } from './mail/mail.module';
 import { MembershipsModule } from './memberships/memberships.module';
 import { PaymentsModule } from './payments/payments.module';
+import { ProfileModule } from './profile/profile.module';
 import { ProgramsModule } from './programs/programs.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ReservationsModule } from './reservations/reservations.module';
@@ -50,6 +51,7 @@ import { SearchModule } from './search/search.module';
     MembershipsModule,
     ProgramsModule,
     GroupSessionsModule,
+    ProfileModule,
     HealthModule,
   ],
   providers: [

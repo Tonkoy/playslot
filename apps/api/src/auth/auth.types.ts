@@ -6,6 +6,7 @@ export interface AuthenticatedUser {
   email: string;
   name: string;
   locale: string;
+  avatarUrl?: string | null; // present on the /me read; omitted from the lightweight JWT user
   emailVerified: boolean;
   roles: Role[];
 }

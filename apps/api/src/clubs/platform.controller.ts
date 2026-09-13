@@ -21,6 +21,11 @@ export class PlatformController {
     return this.clubs.listAllClubs();
   }
 
+  @Get('clubs/:id')
+  getClub(@Param('id') id: string) {
+    return this.clubs.getForAdmin(Number(id));
+  }
+
   @Post('clubs')
   createClub(
     @Body(new ZodBody(platformCreateClubSchema)) body: PlatformCreateClubInput,

@@ -84,4 +84,19 @@ describe('Org admin hierarchy (e2e)', () => {
     const coachCookie = coachLogin.headers['set-cookie'] as unknown as string[];
     await http().post(`/clubs/${clubId}/coaches`).set('Cookie', coachCookie).send({ email: 'x@y.test' }).expect(403);
   });
+
+  it('super-admin reach: the platform admin opens and edits any club without membership', async () => {
+    // The platform admin is NOT a ClubMember of this club, yet can read + manage it.
+    const got = await http().get(`/platform/clubs/${clubId}`).set('Cookie', platformCookie).expect(200);
+    expect(got.body.name).toBe('New Club');
+    expect(Array.isArray(got.body.openingHours)).toBe(true);
+
+    await http()
+      .patch(`/clubs/${clubId}/profile`)
+      .set('Cookie', platformCookie)
+      .send({ phone: '+359 2 111 2222' })
+      .expect(200);
+    const team = await http().get(`/clubs/${clubId}/team`).set('Cookie', platformCookie).expect(200);
+    expect(team.body).toHaveProperty('coaches');
+  });
 });

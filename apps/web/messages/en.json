@@ -444,7 +444,8 @@
     "coachesCount": "{n} coaches",
     "activate": "Activate",
     "suspend": "Suspend",
-    "addAdmin": "Add admin"
+    "addAdmin": "Add admin",
+    "manage": "Manage"
   },
   "Team": {
     "title": "Team",

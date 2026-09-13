@@ -444,7 +444,8 @@
     "coachesCount": "{n} треньори",
     "activate": "Активирай",
     "suspend": "Спри",
-    "addAdmin": "Добави админ"
+    "addAdmin": "Добави админ",
+    "manage": "Управлявай"
   },
   "Team": {
     "title": "Екип",

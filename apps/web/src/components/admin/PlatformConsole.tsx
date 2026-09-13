@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import type { PlatformClubDto } from '@playslot/contracts';
+import { Link } from '@/i18n/navigation';
 import {
   platformAddAdmin,
   platformCreateClub,
@@ -114,7 +115,10 @@ function ClubRow({
         <span className="mono" style={{ fontSize: 12, color: 'var(--ink-3)' }}>
           {c.city} · {c.status} · {t('adminsCount', { n: c.adminCount })} · {t('coachesCount', { n: c.coachCount })}
         </span>
-        <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+        <span style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Link href={`/admin/clubs/${c.id}`} style={{ ...smallBtn, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', color: 'var(--teal)', borderColor: 'var(--teal)' }}>
+            {t('manage')}
+          </Link>
           <button type="button" onClick={() => onStatus(!active)} style={smallBtn}>
             {active ? t('suspend') : t('activate')}
           </button>

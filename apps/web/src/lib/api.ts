@@ -203,6 +203,9 @@ export function platformCreateClub(
 ): Promise<import('@playslot/contracts').PlatformClubDto> {
   return apiFetch('/platform/clubs', { method: 'POST', body: JSON.stringify(input) });
 }
+export function platformGetClub(clubId: number): Promise<AdminClub> {
+  return apiFetch(`/platform/clubs/${clubId}`);
+}
 export function platformAddAdmin(
   clubId: number,
   input: import('@playslot/contracts').AddMemberInput,

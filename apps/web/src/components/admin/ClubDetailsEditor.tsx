@@ -33,6 +33,7 @@ export function ClubDetailsEditor({ clubId, club }: { clubId: number; club: Club
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['myClubs'] });
+      qc.invalidateQueries({ queryKey: ['platformClub', clubId] });
       toast(tt('clubSaved'));
     },
     onError: (e) => toast(e instanceof Error ? e.message : tt('error'), 'error'),

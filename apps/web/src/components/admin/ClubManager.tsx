@@ -19,6 +19,7 @@ import {
   adminUpdateCourt,
   getMe,
   getMyClubs,
+  platformGetClub,
 } from '@/lib/api';
 
 const SURFACES = ['CLAY', 'HARD', 'GRASS', 'CARPET', 'ARTIFICIAL_GRASS', 'PARQUET', 'OTHER'];
@@ -36,6 +37,14 @@ export function ClubManager({ clubId }: { clubId: number }) {
 
   const myClubs = useQuery({ queryKey: ['myClubs'], queryFn: getMyClubs, enabled: me.isSuccess });
   const membership = myClubs.data?.find((m) => m.club.id === clubId);
+  const isPlatform = me.data?.user.roles.includes('PLATFORM_ADMIN') ?? false;
+
+  // A platform admin can open any club even without being a member of it.
+  const platformClub = useQuery({
+    queryKey: ['platformClub', clubId],
+    queryFn: () => platformGetClub(clubId),
+    enabled: me.isSuccess && isPlatform && myClubs.isSuccess && !membership,
+  });
 
   const courts = useQuery({
     queryKey: ['courts', clubId],
@@ -47,6 +56,7 @@ export function ClubManager({ clubId }: { clubId: number }) {
     mutationFn: (slot: number) => adminUpdateClubSettings(clubId, slot),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['myClubs'] });
+      qc.invalidateQueries({ queryKey: ['platformClub', clubId] });
       qc.invalidateQueries({ queryKey: ['availability', clubId] });
     },
   });
@@ -71,14 +81,15 @@ export function ClubManager({ clubId }: { clubId: number }) {
   const [editDraft, setEditDraft] = useState<CourtInput>(EMPTY);
 
   if (me.isLoading || me.isError) return <p style={{ color: 'var(--ink-3)' }}>…</p>;
-  if (myClubs.isSuccess && !membership)
+  if (myClubs.isSuccess && !membership && !isPlatform)
     return (
       <div style={box}>
         {t('notYourClub')} <Link href="/admin" style={{ color: 'var(--teal)' }}>← {t('back')}</Link>
       </div>
     );
 
-  const club = membership?.club;
+  const club = membership?.club ?? platformClub.data;
+  if (!club) return <p style={{ color: 'var(--ink-3)' }}>…</p>;
 
   return (
     <div style={{ display: 'grid', gap: 28 }}>

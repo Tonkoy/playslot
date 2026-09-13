@@ -328,6 +328,13 @@ export class ClubsService {
     }));
   }
 
+  /** Full club record for a platform admin to manage (any status). */
+  async getForAdmin(clubId: number) {
+    const club = await this.prisma.club.findUnique({ where: { id: clubId }, select: PUBLIC_CLUB_SELECT });
+    if (!club) throw new AppException('not_found');
+    return { ...club, openingHours: await this.openingHours(clubId) };
+  }
+
   async createClubAsPlatform(input: PlatformCreateClubInput, actorUserId: number): Promise<PlatformClubDto> {
     const club = await this.prisma.$transaction(async (tx) => {
       const city = await tx.city.upsert({ where: { name: input.city }, create: { name: input.city }, update: {} });

@@ -8,7 +8,11 @@ import { EventsSection } from '@/components/EventsSection';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { MembershipPlansSection } from '@/components/MembershipPlansSection';
 import { ReviewsSection } from '@/components/ReviewsSection';
-import { getClub, getClubCourts } from '@/lib/api';
+import { Avatar } from '@/components/Avatar';
+import { getClub, getClubCourts, getCoaches } from '@/lib/api';
+import { minToHHMM } from '@/lib/tz';
+
+const WEEK = [1, 2, 3, 4, 5, 6, 0]; // Monday … Sunday
 
 export async function generateMetadata({
   params,
@@ -49,6 +53,9 @@ export default async function ClubProfilePage({
   }
 
   const courts = (await getClubCourts(slug)) ?? [];
+  const coaches = (await getCoaches(club.id)) ?? [];
+  const weekday = (w: number) =>
+    new Intl.DateTimeFormat(locale === 'bg' ? 'bg-BG' : 'en-US', { weekday: 'long' }).format(new Date(Date.UTC(2024, 0, 7 + w)));
 
   return (
     <>
@@ -58,36 +65,94 @@ export default async function ClubProfilePage({
           ← {t('backToClubs')}
         </Link>
 
-        <header style={{ margin: '12px 0 20px' }}>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-            <h1 style={{ fontSize: 'clamp(26px, 5vw, 42px)', fontWeight: 800 }}>{club.name}</h1>
-            <span style={{ marginLeft: 'auto' }}>
-              <FavoriteButton clubId={club.id} />
+        <header style={{ display: 'flex', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap', margin: '12px 0 20px' }}>
+          {club.photoUrl ? (
+            <img src={club.photoUrl} alt={club.name} style={{ width: 96, height: 96, borderRadius: 'var(--radius)', objectFit: 'cover', border: '1px solid var(--line)', flexShrink: 0 }} />
+          ) : (
+            <span style={{ width: 96, height: 96, borderRadius: 'var(--radius)', border: '1px solid var(--line-2)', background: 'var(--surface-2)', display: 'grid', placeItems: 'center', color: 'var(--ink-3)', fontWeight: 800, fontSize: 34, flexShrink: 0 }}>
+              {club.name.trim().charAt(0).toUpperCase()}
             </span>
-          </div>
-          <p style={{ color: 'var(--ink-2)', marginTop: 6 }}>
-            {club.city.name} · {club.address}
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-            <span className="mono" style={chip}>
-              {t('courts')}: {courts.length}
-            </span>
-            {club.acceptsMultisport && (
-              <span className="mono" style={{ ...chip, borderColor: 'var(--teal)', color: 'var(--teal)' }}>
-                {t('acceptsMultisport')}
+          )}
+          <div style={{ flex: 1, minWidth: 240 }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              <h1 style={{ fontSize: 'clamp(26px, 5vw, 42px)', fontWeight: 800 }}>{club.name}</h1>
+              <span style={{ marginLeft: 'auto' }}>
+                <FavoriteButton clubId={club.id} />
               </span>
+            </div>
+            <p style={{ color: 'var(--ink-2)', marginTop: 6 }}>
+              {club.city.name} · {club.address}
+              {club.phone ? <> · <a href={`tel:${club.phone}`} style={{ color: 'var(--teal)' }}>{club.phone}</a></> : null}
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+              <span className="mono" style={chip}>
+                {t('courts')}: {courts.length}
+              </span>
+              {club.acceptsMultisport && (
+                <span className="mono" style={{ ...chip, borderColor: 'var(--teal)', color: 'var(--teal)' }}>
+                  {t('acceptsMultisport')}
+                </span>
+              )}
+            </div>
+            {club.description && (
+              <p style={{ color: 'var(--ink-2)', marginTop: 14, maxWidth: '70ch' }}>{club.description}</p>
             )}
           </div>
-          {club.description && (
-            <p style={{ color: 'var(--ink-2)', marginTop: 14, maxWidth: '70ch' }}>{club.description}</p>
-          )}
         </header>
 
-        <h2 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 700, margin: '8px 0' }}>
+        {/* opening hours + rules */}
+        <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', marginBottom: 8 }}>
+          {(club.openingHours?.length ?? 0) > 0 && (
+            <section style={infoCard}>
+              <h2 style={infoH2}>{t('openingHours')}</h2>
+              <div style={{ display: 'grid', gap: 4 }}>
+                {WEEK.map((w) => {
+                  const h = club.openingHours!.find((x) => x.weekday === w);
+                  return (
+                    <div key={w} style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                      <span style={{ textTransform: 'capitalize', color: 'var(--ink-2)' }}>{weekday(w)}</span>
+                      <span className="mono" style={{ color: h ? 'var(--ink)' : 'var(--ink-3)', fontSize: 13 }}>
+                        {h ? `${minToHHMM(h.startMin)}–${minToHHMM(h.endMin)}` : t('closed')}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+          {club.rules && (
+            <section style={infoCard}>
+              <h2 style={infoH2}>{t('rules')}</h2>
+              <p style={{ color: 'var(--ink-2)', whiteSpace: 'pre-wrap' }}>{club.rules}</p>
+            </section>
+          )}
+        </div>
+
+        <h2 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 700, margin: '16px 0 8px' }}>
           {t('availability')}
         </h2>
         <SlotLegend />
         <AvailabilityGrid clubId={club.id} />
+
+        {coaches.length > 0 && (
+          <section style={{ marginTop: 32 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 12 }}>{t('coaches')}</h2>
+            <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+              {coaches.map((c) => (
+                <Link key={c.coachProfileId} href={`/coaches/${c.coachProfileId}`} style={{ display: 'flex', gap: 12, alignItems: 'center', textDecoration: 'none', color: 'var(--ink)', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: 14, boxShadow: 'var(--shadow-sm)' }}>
+                  <Avatar name={c.name} photoUrl={c.photoUrl} size={48} />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 700 }}>{c.name}</div>
+                    {c.hourlyRateCents != null && (
+                      <div className="mono" style={{ color: 'var(--ink-3)', fontSize: 12 }}>{Math.round(c.hourlyRateCents / 100)} €/{t('hour')}</div>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         <EventsSection clubId={club.id} currency={club.currency} timezone={club.timezone} />
         <MembershipPlansSection clubId={club.id} currency={club.currency} />
         <ReviewsSection clubId={club.id} />
@@ -104,3 +169,11 @@ const chip: React.CSSProperties = {
   padding: '5px 12px',
   color: 'var(--ink-2)',
 };
+const infoCard: React.CSSProperties = {
+  background: 'var(--surface)',
+  border: '1px solid var(--line)',
+  borderRadius: 'var(--radius)',
+  padding: 18,
+  boxShadow: 'var(--shadow-sm)',
+};
+const infoH2: React.CSSProperties = { fontSize: 16, fontWeight: 700, marginBottom: 10 };

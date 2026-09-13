@@ -290,7 +290,12 @@
     "availability": "Availability",
     "courts": "Courts",
     "acceptsMultisport": "Accepts Multisport",
-    "backToClubs": "All clubs"
+    "backToClubs": "All clubs",
+    "openingHours": "Opening hours",
+    "closed": "Closed",
+    "rules": "Rules",
+    "coaches": "Coaches",
+    "hour": "hour"
   },
   "Grid": {
     "heading": "Availability by court and time",
@@ -356,7 +361,8 @@
     "hoursSaved": "Working hours saved",
     "profileSaved": "Profile saved",
     "sessionCreated": "Session created — players invited",
-    "sessionCancelled": "Session cancelled"
+    "sessionCancelled": "Session cancelled",
+    "clubSaved": "Club profile saved"
   },
   "CoachSchedule": {
     "title": "My schedule",
@@ -471,5 +477,16 @@
     "juniors": "Juniors",
     "adults": "Adults",
     "seniors": "Seniors"
+  },
+  "ClubAdmin": {
+    "detailsTitle": "Club profile",
+    "detailsHelp": "Shown on your public club page. Photo, contact, about and rules.",
+    "name": "Club name",
+    "phone": "Phone",
+    "address": "Address",
+    "photoUrl": "Photo / logo URL",
+    "about": "About",
+    "rules": "Rules",
+    "save": "Save profile"
   }
 }

@@ -79,10 +79,24 @@ export const upsertClubSchema = z.object({
   timezone: z.string().min(1).default('Europe/Sofia'),
   currency: z.string().length(3).default('EUR'),
   description: z.string().max(4000).optional(),
+  phone: z.string().max(40).optional(),
+  photoUrl: z.string().url().max(2000).optional().or(z.literal('')),
+  rules: z.string().max(8000).optional(),
   slotIntervalMin: slotIntervalSchema.default(60),
   acceptsMultisport: z.boolean().optional(),
 });
 export type UpsertClubInput = z.infer<typeof upsertClubSchema>;
+
+/** Club-admin edits to the public profile (partial; name/slug/city stay put). */
+export const updateClubProfileSchema = z.object({
+  name: z.string().min(1).max(160).optional(),
+  address: z.string().min(1).max(240).optional(),
+  description: z.string().max(4000).nullish(),
+  phone: z.string().max(40).nullish(),
+  photoUrl: z.string().url().max(2000).nullish().or(z.literal('')),
+  rules: z.string().max(8000).nullish(),
+});
+export type UpdateClubProfileInput = z.infer<typeof updateClubProfileSchema>;
 
 /** Club-wide booking granularity — 30 or 60 minutes only (per-club, spec §5). */
 export const clubSettingsSchema = z.object({

@@ -318,7 +318,10 @@ model Club {
   lng               Float?
   timezone          String          @default("Europe/Sofia")
   currency          String          @default("EUR")
-  description       String?
+  description       String? // short "about" blurb
+  phone             String?
+  photoUrl          String? // club photo / logo (URL)
+  rules             String? // club rules, shown on the public profile
   slotIntervalMin   Int             @default(60) // club-wide booking granularity: 30 or 60 (spec §5)
   acceptsMultisport Boolean         @default(false)
   paymentMethods    PaymentMethod[]

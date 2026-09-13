@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { SPORTS } from '@playslot/contracts';
 import { Link, useRouter } from '@/i18n/navigation';
+import { ClubDetailsEditor } from './ClubDetailsEditor';
 import { EventManager } from './EventManager';
 import { MembershipManager } from './MembershipManager';
 import { TeamManager } from './TeamManager';
@@ -101,6 +102,9 @@ export function ClubManager({ clubId }: { clubId: number }) {
           {t('openCalendar')}
         </Link>
       </div>
+
+      {/* ── Club profile ── */}
+      {club && <ClubDetailsEditor clubId={clubId} club={club} />}
 
       {/* ── Slot time (club-wide) ── */}
       <section style={card}>

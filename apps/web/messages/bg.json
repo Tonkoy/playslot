@@ -290,7 +290,12 @@
     "availability": "Наличност",
     "courts": "Кортове",
     "acceptsMultisport": "Приема Multisport",
-    "backToClubs": "Всички клубове"
+    "backToClubs": "Всички клубове",
+    "openingHours": "Работно време",
+    "closed": "Затворено",
+    "rules": "Правила",
+    "coaches": "Треньори",
+    "hour": "час"
   },
   "Grid": {
     "heading": "Наличност по кортове и часове",
@@ -356,7 +361,8 @@
     "hoursSaved": "Работното време е запазено",
     "profileSaved": "Профилът е запазен",
     "sessionCreated": "Сесията е създадена — играчите са поканени",
-    "sessionCancelled": "Сесията е отменена"
+    "sessionCancelled": "Сесията е отменена",
+    "clubSaved": "Профилът на клуба е запазен"
   },
   "CoachSchedule": {
     "title": "Моят график",
@@ -471,5 +477,16 @@
     "juniors": "Юноши",
     "adults": "Възрастни",
     "seniors": "Ветерани"
+  },
+  "ClubAdmin": {
+    "detailsTitle": "Профил на клуба",
+    "detailsHelp": "Показва се на публичната страница на клуба. Снимка, контакти, за клуба и правила.",
+    "name": "Име на клуба",
+    "phone": "Телефон",
+    "address": "Адрес",
+    "photoUrl": "URL на снимка / лого",
+    "about": "За клуба",
+    "rules": "Правила",
+    "save": "Запази профила"
   }
 }

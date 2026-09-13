@@ -7,6 +7,7 @@ import {
   type InviteResultDto,
   type PlatformClubDto,
   type PlatformCreateClubInput,
+  type UpdateClubProfileInput,
   type UpsertClubInput,
 } from '@playslot/contracts';
 import { type Prisma, Role } from '@playslot/db';
@@ -26,6 +27,9 @@ const PUBLIC_CLUB_SELECT = {
   timezone: true,
   currency: true,
   description: true,
+  phone: true,
+  photoUrl: true,
+  rules: true,
   slotIntervalMin: true,
   acceptsMultisport: true,
   paymentMethods: true,
@@ -81,7 +85,7 @@ export class ClubsService {
       select: PUBLIC_CLUB_SELECT,
     });
     if (!club) throw new AppException('not_found');
-    return club;
+    return { ...club, openingHours: await this.openingHours(club.id) };
   }
 
   async getCourtsPublic(idOrSlug: string) {
@@ -151,6 +155,9 @@ export class ClubsService {
         timezone: input.timezone,
         currency: input.currency,
         description: input.description ?? null,
+        phone: input.phone || null,
+        photoUrl: input.photoUrl || null,
+        rules: input.rules || null,
         slotIntervalMin: input.slotIntervalMin,
         acceptsMultisport: input.acceptsMultisport ?? false,
       },
@@ -159,6 +166,45 @@ export class ClubsService {
 
     await this.audit(actorUserId, 'club.update', 'Club', clubId, before, club);
     return club;
+  }
+
+  /** Club-admin partial update of the public profile (name/slug/city unchanged). */
+  async updateClubProfile(clubId: number, input: UpdateClubProfileInput, actorUserId: number) {
+    const before = await this.prisma.club.findUnique({ where: { id: clubId } });
+    if (!before) throw new AppException('not_found');
+    const club = await this.prisma.club.update({
+      where: { id: clubId },
+      data: {
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.address !== undefined ? { address: input.address } : {}),
+        ...(input.description !== undefined ? { description: input.description || null } : {}),
+        ...(input.phone !== undefined ? { phone: input.phone || null } : {}),
+        ...(input.photoUrl !== undefined ? { photoUrl: input.photoUrl || null } : {}),
+        ...(input.rules !== undefined ? { rules: input.rules || null } : {}),
+      },
+      select: PUBLIC_CLUB_SELECT,
+    });
+    await this.audit(actorUserId, 'club.profile_update', 'Club', clubId, before, club);
+    return club;
+  }
+
+  /** Derived club opening hours: earliest open / latest close across active courts, per weekday. */
+  async openingHours(clubId: number): Promise<{ weekday: number; startMin: number; endMin: number }[]> {
+    const rules = await this.prisma.availabilityRule.findMany({
+      where: { resource: { clubId, type: 'COURT', status: 'ACTIVE' } },
+      select: { weekday: true, startMin: true, endMin: true },
+    });
+    const byDay = new Map<number, { startMin: number; endMin: number }>();
+    for (const r of rules) {
+      const cur = byDay.get(r.weekday);
+      byDay.set(r.weekday, {
+        startMin: cur ? Math.min(cur.startMin, r.startMin) : r.startMin,
+        endMin: cur ? Math.max(cur.endMin, r.endMin) : r.endMin,
+      });
+    }
+    return [...byDay.entries()]
+      .map(([weekday, h]) => ({ weekday, ...h }))
+      .sort((a, b) => a.weekday - b.weekday);
   }
 
   /** Update just the club-wide booking granularity (30 or 60 min). */

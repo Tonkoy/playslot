@@ -38,12 +38,16 @@ export interface ClubPublic {
   timezone: string;
   currency: string;
   description: string | null;
+  phone: string | null;
+  photoUrl: string | null;
+  rules: string | null;
   slotIntervalMin: number;
   acceptsMultisport: boolean;
   paymentMethods: string[];
   status: string;
   cityId: number;
   city: { id: number; name: string };
+  openingHours?: { weekday: number; startMin: number; endMin: number }[];
 }
 
 export interface CourtPublic {
@@ -266,6 +270,13 @@ export function adminUpdateClubSettings(
     method: 'PATCH',
     body: JSON.stringify({ slotIntervalMin }),
   });
+}
+
+export function adminUpdateClubProfile(
+  clubId: number,
+  input: import('@playslot/contracts').UpdateClubProfileInput,
+): Promise<AdminClub> {
+  return apiFetch(`/clubs/${clubId}/profile`, { method: 'PATCH', body: JSON.stringify(input) });
 }
 
 // ── Club OS (staff) ──

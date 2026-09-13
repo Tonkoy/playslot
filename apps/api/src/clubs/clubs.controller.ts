@@ -1,5 +1,10 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import { clubJoinRequestSchema, clubSettingsSchema, upsertClubSchema } from '@playslot/contracts';
+import {
+  clubJoinRequestSchema,
+  clubSettingsSchema,
+  updateClubProfileSchema,
+  upsertClubSchema,
+} from '@playslot/contracts';
 import { Role } from '@playslot/db';
 import { ZodBody } from '../common/zod-validation.pipe';
 import { ClubMembershipGuard } from '../auth/club-membership.guard';
@@ -52,6 +57,17 @@ export class ClubsController {
     @CurrentUser('id') userId: number,
   ) {
     return this.clubs.updateClub(Number(clubId), body, userId);
+  }
+
+  @Patch(':clubId/profile')
+  @UseGuards(ClubMembershipGuard)
+  @ClubRoles(Role.CLUB_ADMIN)
+  updateProfile(
+    @Param('clubId') clubId: string,
+    @Body(new ZodBody(updateClubProfileSchema)) body: import('@playslot/contracts').UpdateClubProfileInput,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.clubs.updateClubProfile(Number(clubId), body, userId);
   }
 
   @Patch(':clubId/settings')

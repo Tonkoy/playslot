@@ -1,4 +1,5 @@
-import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query, Res, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 import {
   blockSchema,
   cancelReservationSchema,
@@ -35,6 +36,20 @@ export class ClubOpsController {
   @Get('customers')
   customers(@Param('clubId') clubId: string) {
     return this.reservations.listCustomers(Number(clubId));
+  }
+
+  /** CSV export of the club's reservations in a date range (opens in Excel). */
+  @Get('export')
+  async export(
+    @Param('clubId') clubId: string,
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<string> {
+    const { filename, csv } = await this.reservations.exportCsv(Number(clubId), from, to);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return csv;
   }
 
   @Post('reservations')

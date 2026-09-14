@@ -7,6 +7,7 @@ import { SPORTS } from '@playslot/contracts';
 import { Link, useRouter } from '@/i18n/navigation';
 import { ClosuresManager } from './ClosuresManager';
 import { ClubDetailsEditor } from './ClubDetailsEditor';
+import { ClubExport } from './ClubExport';
 import { EventManager } from './EventManager';
 import { MembershipManager } from './MembershipManager';
 import { TeamManager } from './TeamManager';
@@ -236,6 +237,9 @@ export function ClubManager({ clubId }: { clubId: number }) {
         timezone={club?.timezone ?? 'Europe/Sofia'}
         currency={club?.currency ?? 'EUR'}
       />
+
+      {/* ── Export reservations (CSV) ── */}
+      <ClubExport clubId={clubId} />
     </div>
   );
 }

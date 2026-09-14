@@ -57,6 +57,17 @@ the pure `domain` core (money in integer cents, UTC/timezone math with DST tests
 Next: **Phase 1** — Prisma schema, auth (email verification + password reset),
 club/court CRUD, and tenant-isolation tests.
 
+## AI team
+
+Nine named Claude Code subagents in `.claude/agents/` cover this repo the
+way a real company would — Ivaylo (Product Owner), Anton (Full-Stack
+Developer), Tegav (QA), Napushalka (DevOps), and Iveto (Design) on the
+product side; Kafemashina (Growth Marketing), Dana (Club Partnerships),
+Nikola (Data & Growth Analytics), and Tisho (Security) on the
+go-to-market/risk side. Each owns their own slice of the spec and hands
+off to the others at the same points a human team would. See
+[`docs/TEAM.md`](docs/TEAM.md).
+
 ## Non-negotiables (see `docs/AGENTS.md` §2)
 
 PostgreSQL is authoritative · never trust the client · double-booking impossible at the DB layer ·

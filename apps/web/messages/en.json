@@ -517,5 +517,12 @@
     "reasonPlaceholder": "e.g. National holiday, court maintenance",
     "remove": "Remove",
     "courtsAffected": "{n} courts"
+  },
+  "Export": {
+    "title": "Export reservations",
+    "help": "Download the club's reservations for a date range as a CSV file (opens in Excel).",
+    "from": "From",
+    "to": "To",
+    "download": "Download CSV"
   }
 }

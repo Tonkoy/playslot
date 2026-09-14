@@ -410,6 +410,53 @@ export class ReservationsService {
     };
   }
 
+  /** Export a club's reservations in a date range as CSV (opens in Excel). */
+  async exportCsv(clubId: number, from: string, to: string): Promise<{ filename: string; csv: string }> {
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRe.test(from) || !dateRe.test(to)) {
+      throw new AppException('validation_failed', { fields: { from: ['from/to must be YYYY-MM-DD'] } });
+    }
+    const club = await this.prisma.club.findFirst({ where: { id: clubId }, select: { timezone: true, slug: true } });
+    if (!club) throw new AppException('not_found');
+    const tz = club.timezone;
+    const start = instantFromDayMinutes(from, 0, tz);
+    const end = instantFromDayMinutes(to, 24 * 60, tz);
+    if (end <= start) throw new AppException('validation_failed', { fields: { to: ['must not be before from'] } });
+
+    const rows = await this.prisma.reservation.findMany({
+      where: { clubId, startsAt: { lt: end }, endsAt: { gt: start } },
+      orderBy: { startsAt: 'asc' },
+      include: {
+        resources: { select: { resource: { select: { name: true } } } },
+        user: { select: { name: true } },
+        payment: { select: { status: true } },
+      },
+    });
+
+    const header = ['Date', 'Start', 'End', 'Courts', 'Type', 'Status', 'Customer', 'Price', 'Currency', 'Payment', 'PaymentStatus', 'Source'];
+    const lines = [header];
+    for (const r of rows) {
+      const participantName = (r.participants as { name?: string } | null)?.name;
+      lines.push([
+        formatInZone(r.startsAt, tz, 'yyyy-MM-dd'),
+        formatInZone(r.startsAt, tz, 'HH:mm'),
+        formatInZone(r.endsAt, tz, 'HH:mm'),
+        r.resources.map((x) => x.resource.name).join(' + '),
+        r.type,
+        r.status,
+        r.type === 'BLOCK' ? '' : (r.user?.name ?? participantName ?? ''),
+        (r.priceCents / 100).toFixed(2),
+        r.currency,
+        r.paymentMethod,
+        r.payment?.status ?? '',
+        r.source,
+      ]);
+    }
+    // UTF-8 BOM so Excel reads Cyrillic; CRLF line endings; RFC-4180 quoting.
+    const csv = '﻿' + lines.map((row) => row.map(csvCell).join(',')).join('\r\n');
+    return { filename: `${club.slug}_${from}_${to}.csv`, csv };
+  }
+
   async listCustomers(clubId: number) {
     const rows = await this.prisma.reservation.findMany({
       where: { clubId, type: { in: ['COURT', 'LESSON'] } },
@@ -1085,4 +1132,9 @@ function isExclusionViolation(e: unknown): boolean {
   }
   const msg = e instanceof Error ? e.message : String(e);
   return msg.includes('no_resource_overlap') || msg.includes('23P01');
+}
+
+/** RFC-4180 CSV field: quote when it contains a comma, quote or newline. */
+function csvCell(v: string): string {
+  return /[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
 }

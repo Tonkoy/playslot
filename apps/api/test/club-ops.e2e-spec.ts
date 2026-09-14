@@ -202,4 +202,17 @@ describe('Club Operating System (e2e)', () => {
     const logs = await ctx.prisma.auditLog.count({ where: { objectType: 'Reservation' } });
     expect(logs).toBeGreaterThan(0);
   });
+
+  it('exports the club’s reservations as CSV (staff only)', async () => {
+    const res = await http()
+      .get(`/clubs/${clubId}/export?from=${DAY}&to=${DAY}`)
+      .set('Cookie', staffCookie)
+      .expect(200);
+    expect(res.headers['content-type']).toContain('text/csv');
+    expect(res.headers['content-disposition']).toContain('.csv');
+    expect(res.text).toContain('Date,Start,End,Courts,Type,Status');
+    expect(res.text.split('\r\n').length).toBeGreaterThan(1); // header + at least one row
+
+    await http().get(`/clubs/${clubId}/export?from=${DAY}&to=${DAY}`).set('Cookie', playerCookie).expect(403);
+  });
 });

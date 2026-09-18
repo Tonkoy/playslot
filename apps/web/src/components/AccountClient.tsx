@@ -87,7 +87,7 @@ export function AccountClient() {
             border: '1px solid var(--clay)',
             color: 'var(--clay)',
             background: 'var(--surface)',
-            borderRadius: 'var(--radius-sm)',
+            borderRadius: 'var(--pill)',
             fontWeight: 700,
             cursor: 'pointer',
           }}

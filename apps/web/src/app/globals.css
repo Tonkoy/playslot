@@ -1,117 +1,58 @@
 @import 'tailwindcss';
 
 /*
- * PlaySlot design tokens (from docs/design/playslot-design.html).
- * Light palette on :root; dark overrides under prefers-color-scheme and an
- * explicit [data-theme="dark"]. Colors are theme-aware; slot-state colors are
- * kept distinct from the brand accent and are never used color-only in the UI.
+ * PlaySlot design tokens — deep-green / lime / white system (spec-linked to
+ * docs/design/playslot-design.html). Light theme only: PlaySlot ships one
+ * deliberate, on-brand surface rather than a user-toggled dark mode. Slot-state
+ * colors stay distinct from the brand accent and are never used color-only.
  */
 :root {
-  --ground: #f5f7f2;
+  --ground: #ffffff;
   --surface: #ffffff;
-  --surface-2: #edefe8;
-  --ink: #14181b;
-  --ink-2: #464c4e;
-  --ink-3: #7b8184;
-  --line: #e1e4db;
-  --line-2: #cdd1c6;
+  --surface-2: #f3f7f4;
+  --ink: #12181b;
+  --ink-2: #4b564f;
+  --ink-3: #7c877f;
+  --line: #e7ece8;
+  --line-2: #d7e0da;
 
-  --lime: #c7f000; /* brand accent — always dark text on top */
-  --lime-deep: #a6c900;
-  /* Text on the lime accent is ALWAYS dark in both themes (lime never darkens). */
-  --on-lime: #14181b;
-  --teal: #0e9e9c; /* info / coach */
-  --teal-soft: #d6eeec;
-  --clay: #e4622e; /* secondary highlight */
-  --clay-soft: #f8e2d6;
+  /* Brand */
+  --green-deep: #123b2c; /* primary ink-on-brand surfaces, footers, dark cards */
+  --green: #1e6b47; /* primary accent — links, primary actions */
+  --green-soft: #e7f3ea;
+  --green-soft-2: #d8eedd;
+  --lime: #cfea6e; /* brand highlight — always dark text on top */
+  --lime-deep: #b9d958;
+  --on-lime: var(--green-deep);
+
+  --teal: #0e8f7c; /* info / coach accent, distinct from primary green */
+  --teal-soft: #dff3ee;
+  --clay: #d95b2e; /* secondary highlight / destructive-leaning actions */
+  --clay-soft: #fbe4d8;
 
   /* slot-state semantics */
-  --free: #1e9e57;
-  --free-soft: #dbf0e4;
+  --free: #1e6b47; /* reuses the brand green — a free slot is the "on brand" state */
+  --free-soft: #e7f3ea;
   --held: #c98a06;
   --held-soft: #f6eacb;
-  --booked: #9aa0a2;
-  --booked-soft: #e7e9e4;
-  --reserved: #d13438; /* reserved/busy — red, theme-aware */
-  --reserved-soft: #f9dede;
-  --event: #7a5af0;
-  --event-soft: #e5defb;
+  --booked: #8b948e;
+  --booked-soft: #ecefea;
+  --reserved: #c94a3a;
+  --reserved-soft: #fbe3de;
+  --event: #6e5ac9;
+  --event-soft: #e9e4fb;
 
-  --radius: 14px;
-  --radius-sm: 9px;
-  --shadow: 0 1px 2px rgba(20, 24, 27, 0.05), 0 10px 30px rgba(20, 24, 27, 0.07);
-  --shadow-sm: 0 1px 2px rgba(20, 24, 27, 0.06), 0 3px 10px rgba(20, 24, 27, 0.05);
-  --maxw: 1180px;
+  --radius: 18px;
+  --radius-sm: 12px;
+  --pill: 100px;
+  --shadow: 0 1px 2px rgba(18, 24, 27, 0.05), 0 24px 54px rgba(18, 59, 44, 0.12);
+  --shadow-sm: 0 1px 2px rgba(18, 24, 27, 0.05), 0 6px 16px rgba(18, 59, 44, 0.08);
+  --maxw: 1240px;
 
-  /* Brand mark — light theme: white tile with a border and dark "off" slots. */
-  --brand-tile-bg: #ffffff;
-  --brand-tile-ring: var(--line-2);
-  --brand-off: #14181b;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --ground: #0e1113;
-    --surface: #171b1e;
-    --surface-2: #20262a;
-    --ink: #f1f3ee;
-    --ink-2: #b9bfc0;
-    --ink-3: #828889;
-    --line: #272d30;
-    --line-2: #39403f;
-    --lime: #cbf33a;
-    --lime-deep: #a6c900;
-    --teal: #33b7b4;
-    --teal-soft: #0f2e2d;
-    --clay: #f0774a;
-    --clay-soft: #33190f;
-    --free: #41b978;
-    --free-soft: #12301f;
-    --held: #dca83a;
-    --held-soft: #322611;
-    --booked: #6d7375;
-    --booked-soft: #23282a;
-    --reserved: #f0736a;
-    --reserved-soft: #331414;
-    --event: #9b83f5;
-    --event-soft: #1e1836;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 34px rgba(0, 0, 0, 0.5);
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.4);
-    /* Brand mark — dark theme: light tile, no border, gray "off" slots. */
-    --brand-tile-bg: #f1f3ee;
-    --brand-tile-ring: transparent;
-    --brand-off: #6d7375;
-  }
-}
-
-:root[data-theme='dark'] {
-  --ground: #0e1113;
-  --surface: #171b1e;
-  --surface-2: #20262a;
-  --ink: #f1f3ee;
-  --ink-2: #b9bfc0;
-  --ink-3: #828889;
-  --line: #272d30;
-  --line-2: #39403f;
-  --lime: #cbf33a;
-  --lime-deep: #a6c900;
-  --teal: #33b7b4;
-  --teal-soft: #0f2e2d;
-  --clay: #f0774a;
-  --clay-soft: #33190f;
-  --free: #41b978;
-  --free-soft: #12301f;
-  --held: #dca83a;
-  --held-soft: #322611;
-  --booked: #6d7375;
-  --booked-soft: #23282a;
-  --event: #9b83f5;
-  --event-soft: #1e1836;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 34px rgba(0, 0, 0, 0.5);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.4);
-  --brand-tile-bg: #f1f3ee;
+  /* Brand mark — deep-green tile, lime "on" slot, translucent-white "off" slots. */
+  --brand-tile-bg: var(--green-deep);
   --brand-tile-ring: transparent;
-  --brand-off: #6d7375;
+  --brand-off: rgba(255, 255, 255, 0.35);
 }
 
 /* Expose tokens to Tailwind so utilities like bg-surface / text-ink work. */
@@ -132,7 +73,7 @@
 }
 
 html {
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
 body {
@@ -159,13 +100,13 @@ h4 {
 }
 
 /* Custom select control: hide the native chevron and draw our own so selects
- * match the app's inputs in both themes. !important beats the inline
- * `background:` shorthands used at call sites. */
+ * match the app's inputs. !important beats the inline `background:` shorthands
+ * used at call sites. */
 select {
   -webkit-appearance: none !important;
   -moz-appearance: none !important;
   appearance: none !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%23808589' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E") !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%237C877F' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E") !important;
   background-repeat: no-repeat !important;
   background-position: right 12px center !important;
   background-size: 12px 8px !important;
@@ -186,7 +127,7 @@ select {
 
 /* Visible focus for keyboard nav (WCAG 2.1 AA, spec §20). */
 :focus-visible {
-  outline: 2px solid var(--teal);
+  outline: 2px solid var(--green);
   outline-offset: 2px;
   border-radius: 4px;
 }

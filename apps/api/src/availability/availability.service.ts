@@ -40,7 +40,7 @@ export class AvailabilityService {
   async getAvailability(query: AvailabilityQuery, userId?: number): Promise<AvailabilityResponse> {
     const club = await this.prisma.club.findFirst({
       where: { id: query.clubId, status: 'ACTIVE' },
-      select: { currency: true, timezone: true, slotIntervalMin: true },
+      select: { currency: true, timezone: true, slotIntervalMin: true, bookingDurationsMin: true },
     });
     if (!club) throw new AppException('not_found');
 
@@ -207,6 +207,12 @@ export class AvailabilityService {
       timezone: tz,
       currency: club.currency,
       slotIntervalMin,
+      // The club owns the list of bookable lengths; the player UI renders
+      // exactly these. Fall back to the interval itself if a club somehow has
+      // an empty list, so the schedule is never unbookable.
+      bookingDurationsMin: club.bookingDurationsMin.length
+        ? [...club.bookingDurationsMin].sort((a, b) => a - b)
+        : [slotIntervalMin],
       courts: courts.map((c) => ({
         id: c.id,
         name: c.name,

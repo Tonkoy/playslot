@@ -42,6 +42,7 @@ export interface ClubPublic {
   photoUrl: string | null;
   rules: string | null;
   slotIntervalMin: number;
+  bookingDurationsMin: number[];
   acceptsMultisport: boolean;
   paymentMethods: string[];
   status: string;
@@ -215,6 +216,14 @@ export function platformAddAdmin(
 export function platformSetClubStatus(clubId: number, active: boolean): Promise<{ status: string }> {
   return apiFetch(`/platform/clubs/${clubId}/${active ? 'activate' : 'suspend'}`, { method: 'POST' });
 }
+export function platformSetFeatured(clubId: number, featured: boolean): Promise<{ isFeatured: boolean }> {
+  return apiFetch(`/platform/clubs/${clubId}/${featured ? 'feature' : 'unfeature'}`, { method: 'POST' });
+}
+
+// ── homepage: featured club ──
+export function getFeaturedClub(): Promise<import('@playslot/contracts').FeaturedClubDto | null> {
+  return apiFetch('/clubs/featured');
+}
 
 // ── club admin: team ──
 export function getClubTeam(clubId: number): Promise<import('@playslot/contracts').ClubTeamDto> {
@@ -278,10 +287,14 @@ export function adminSetCourtStatus(
 export function adminUpdateClubSettings(
   clubId: number,
   slotIntervalMin: number,
+  bookingDurationsMin?: number[],
 ): Promise<AdminClub> {
   return apiFetch(`/clubs/${clubId}/settings`, {
     method: 'PATCH',
-    body: JSON.stringify({ slotIntervalMin }),
+    body: JSON.stringify({
+      slotIntervalMin,
+      ...(bookingDurationsMin ? { bookingDurationsMin } : {}),
+    }),
   });
 }
 

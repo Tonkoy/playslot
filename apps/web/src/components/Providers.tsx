@@ -2,6 +2,8 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
+import { SearchModalHost } from './SearchModalHost';
+import { SearchModalProvider } from './SearchModalContext';
 import { ToastProvider } from './Toast';
 
 /** App-wide client providers (TanStack Query for server-state caching, spec §3). */
@@ -14,7 +16,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
   return (
     <QueryClientProvider client={client}>
-      <ToastProvider>{children}</ToastProvider>
+      <ToastProvider>
+        <SearchModalProvider>
+          {children}
+          <SearchModalHost />
+        </SearchModalProvider>
+      </ToastProvider>
     </QueryClientProvider>
   );
 }

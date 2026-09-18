@@ -233,7 +233,7 @@ const primaryBtn: React.CSSProperties = {
   background: 'var(--lime)',
   color: 'var(--on-lime)',
   border: 'none',
-  borderRadius: 'var(--radius-sm)',
+  borderRadius: 'var(--pill)',
   cursor: 'pointer',
   fontWeight: 700,
 };

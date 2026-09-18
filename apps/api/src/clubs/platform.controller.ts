@@ -52,4 +52,14 @@ export class PlatformController {
   suspend(@Param('id') id: string, @CurrentUser('id') userId: number) {
     return this.clubs.setStatus(Number(id), 'SUSPENDED', userId);
   }
+
+  @Post('clubs/:id/feature')
+  feature(@Param('id') id: string, @CurrentUser('id') userId: number) {
+    return this.clubs.setFeatured(Number(id), true, userId);
+  }
+
+  @Post('clubs/:id/unfeature')
+  unfeature(@Param('id') id: string, @CurrentUser('id') userId: number) {
+    return this.clubs.setFeatured(Number(id), false, userId);
+  }
 }

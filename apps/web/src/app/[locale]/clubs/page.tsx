@@ -1,7 +1,27 @@
+import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { isAppLocale } from '@/i18n/routing';
+import { pageMetadata } from '@/lib/seo';
 import { Link } from '@/i18n/navigation';
 import { SiteHeader } from '@/components/SiteHeader';
+import { PageHeader } from '@/components/PageHeader';
 import { getClubs } from '@/lib/api';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  if (!isAppLocale(locale)) return {};
+  const t = await getTranslations({ locale, namespace: 'Seo' });
+  return pageMetadata({
+    locale,
+    path: '/clubs',
+    title: t('clubs.title'),
+    description: t('clubs.description'),
+  });
+}
 
 export default async function ClubsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -13,8 +33,7 @@ export default async function ClubsPage({ params }: { params: Promise<{ locale: 
     <>
       <SiteHeader />
       <main style={{ maxWidth: 'var(--maxw)', margin: '0 auto', padding: '32px 20px 64px' }}>
-        <h1 style={{ fontSize: 'clamp(26px, 5vw, 40px)', fontWeight: 800 }}>{t('title')}</h1>
-        <p style={{ color: 'var(--ink-2)', margin: '8px 0 24px' }}>{t('subtitle')}</p>
+        <PageHeader eyebrow={t('eyebrow')} title={t('title')} subtitle={t('subtitle')} />
 
         {clubs.length === 0 ? (
           <div
@@ -63,10 +82,10 @@ export default async function ClubsPage({ params }: { params: Promise<{ locale: 
                     marginTop: 14,
                     color: 'var(--on-lime)',
                     background: 'var(--lime)',
-                    borderRadius: 100,
-                    padding: '6px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '8px 14px',
                     fontSize: 13,
-                    fontWeight: 700,
+                    fontWeight: 800,
                   }}
                 >
                   {t('viewClub')} →

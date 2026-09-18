@@ -35,7 +35,7 @@ export function MembershipPlansSection({ clubId, currency }: { clubId: number; c
           style={{
             background: 'var(--lime)',
             color: 'var(--on-lime)',
-            borderRadius: 'var(--radius-sm)',
+            borderRadius: 'var(--pill)',
             padding: '10px 14px',
             fontWeight: 700,
             marginBottom: 12,

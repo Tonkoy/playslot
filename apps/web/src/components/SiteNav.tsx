@@ -7,7 +7,7 @@ import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { getMe, logout } from '@/lib/api';
 import { Avatar } from './Avatar';
 import { LanguageSwitcher } from './LanguageSwitcher';
-import { ThemeToggle } from './ThemeToggle';
+import { useSearchModal } from './SearchModalContext';
 
 const linkStyle: React.CSSProperties = {
   color: 'var(--ink-2)',
@@ -15,6 +15,8 @@ const linkStyle: React.CSSProperties = {
   textDecoration: 'none',
   padding: '8px 0',
 };
+
+type NavItem = { href: string; label: string; show: boolean };
 
 export function SiteNav() {
   const t = useTranslations('Nav');
@@ -24,6 +26,7 @@ export function SiteNav() {
   const router = useRouter();
   const qc = useQueryClient();
   const menuRef = useRef<HTMLDivElement>(null);
+  const { openModal } = useSearchModal();
 
   const me = useQuery({ queryKey: ['me'], queryFn: getMe, retry: false });
   const signedIn = me.isSuccess;
@@ -59,52 +62,33 @@ export function SiteNav() {
 
   const close = () => setOpen(false);
 
-  const links = (
+  const navItems: NavItem[] = [
+    { href: '/clubs', label: t('clubs'), show: true },
+    { href: '/coaches', label: t('coaches'), show: true },
+    { href: '/sessions', label: t('sessions'), show: true },
+    { href: '/admin', label: t('admin'), show: isStaff },
+    { href: '/me/coach', label: t('coachHub'), show: isCoach },
+    { href: '/me/schedule', label: t('schedule'), show: isCoach },
+    { href: '/me/bookings', label: t('bookings'), show: signedIn },
+    { href: '/me/favorites', label: t('favorites'), show: signedIn },
+  ].filter((i) => i.show);
+
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
+  // Plain vertical list — used in the mobile dropdown panel.
+  const mobileLinks = (
     <>
-      <Link href="/clubs" style={linkStyle} onClick={close}>
-        {t('clubs')}
-      </Link>
-      <Link href="/coaches" style={linkStyle} onClick={close}>
-        {t('coaches')}
-      </Link>
-      <Link href="/sessions" style={linkStyle} onClick={close}>
-        {t('sessions')}
-      </Link>
-      {isStaff && (
-        <Link href="/admin" style={linkStyle} onClick={close}>
-          {t('admin')}
+      {navItems.map((item) => (
+        <Link key={item.href} href={item.href} style={linkStyle} onClick={close}>
+          {item.label}
         </Link>
-      )}
-      {isCoach && (
-        <Link href="/me/coach" style={linkStyle} onClick={close}>
-          {t('coachHub')}
-        </Link>
-      )}
-      {isCoach && (
-        <Link href="/me/schedule" style={linkStyle} onClick={close}>
-          {t('schedule')}
-        </Link>
-      )}
-      {signedIn && (
-        <Link href="/me/bookings" style={linkStyle} onClick={close}>
-          {t('bookings')}
-        </Link>
-      )}
-      {signedIn && (
-        <Link href="/me/favorites" style={linkStyle} onClick={close}>
-          {t('favorites')}
-        </Link>
-      )}
+      ))}
     </>
   );
 
   // Rows shared by the desktop dropdown and the mobile panel.
   const settingsRows = (
     <>
-      <div style={menuRow}>
-        <span style={menuRowLabel}>{t('theme')}</span>
-        <ThemeToggle />
-      </div>
       <div style={menuRow}>
         <span style={menuRowLabel}>{t('language')}</span>
         <LanguageSwitcher />
@@ -114,9 +98,67 @@ export function SiteNav() {
 
   return (
     <>
-      {/* Desktop: primary links inline; account + settings collapsed into a dropdown. */}
+      {/* Desktop: primary links grouped in a pill, then search / account. */}
       <nav className="nav-desktop" aria-label="Primary">
-        {links}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            background: 'var(--green-soft)',
+            padding: 5,
+            borderRadius: 'var(--pill)',
+            flexWrap: 'wrap',
+          }}
+        >
+          {navItems.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 'var(--pill)',
+                  fontSize: 13.5,
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap',
+                  background: active ? 'var(--green-deep)' : 'transparent',
+                  color: active ? '#fff' : 'var(--ink-2)',
+                }}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          onClick={openModal}
+          aria-label={t('searchAria')}
+          title={t('searchAria')}
+          style={{
+            width: 40,
+            height: 40,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'var(--green-soft)',
+            border: 'none',
+            borderRadius: '50%',
+            color: 'var(--green-deep)',
+            cursor: 'pointer',
+            flex: 'none',
+          }}
+        >
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M21 21l-4.3-4.3" />
+          </svg>
+        </button>
+
         <div ref={menuRef} style={{ position: 'relative' }}>
           <button
             type="button"
@@ -131,10 +173,10 @@ export function SiteNav() {
               minWidth: 44,
               minHeight: 44,
               padding: 0,
-              background: menuOpen ? 'var(--surface-2)' : 'var(--surface)',
+              background: menuOpen ? 'var(--green-soft)' : 'var(--surface)',
               border: '1px solid var(--line-2)',
-              borderRadius: 'var(--radius-sm)',
-              color: 'var(--ink)',
+              borderRadius: '50%',
+              color: 'var(--green-deep)',
               cursor: 'pointer',
               fontSize: 22,
               lineHeight: 1,
@@ -219,6 +261,7 @@ export function SiteNav() {
                     color: 'var(--on-lime)',
                     fontWeight: 700,
                     textAlign: 'center',
+                    borderRadius: 'var(--pill)',
                   }}
                 >
                   {t('login')}
@@ -229,29 +272,53 @@ export function SiteNav() {
         </div>
       </nav>
 
-      {/* Mobile: hamburger toggle */}
-      <button
-        type="button"
-        className="nav-burger"
-        aria-label={t('menu')}
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        style={{
-          marginLeft: 'auto',
-          minWidth: 44,
-          minHeight: 44,
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'var(--surface)',
-          border: '1px solid var(--line-2)',
-          borderRadius: 'var(--radius-sm)',
-          color: 'var(--ink)',
-          fontSize: 20,
-          cursor: 'pointer',
-        }}
-      >
-        {open ? '✕' : '☰'}
-      </button>
+      {/* Mobile: search + hamburger toggle */}
+      <div style={{ marginLeft: 'auto', alignItems: 'center', gap: 8 }} className="nav-burger">
+        <button
+          type="button"
+          onClick={openModal}
+          aria-label={t('searchAria')}
+          title={t('searchAria')}
+          style={{
+            minWidth: 44,
+            minHeight: 44,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'var(--surface)',
+            border: '1px solid var(--line-2)',
+            borderRadius: '50%',
+            color: 'var(--green-deep)',
+            cursor: 'pointer',
+          }}
+        >
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M21 21l-4.3-4.3" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          aria-label={t('menu')}
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+          style={{
+            minWidth: 44,
+            minHeight: 44,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'var(--surface)',
+            border: '1px solid var(--line-2)',
+            borderRadius: '50%',
+            color: 'var(--green-deep)',
+            fontSize: 20,
+            cursor: 'pointer',
+          }}
+        >
+          {open ? '✕' : '☰'}
+        </button>
+      </div>
 
       {/* Mobile dropdown panel (hidden on desktop via CSS) */}
       {open && (
@@ -273,7 +340,7 @@ export function SiteNav() {
             zIndex: 20,
           }}
         >
-          {links}
+          {mobileLinks}
           {signedIn && (
             <Link href="/me" style={linkStyle} onClick={close}>
               {t('account')}
@@ -294,7 +361,7 @@ export function SiteNav() {
                   border: '1px solid var(--clay)',
                   background: 'var(--surface)',
                   color: 'var(--clay)',
-                  borderRadius: 'var(--radius-sm)',
+                  borderRadius: 'var(--pill)',
                   fontWeight: 700,
                   cursor: 'pointer',
                 }}
@@ -312,7 +379,7 @@ export function SiteNav() {
                   padding: '0 16px',
                   background: 'var(--lime)',
                   color: 'var(--on-lime)',
-                  borderRadius: 'var(--radius-sm)',
+                  borderRadius: 'var(--pill)',
                   fontWeight: 700,
                   textDecoration: 'none',
                 }}

@@ -101,6 +101,17 @@ export type UpdateClubProfileInput = z.infer<typeof updateClubProfileSchema>;
 /** Club-wide booking granularity — 30 or 60 minutes only (per-club, spec §5). */
 export const clubSettingsSchema = z.object({
   slotIntervalMin: slotIntervalSchema,
+  /**
+   * Booking lengths this club offers players. The club owns this list; the
+   * player-facing schedule renders exactly these options and nothing else.
+   * Each entry must be a whole multiple of the club's slot interval, which
+   * the service re-checks against the stored interval before saving.
+   */
+  bookingDurationsMin: z
+    .array(z.number().int().min(15).max(240))
+    .min(1)
+    .max(8)
+    .optional(),
 });
 export type ClubSettingsInput = z.infer<typeof clubSettingsSchema>;
 

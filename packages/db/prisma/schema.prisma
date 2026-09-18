@@ -326,9 +326,14 @@ model Club {
   photoUrl          String? // club photo / logo (URL)
   rules             String? // club rules, shown on the public profile
   slotIntervalMin   Int             @default(60) // club-wide booking granularity: 30 or 60 (spec §5)
+  // Booking lengths the club offers players, in minutes. The player-facing
+  // schedule shows exactly these; the club sets them with its scheduling and
+  // working hours, so players can never invent a range of their own.
+  bookingDurationsMin Int[]         @default([60, 90, 120])
   acceptsMultisport Boolean         @default(false)
   paymentMethods    PaymentMethod[]
   status            ClubStatus      @default(PENDING) // PENDING → platform-admin activates → ACTIVE
+  isFeatured        Boolean         @default(false) // platform-admin picks one club to headline the homepage
 
   city         City                 @relation(fields: [cityId], references: [id])
   resources    Resource[]
@@ -348,6 +353,7 @@ model Club {
 
   @@index([cityId])
   @@index([status])
+  @@index([isFeatured])
 }
 
 model ClubMember {

@@ -10,6 +10,7 @@ import {
   platformCreateClub,
   platformListClubs,
   platformSetClubStatus,
+  platformSetFeatured,
 } from '@/lib/api';
 import { AddMemberForm } from './AddMemberForm';
 
@@ -35,6 +36,10 @@ export function PlatformConsole() {
   });
   const status = useMutation({
     mutationFn: (args: { id: number; active: boolean }) => platformSetClubStatus(args.id, args.active),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['platformClubs'] }),
+  });
+  const featureMut = useMutation({
+    mutationFn: (args: { id: number; featured: boolean }) => platformSetFeatured(args.id, args.featured),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['platformClubs'] }),
   });
 
@@ -83,6 +88,7 @@ export function PlatformConsole() {
             expanded={expanded === c.id}
             onToggle={() => setExpanded(expanded === c.id ? null : c.id)}
             onStatus={(active) => status.mutate({ id: c.id, active })}
+            onFeature={(featured) => featureMut.mutate({ id: c.id, featured })}
             onAdminAdded={() => qc.invalidateQueries({ queryKey: ['platformClubs'] })}
             t={t}
           />
@@ -97,6 +103,7 @@ function ClubRow({
   expanded,
   onToggle,
   onStatus,
+  onFeature,
   onAdminAdded,
   t,
 }: {
@@ -104,21 +111,45 @@ function ClubRow({
   expanded: boolean;
   onToggle: () => void;
   onStatus: (active: boolean) => void;
+  onFeature: (featured: boolean) => void;
   onAdminAdded: () => void;
   t: ReturnType<typeof useTranslations>;
 }) {
   const active = c.status === 'ACTIVE';
   return (
-    <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>
+    <div
+      style={{
+        border: `1px solid ${c.isFeatured ? 'var(--lime)' : 'var(--line)'}`,
+        borderRadius: 'var(--radius-sm)',
+        padding: '12px 14px',
+      }}
+    >
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <span style={{ fontWeight: 700 }}>{c.name}</span>
         <span className="mono" style={{ fontSize: 12, color: 'var(--ink-3)' }}>
           {c.city} · {c.status} · {t('adminsCount', { n: c.adminCount })} · {t('coachesCount', { n: c.coachCount })}
         </span>
+        {c.isFeatured && (
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              padding: '3px 10px',
+              borderRadius: 'var(--pill)',
+              background: 'var(--lime)',
+              color: 'var(--on-lime)',
+            }}
+          >
+            ★ {t('featuredBadge')}
+          </span>
+        )}
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Link href={`/admin/clubs/${c.id}`} style={{ ...smallBtn, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', color: 'var(--teal)', borderColor: 'var(--teal)' }}>
             {t('manage')}
           </Link>
+          <button type="button" onClick={() => onFeature(!c.isFeatured)} style={smallBtn}>
+            {c.isFeatured ? t('unfeature') : t('featureOnHome')}
+          </button>
           <button type="button" onClick={() => onStatus(!active)} style={smallBtn}>
             {active ? t('suspend') : t('activate')}
           </button>
@@ -163,7 +194,7 @@ const primaryBtn: React.CSSProperties = {
   background: 'var(--lime)',
   color: 'var(--on-lime)',
   border: 'none',
-  borderRadius: 'var(--radius-sm)',
+  borderRadius: 'var(--pill)',
   fontWeight: 700,
   cursor: 'pointer',
 };
@@ -172,8 +203,8 @@ const smallBtn: React.CSSProperties = {
   padding: '0 12px',
   border: '1px solid var(--line-2)',
   background: 'var(--surface)',
-  color: 'var(--ink)',
-  borderRadius: 'var(--radius-sm)',
+  color: 'var(--green-deep)',
+  borderRadius: 'var(--pill)',
   cursor: 'pointer',
   fontSize: 13,
 };

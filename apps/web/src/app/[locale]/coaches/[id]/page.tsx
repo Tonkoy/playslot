@@ -1,4 +1,8 @@
+import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { isAppLocale } from '@/i18n/routing';
+import { NOINDEX, localeUrl, pageMetadata } from '@/lib/seo';
+import { JsonLd } from '@/components/JsonLd';
 import { Link } from '@/i18n/navigation';
 import { Avatar } from '@/components/Avatar';
 import { GroupSessionsList } from '@/components/GroupSessionsList';
@@ -7,6 +11,27 @@ import { getCoach } from '@/lib/api';
 import { minToHHMM } from '@/lib/tz';
 
 const WEEK = [1, 2, 3, 4, 5, 6, 0]; // Monday … Sunday
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; id: string }>;
+}): Promise<Metadata> {
+  const { locale, id } = await params;
+  if (!isAppLocale(locale)) return {};
+  const coach = await getCoach(Number(id));
+  const t = await getTranslations({ locale, namespace: 'Seo' });
+  if (!coach) return { ...NOINDEX, title: t('coaches.title') };
+
+  return pageMetadata({
+    locale,
+    path: `/coaches/${coach.coachProfileId}`,
+    type: 'profile',
+    title: t('coach.title', { name: coach.name }),
+    description: coach.bio?.trim() || t('coach.description', { name: coach.name }),
+    image: coach.photoUrl ?? undefined,
+  });
+}
 
 export default async function CoachProfilePage({
   params,
@@ -36,8 +61,42 @@ export default async function CoachProfilePage({
     );
   }
 
+  // A coach is a Person offering lesson Services — the shape Google uses for
+  // "резервирай треньор" style queries, with the club as the work location.
+  const coachGraph = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: coach.name,
+    url: isAppLocale(locale) ? localeUrl(locale, `/coaches/${coach.coachProfileId}`) : '',
+    jobTitle: t('jobTitle'),
+    ...(coach.bio ? { description: coach.bio } : {}),
+    ...(coach.photoUrl ? { image: coach.photoUrl } : {}),
+    ...(coach.languages.length ? { knowsLanguage: coach.languages } : {}),
+    ...(coach.clubs.length
+      ? {
+          worksFor: coach.clubs.map((c) => ({
+            '@type': 'SportsActivityLocation',
+            name: c.name,
+            url: isAppLocale(locale) ? localeUrl(locale, `/clubs/${c.slug}`) : '',
+          })),
+        }
+      : {}),
+    ...(coach.services.length
+      ? {
+          makesOffer: coach.services.map((sv) => ({
+            '@type': 'Offer',
+            name: sv.name,
+            ...(sv.priceCents != null
+              ? { price: (sv.priceCents / 100).toFixed(2), priceCurrency: 'EUR' }
+              : {}),
+          })),
+        }
+      : {}),
+  };
+
   return (
     <>
+      <JsonLd data={coachGraph} />
       <SiteHeader />
       <main style={{ maxWidth: 760, margin: '0 auto', padding: '24px 20px 64px' }}>
         <Link href="/coaches" style={{ color: 'var(--teal)', fontSize: 14 }}>

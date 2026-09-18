@@ -110,7 +110,7 @@ export function MyBookings() {
             border: '1px solid var(--clay)',
             color: 'var(--clay)',
             background: 'var(--surface)',
-            borderRadius: 'var(--radius-sm)',
+            borderRadius: 'var(--pill)',
             cursor: 'pointer',
           }}
         >
@@ -159,7 +159,7 @@ export function MyBookings() {
                   border: '1px solid var(--line-2)',
                   background: 'var(--surface)',
                   color: 'var(--ink)',
-                  borderRadius: 'var(--radius-sm)',
+                  borderRadius: 'var(--pill)',
                   cursor: 'pointer',
                   fontWeight: 600,
                 }}
@@ -176,7 +176,7 @@ export function MyBookings() {
                   border: 'none',
                   background: 'var(--clay)',
                   color: '#fff',
-                  borderRadius: 'var(--radius-sm)',
+                  borderRadius: 'var(--pill)',
                   cursor: 'pointer',
                   fontWeight: 700,
                 }}

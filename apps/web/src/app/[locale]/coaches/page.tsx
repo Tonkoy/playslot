@@ -1,8 +1,27 @@
+import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { isAppLocale } from '@/i18n/routing';
+import { pageMetadata } from '@/lib/seo';
 import { Link } from '@/i18n/navigation';
 import { Avatar } from '@/components/Avatar';
 import { SiteHeader } from '@/components/SiteHeader';
 import { getCoaches } from '@/lib/api';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  if (!isAppLocale(locale)) return {};
+  const t = await getTranslations({ locale, namespace: 'Seo' });
+  return pageMetadata({
+    locale,
+    path: '/coaches',
+    title: t('coaches.title'),
+    description: t('coaches.description'),
+  });
+}
 
 export default async function CoachesPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

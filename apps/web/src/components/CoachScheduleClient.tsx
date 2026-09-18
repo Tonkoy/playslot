@@ -121,7 +121,7 @@ export function CoachScheduleClient() {
         <button type="button" onClick={() => setWeekStart((w) => addDays(w, 7))} style={navBtn} aria-label={t('nextWeek')}>
           ›
         </button>
-        <button type="button" onClick={() => setWeekStart(mondayOfThisWeek())} style={{ ...navBtn, width: 'auto', padding: '0 14px' }}>
+        <button type="button" onClick={() => setWeekStart(mondayOfThisWeek())} style={{ ...navBtn, width: 'auto', padding: '0 14px', borderRadius: 'var(--pill)' }}>
           {t('thisWeek')}
         </button>
         <button
@@ -137,8 +137,8 @@ export function CoachScheduleClient() {
             gap: 6,
             background: 'var(--surface)',
             border: '1px solid var(--line-2)',
-            borderRadius: 'var(--radius-sm)',
-            color: 'var(--ink)',
+            borderRadius: 'var(--pill)',
+            color: 'var(--green-deep)',
             cursor: total === 0 ? 'not-allowed' : 'pointer',
             opacity: total === 0 ? 0.5 : 1,
             fontWeight: 600,
@@ -231,8 +231,8 @@ const navBtn: React.CSSProperties = {
   justifyContent: 'center',
   background: 'var(--surface)',
   border: '1px solid var(--line-2)',
-  borderRadius: 'var(--radius-sm)',
-  color: 'var(--ink)',
+  borderRadius: '50%',
+  color: 'var(--green-deep)',
   cursor: 'pointer',
   fontSize: 18,
 };

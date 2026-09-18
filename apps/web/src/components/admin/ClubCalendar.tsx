@@ -164,21 +164,72 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
   return (
     <div>
       {/* Toolbar */}
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
-        <button type="button" onClick={() => setDate(shiftDate(date, -1))} style={navBtn} aria-label={t('prevDay')}>
-          ‹
-        </button>
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value || todayIso())} style={ctrl} aria-label={t('date')} />
-        <button type="button" onClick={() => setDate(shiftDate(date, 1))} style={navBtn} aria-label={t('nextDay')}>
-          ›
-        </button>
-        <button type="button" onClick={() => setDate(todayIso())} style={ctrl}>
+      <div
+        style={{
+          display: 'flex',
+          gap: 16,
+          flexWrap: 'wrap',
+          alignItems: 'flex-end',
+          marginBottom: 14,
+          background: 'var(--surface)',
+          border: '1px solid var(--line)',
+          borderRadius: 'var(--radius)',
+          padding: 16,
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span style={labelText}>{t('date')}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button type="button" onClick={() => setDate(shiftDate(date, -1))} style={iconBtn} aria-label={t('prevDay')}>
+              ‹
+            </button>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value || todayIso())} style={ctrl} aria-label={t('date')} />
+            <button type="button" onClick={() => setDate(shiftDate(date, 1))} style={iconBtn} aria-label={t('nextDay')}>
+              ›
+            </button>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setDate(todayIso())}
+          style={date === todayIso() ? todayBtnActive : todayBtn}
+        >
           {t('today')}
         </button>
-        <label style={{ display: 'inline-flex', gap: 6, alignItems: 'center', marginLeft: 'auto', fontSize: 14 }}>
+        <label
+          style={{
+            display: 'inline-flex',
+            gap: 8,
+            alignItems: 'center',
+            marginLeft: 'auto',
+            fontSize: 13.5,
+            fontWeight: 600,
+            padding: '10px 14px',
+            borderRadius: 'var(--radius-sm)',
+            border: `1px solid ${blockMode ? 'var(--clay)' : 'var(--line-2)'}`,
+            background: blockMode ? 'var(--clay-soft)' : 'var(--surface)',
+            color: blockMode ? 'var(--clay)' : 'var(--ink-2)',
+            cursor: 'pointer',
+          }}
+        >
           <input type="checkbox" checked={blockMode} onChange={(e) => setBlockMode(e.target.checked)} />
-          {t('blockMode')}
+          ⛔ {t('blockMode')}
         </label>
+      </div>
+
+      {/* Legend */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, margin: '0 0 14px', fontSize: 12.5, color: 'var(--ink-2)' }}>
+        {[
+          { bg: 'var(--green-soft)', border: 'var(--green)', label: t('legendFree') },
+          { bg: 'var(--teal-soft)', border: 'var(--teal)', label: t('legendBooked') },
+          { bg: 'var(--held-soft)', border: 'var(--held)', label: t('legendHold') },
+          { bg: 'var(--booked-soft)', border: 'var(--line-2)', label: t('legendBlocked') },
+        ].map((l) => (
+          <span key={l.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <i style={{ width: 11, height: 11, borderRadius: 3, background: l.bg, border: `1px solid ${l.border}`, display: 'inline-block' }} />
+            {l.label}
+          </span>
+        ))}
       </div>
 
       {moveEntry && (
@@ -262,7 +313,7 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
                                 ? 'var(--teal-soft)'
                                 : moveEntry
                                   ? 'var(--free-soft)'
-                                  : 'transparent',
+                                  : 'var(--green-soft)',
                             border:
                               selection?.kind === 'free' && selection.courtId === c.id && selection.startMin === min
                                 ? '2px solid var(--teal)'
@@ -369,8 +420,10 @@ const th: React.CSSProperties = {
   padding: '10px 8px',
   borderBottom: '1px solid var(--line)',
   fontSize: 13,
+  fontWeight: 700,
   textAlign: 'center',
-  background: 'var(--surface-2)',
+  background: 'var(--green-soft)',
+  color: 'var(--green-deep)',
   whiteSpace: 'nowrap',
 };
 const timeCell: React.CSSProperties = {
@@ -379,7 +432,7 @@ const timeCell: React.CSSProperties = {
   color: 'var(--ink-2)',
   borderBottom: '1px solid var(--line)',
   textAlign: 'right',
-  background: 'var(--surface-2)',
+  background: 'var(--green-soft)',
   whiteSpace: 'nowrap',
 };
 const cell: React.CSSProperties = { padding: 3, borderBottom: '1px solid var(--line)', verticalAlign: 'top' };
@@ -392,14 +445,27 @@ const ctrl: React.CSSProperties = {
   borderRadius: 'var(--radius-sm)',
   fontFamily: 'inherit',
 };
-const navBtn: React.CSSProperties = { ...ctrl, minWidth: 44, fontSize: 18, cursor: 'pointer' };
+const labelText: React.CSSProperties = { fontWeight: 700, fontSize: 13, color: 'var(--ink)' };
+const iconBtn: React.CSSProperties = { ...ctrl, minWidth: 40, fontSize: 18, cursor: 'pointer', borderRadius: 'var(--radius-sm)', color: 'var(--green-deep)' };
+const todayBtn: React.CSSProperties = {
+  minHeight: 44,
+  padding: '0 18px',
+  border: '1px solid var(--line-2)',
+  background: 'var(--surface)',
+  color: 'var(--green-deep)',
+  borderRadius: 'var(--radius-sm)',
+  cursor: 'pointer',
+  fontSize: 14,
+  fontWeight: 700,
+};
+const todayBtnActive: React.CSSProperties = { ...todayBtn, background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', fontWeight: 800 };
 const smallBtn: React.CSSProperties = {
   minHeight: 40,
   padding: '0 14px',
   border: '1px solid var(--line-2)',
   background: 'var(--surface)',
-  color: 'var(--ink)',
-  borderRadius: 'var(--radius-sm)',
+  color: 'var(--green-deep)',
+  borderRadius: 'var(--pill)',
   cursor: 'pointer',
   fontSize: 14,
 };

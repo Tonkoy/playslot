@@ -1,7 +1,14 @@
+import type { Metadata } from 'next';
+import { NOINDEX } from '@/lib/seo';
+
+/** Account/admin screen: kept out of the index so it never competes in search. */
+export const metadata: Metadata = NOINDEX;
+
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { SiteHeader } from '@/components/SiteHeader';
 import { ClubCalendar } from '@/components/admin/ClubCalendar';
+import { PageHeader } from '@/components/PageHeader';
 
 export default async function CalendarPage({
   params,
@@ -16,13 +23,11 @@ export default async function CalendarPage({
   return (
     <>
       <SiteHeader />
-      <main style={{ maxWidth: 1180, margin: '0 auto', padding: '24px 20px 64px' }}>
+      <main style={{ maxWidth: 'var(--maxw)', margin: '0 auto', padding: '24px 20px 64px' }}>
         <Link href={`/admin/clubs/${clubId}`} style={{ color: 'var(--teal)', fontSize: 14 }}>
           ← {a('back')}
         </Link>
-        <h1 style={{ fontSize: 'clamp(22px, 4vw, 32px)', fontWeight: 800, margin: '10px 0 16px' }}>
-          {t('title')}
-        </h1>
+        <PageHeader eyebrow={t('eyebrow')} title={t('title')} />
         <ClubCalendar clubId={Number(clubId)} />
       </main>
     </>

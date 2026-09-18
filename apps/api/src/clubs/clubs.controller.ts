@@ -31,6 +31,14 @@ export class ClubsController {
     return this.clubs.joinRequest(body);
   }
 
+  // Must stay registered before ":id" — "featured" would otherwise be parsed
+  // as an id.
+  @Public()
+  @Get('featured')
+  featured() {
+    return this.clubs.getFeaturedForHome();
+  }
+
   @Public()
   @Get(':id')
   get(@Param('id') id: string) {
@@ -110,6 +118,6 @@ export class ClubsController {
     @Body(new ZodBody(clubSettingsSchema)) body: import('@playslot/contracts').ClubSettingsInput,
     @CurrentUser('id') userId: number,
   ) {
-    return this.clubs.updateSettings(Number(clubId), body.slotIntervalMin, userId);
+    return this.clubs.updateSettings(Number(clubId), body, userId);
   }
 }

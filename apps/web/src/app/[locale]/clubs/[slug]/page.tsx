@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { isAppLocale } from '@/i18n/routing';
+import { NOINDEX, SITE_NAME, localeUrl, pageMetadata } from '@/lib/seo';
+import { JsonLd } from '@/components/JsonLd';
 import { Link } from '@/i18n/navigation';
 import { SiteHeader } from '@/components/SiteHeader';
 import { AvailabilityGrid } from '@/components/availability/AvailabilityGrid';
@@ -17,22 +20,37 @@ const WEEK = [1, 2, 3, 4, 5, 6, 0]; // Monday … Sunday
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
+  const { locale, slug } = await params;
+  if (!isAppLocale(locale)) return {};
   const club = await getClub(slug);
-  return {
-    title: club ? `${club.name} — PlaySlot` : 'PlaySlot',
-    description: club?.description ?? undefined,
-  };
+  const t = await getTranslations({ locale, namespace: 'Seo' });
+  if (!club) return { ...NOINDEX, title: t('clubs.title') };
+
+  return pageMetadata({
+    locale,
+    path: `/clubs/${club.slug}`,
+    title: t('club.title', { name: club.name }),
+    // The club's own blurb wins when it has one — it's unique copy, which
+    // reads better in the SERP than a template. Otherwise fall back to the
+    // keyword-bearing template so the page still states its intent.
+    description:
+      club.description?.trim() ||
+      t('club.description', { name: club.name, city: club.city.name }),
+    image: club.photoUrl ?? undefined,
+  });
 }
 
 export default async function ClubProfilePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; slug: string }>;
+  searchParams: Promise<{ date?: string }>;
 }) {
   const { locale, slug } = await params;
+  const { date } = await searchParams;
   setRequestLocale(locale);
   const t = await getTranslations('ClubProfile');
   const club = await getClub(slug);
@@ -54,11 +72,61 @@ export default async function ClubProfilePage({
 
   const courts = (await getClubCourts(slug)) ?? [];
   const coaches = (await getCoaches(club.id)) ?? [];
+
+  // A club page is a local-business result: name, address, geo and opening
+  // hours let Google show it for "резервирай корт онлайн" + city queries, and
+  // the breadcrumb renders the Начало › Клубове › <club> trail in the SERP.
+  const clubUrl = isAppLocale(locale) ? localeUrl(locale, `/clubs/${club.slug}`) : '';
+  const DAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const pad = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  const clubGraph = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'SportsActivityLocation',
+      name: club.name,
+      url: clubUrl,
+      ...(club.description ? { description: club.description } : {}),
+      ...(club.photoUrl ? { image: club.photoUrl } : {}),
+      ...(club.phone ? { telephone: club.phone } : {}),
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: club.address,
+        addressLocality: club.city.name,
+        addressCountry: 'BG',
+      },
+      ...(club.lat != null && club.lng != null
+        ? { geo: { '@type': 'GeoCoordinates', latitude: club.lat, longitude: club.lng } }
+        : {}),
+      ...(club.openingHours?.length
+        ? {
+            openingHoursSpecification: club.openingHours.map((h) => ({
+              '@type': 'OpeningHoursSpecification',
+              dayOfWeek: DAY[h.weekday],
+              opens: pad(h.startMin),
+              closes: pad(h.endMin),
+            })),
+          }
+        : {}),
+      ...(courts.length
+        ? { amenityFeature: courts.map((c) => ({ '@type': 'LocationFeatureSpecification', name: c.name, value: true })) }
+        : {}),
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: SITE_NAME, item: isAppLocale(locale) ? localeUrl(locale, '') : '' },
+        { '@type': 'ListItem', position: 2, name: t('backToClubs'), item: isAppLocale(locale) ? localeUrl(locale, '/clubs') : '' },
+        { '@type': 'ListItem', position: 3, name: club.name, item: clubUrl },
+      ],
+    },
+  ];
   const weekday = (w: number) =>
     new Intl.DateTimeFormat(locale === 'bg' ? 'bg-BG' : 'en-US', { weekday: 'long' }).format(new Date(Date.UTC(2024, 0, 7 + w)));
 
   return (
     <>
+      <JsonLd data={clubGraph} />
       <SiteHeader />
       <main style={{ maxWidth: 'var(--maxw)', margin: '0 auto', padding: '24px 20px 64px' }}>
         <Link href="/clubs" style={{ color: 'var(--teal)', fontSize: 14 }}>
@@ -132,7 +200,7 @@ export default async function ClubProfilePage({
           {t('availability')}
         </h2>
         <SlotLegend />
-        <AvailabilityGrid clubId={club.id} />
+        <AvailabilityGrid clubId={club.id} initialDate={date} />
 
         {coaches.length > 0 && (
           <section style={{ marginTop: 32 }}>

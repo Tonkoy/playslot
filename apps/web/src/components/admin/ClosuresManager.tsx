@@ -129,7 +129,7 @@ export function ClosuresManager({ clubId, timezone }: { clubId: number; timezone
             type="button"
             onClick={() => create.mutate()}
             disabled={!canCreate || create.isPending}
-            style={{ minHeight: 44, padding: '0 20px', background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 700, cursor: canCreate ? 'pointer' : 'not-allowed', opacity: canCreate ? 1 : 0.5 }}
+            style={{ minHeight: 44, padding: '0 20px', background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', borderRadius: 'var(--pill)', fontWeight: 700, cursor: canCreate ? 'pointer' : 'not-allowed', opacity: canCreate ? 1 : 0.5 }}
           >
             {create.isPending ? '…' : t('add')}
           </button>
@@ -145,4 +145,4 @@ const h3: React.CSSProperties = { fontSize: 15, fontWeight: 700, marginBottom: 1
 const row: React.CSSProperties = { display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', padding: '10px 12px' };
 const field: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--ink-2)' };
 const input: React.CSSProperties = { minHeight: 46, padding: '0 10px', border: '1px solid var(--line-2)', background: 'var(--surface)', color: 'var(--ink)', borderRadius: 'var(--radius-sm)', fontFamily: 'inherit' };
-const delBtn: React.CSSProperties = { minHeight: 36, padding: '0 12px', border: '1px solid var(--clay)', color: 'var(--clay)', background: 'var(--surface)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 13 };
+const delBtn: React.CSSProperties = { minHeight: 36, padding: '0 12px', border: '1px solid var(--clay)', color: 'var(--clay)', background: 'var(--surface)', borderRadius: 'var(--pill)', cursor: 'pointer', fontSize: 13 };

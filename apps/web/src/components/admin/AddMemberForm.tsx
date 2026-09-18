@@ -111,7 +111,7 @@ const primaryBtn: React.CSSProperties = {
   background: 'var(--lime)',
   color: 'var(--on-lime)',
   border: 'none',
-  borderRadius: 'var(--radius-sm)',
+  borderRadius: 'var(--pill)',
   fontWeight: 700,
   cursor: 'pointer',
 };
@@ -120,8 +120,8 @@ const smallBtn: React.CSSProperties = {
   padding: '0 12px',
   border: '1px solid var(--line-2)',
   background: 'var(--surface)',
-  color: 'var(--ink)',
-  borderRadius: 'var(--radius-sm)',
+  color: 'var(--green-deep)',
+  borderRadius: 'var(--pill)',
   cursor: 'pointer',
   fontSize: 13,
 };

@@ -1,3 +1,9 @@
+import type { Metadata } from 'next';
+import { NOINDEX } from '@/lib/seo';
+
+/** Account/admin screen: kept out of the index so it never competes in search. */
+export const metadata: Metadata = NOINDEX;
+
 import { setRequestLocale } from 'next-intl/server';
 import { SiteHeader } from '@/components/SiteHeader';
 import { ClubManager } from '@/components/admin/ClubManager';

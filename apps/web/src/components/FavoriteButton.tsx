@@ -30,7 +30,7 @@ export function FavoriteButton({ clubId }: { clubId: number }) {
     alignItems: 'center',
     gap: 6,
     padding: '0 14px',
-    borderRadius: 'var(--radius-sm)',
+    borderRadius: 'var(--pill)',
     border: '1px solid var(--line-2)',
     background: 'var(--surface)',
     color: 'var(--ink)',

@@ -184,7 +184,7 @@ export function CoachProfileEditor({ name }: { name: string }) {
           type="button"
           onClick={() => save.mutate()}
           disabled={save.isPending}
-          style={{ minHeight: 44, padding: '0 20px', background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 700, cursor: 'pointer' }}
+          style={{ minHeight: 44, padding: '0 20px', background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', borderRadius: 'var(--pill)', fontWeight: 700, cursor: 'pointer' }}
         >
           {save.isPending ? '…' : t('save')}
         </button>
@@ -198,7 +198,7 @@ function chip(on: boolean): React.CSSProperties {
     minHeight: 40,
     padding: '0 14px',
     borderRadius: 999,
-    border: `1.5px solid ${on ? 'var(--ink)' : 'var(--line-2)'}`,
+    border: `1.5px solid ${on ? 'var(--green-deep)' : 'var(--line-2)'}`,
     background: on ? 'var(--lime)' : 'var(--surface)',
     color: on ? 'var(--on-lime)' : 'var(--ink-2)',
     cursor: 'pointer',

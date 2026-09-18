@@ -55,7 +55,8 @@ export function ClubManager({ clubId }: { clubId: number }) {
   });
 
   const settingsMut = useMutation({
-    mutationFn: (slot: number) => adminUpdateClubSettings(clubId, slot),
+    mutationFn: (v: { slotIntervalMin: number; bookingDurationsMin?: number[] }) =>
+      adminUpdateClubSettings(clubId, v.slotIntervalMin, v.bookingDurationsMin),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['myClubs'] });
       qc.invalidateQueries({ queryKey: ['platformClub', clubId] });
@@ -93,20 +94,45 @@ export function ClubManager({ clubId }: { clubId: number }) {
   const club = membership?.club ?? platformClub.data;
   if (!club) return <p style={{ color: 'var(--ink-3)' }}>…</p>;
 
+  const interval = club.slotIntervalMin ?? 60;
+  // Only lengths that divide evenly into the club's granularity can ever line
+  // up with a real slot, so the choices are filtered by it below.
+  const offeredDurations = (club.bookingDurationsMin?.length
+    ? club.bookingDurationsMin
+    : [interval]
+  )
+    .filter((d) => d % interval === 0)
+    .sort((a, b) => a - b);
+
   return (
     <div style={{ display: 'grid', gap: 28 }}>
       <Link href="/admin" style={{ color: 'var(--teal)', fontSize: 14 }}>
         ← {t('back')}
       </Link>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <h1 style={{ fontSize: 'clamp(22px, 4vw, 32px)', fontWeight: 800 }}>{club?.name}</h1>
+      <div>
+        <span
+          className="mono"
+          style={{
+            display: 'inline-flex',
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'var(--green)',
+            marginBottom: 8,
+          }}
+        >
+          {t('eyebrow')}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <h1 style={{ fontSize: 'clamp(22px, 4vw, 32px)', fontWeight: 800 }}>{club?.name}</h1>
         <Link
           href={`/admin/clubs/${clubId}/calendar`}
           style={{
             marginLeft: 'auto',
-            background: 'var(--ink)',
+            background: 'var(--green-deep)',
             color: 'var(--lime)',
-            borderRadius: 'var(--radius-sm)',
+            borderRadius: 'var(--pill)',
             padding: '10px 16px',
             fontWeight: 700,
             textDecoration: 'none',
@@ -114,6 +140,7 @@ export function ClubManager({ clubId }: { clubId: number }) {
         >
           {t('openCalendar')}
         </Link>
+        </div>
       </div>
 
       {/* ── Club profile ── */}
@@ -132,14 +159,14 @@ export function ClubManager({ clubId }: { clubId: number }) {
               <button
                 key={v}
                 type="button"
-                onClick={() => settingsMut.mutate(v)}
+                onClick={() => settingsMut.mutate({ slotIntervalMin: v })}
                 disabled={settingsMut.isPending}
                 aria-pressed={active}
                 style={{
                   minHeight: 44,
                   padding: '0 18px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: `2px solid ${active ? 'var(--ink)' : 'var(--line-2)'}`,
+                  borderRadius: 'var(--pill)',
+                  border: `2px solid ${active ? 'var(--green-deep)' : 'var(--line-2)'}`,
                   background: active ? 'var(--lime)' : 'var(--surface)',
                   color: active ? 'var(--on-lime)' : 'var(--ink)',
                   fontWeight: 700,
@@ -156,6 +183,51 @@ export function ClubManager({ clubId }: { clubId: number }) {
             {(settingsMut.error as Error).message}
           </p>
         )}
+      </section>
+
+      {/* ── Booking lengths offered to players ── */}
+      <section style={card}>
+        <h2 style={h2}>{t('durationsTitle')}</h2>
+        <p style={{ color: 'var(--ink-2)', fontSize: 14, margin: '4px 0 14px' }}>
+          {t('durationsHelp')}
+        </p>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {DURATION_CHOICES.filter((d) => d % interval === 0).map((d) => {
+            const on = offeredDurations.includes(d);
+            // Never let the club switch every length off — the schedule would
+            // have nothing bookable on it.
+            const isLast = on && offeredDurations.length === 1;
+            return (
+              <button
+                key={d}
+                type="button"
+                onClick={() =>
+                  settingsMut.mutate({
+                    slotIntervalMin: interval,
+                    bookingDurationsMin: on
+                      ? offeredDurations.filter((x) => x !== d)
+                      : [...offeredDurations, d].sort((a, b) => a - b),
+                  })
+                }
+                disabled={settingsMut.isPending || isLast}
+                aria-pressed={on}
+                style={{
+                  minHeight: 44,
+                  padding: '0 18px',
+                  borderRadius: 'var(--pill)',
+                  border: `2px solid ${on ? 'var(--green-deep)' : 'var(--line-2)'}`,
+                  background: on ? 'var(--lime)' : 'var(--surface)',
+                  color: on ? 'var(--on-lime)' : 'var(--ink)',
+                  fontWeight: 700,
+                  cursor: isLast ? 'not-allowed' : 'pointer',
+                  opacity: isLast ? 0.6 : 1,
+                }}
+              >
+                {d} {t('minutesShort')}
+              </button>
+            );
+          })}
+        </div>
       </section>
 
       {/* ── Courts ── */}
@@ -407,8 +479,11 @@ const smallBtn: React.CSSProperties = {
   padding: '0 14px',
   border: '1px solid var(--line-2)',
   background: 'var(--surface)',
-  color: 'var(--ink)',
-  borderRadius: 'var(--radius-sm)',
+  color: 'var(--green-deep)',
+  borderRadius: 'var(--pill)',
   cursor: 'pointer',
   fontSize: 14,
 };
+
+/** Booking lengths a club can offer; filtered by its slot granularity. */
+const DURATION_CHOICES = [30, 60, 90, 120, 150, 180];

@@ -26,6 +26,28 @@ export interface PlatformClubDto {
   status: string;
   adminCount: number;
   coachCount: number;
+  isFeatured: boolean;
+}
+
+/** The one club a platform admin has chosen to headline the homepage, together
+ * with its soonest free slot (spec: homepage "featured club" card). */
+export interface FeaturedClubDto {
+  club: {
+    id: number;
+    slug: string;
+    name: string;
+    address: string;
+    city: string;
+  };
+  slot: {
+    date: string; // YYYY-MM-DD, in the club's timezone
+    start: string; // ISO-8601 with the club's offset
+    end: string;
+    priceCents: number | null;
+    currency: string;
+    courtName: string;
+    hasCoach: boolean;
+  };
 }
 
 /** Result of an invite/link operation. `inviteLink` is only present for a

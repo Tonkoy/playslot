@@ -154,8 +154,8 @@ export function GroupSessionManager({ coachProfileId }: { coachProfileId: number
                 style={{
                   minHeight: 40,
                   padding: '0 12px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: `2px solid ${active ? 'var(--ink)' : 'var(--line-2)'}`,
+                  borderRadius: 'var(--pill)',
+                  border: `2px solid ${active ? 'var(--green-deep)' : 'var(--line-2)'}`,
                   background: active ? 'var(--lime)' : 'var(--surface)',
                   color: active ? 'var(--on-lime)' : 'var(--ink)',
                   cursor: 'pointer',
@@ -194,7 +194,7 @@ export function GroupSessionManager({ coachProfileId }: { coachProfileId: number
           type="button"
           onClick={() => create.mutate()}
           disabled={!canCreate || create.isPending}
-          style={{ minHeight: 44, padding: '0 20px', background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 700, cursor: canCreate ? 'pointer' : 'not-allowed', opacity: canCreate ? 1 : 0.5 }}
+          style={{ minHeight: 44, padding: '0 20px', background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', borderRadius: 'var(--pill)', fontWeight: 700, cursor: canCreate ? 'pointer' : 'not-allowed', opacity: canCreate ? 1 : 0.5 }}
         >
           {create.isPending ? '…' : t('createAndInvite')}
         </button>
@@ -215,7 +215,7 @@ export function GroupSessionManager({ coachProfileId }: { coachProfileId: number
                 {s.cancelled ? (
                   <span className="mono" style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--clay)' }}>{t('cancelledTag')}</span>
                 ) : (
-                  <button type="button" onClick={() => cancel.mutate(s.id)} disabled={cancel.isPending} style={{ marginLeft: 'auto', minHeight: 36, padding: '0 12px', border: '1px solid var(--clay)', color: 'var(--clay)', background: 'var(--surface)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 13 }}>
+                  <button type="button" onClick={() => cancel.mutate(s.id)} disabled={cancel.isPending} style={{ marginLeft: 'auto', minHeight: 36, padding: '0 12px', border: '1px solid var(--clay)', color: 'var(--clay)', background: 'var(--surface)', borderRadius: 'var(--pill)', cursor: 'pointer', fontSize: 13 }}>
                     {t('cancel')}
                   </button>
                 )}

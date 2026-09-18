@@ -1,7 +1,8 @@
 {
   "Common": {
     "appName": "PlaySlot",
-    "tagline": "Book a court and a coach — in one place."
+    "tagline": "Book a court and a coach — in one place.",
+    "close": "Close"
   },
   "Nav": {
     "clubs": "Clubs",
@@ -15,16 +16,12 @@
     "language": "Language",
     "account": "Account",
     "logout": "Log out",
-    "themeLabel": "Theme: {mode}",
-    "theme_system": "system",
-    "theme_light": "light",
-    "theme_dark": "dark",
     "menuAria": "Account & settings",
     "settings": "Settings",
-    "theme": "Theme",
     "schedule": "My schedule",
     "sessions": "Sessions",
-    "coachHub": "Coach profile"
+    "coachHub": "Coach profile",
+    "searchAria": "Search availability"
   },
   "Login": {
     "title": "Log in",
@@ -35,7 +32,8 @@
     "or": "or",
     "google": "Continue with Google",
     "signUp": "No account? Sign up",
-    "forgot": "Forgot password?"
+    "forgot": "Forgot password?",
+    "eyebrow": "// Log in"
   },
   "Register": {
     "title": "Sign up",
@@ -54,7 +52,8 @@
     "passwordMismatch": "Passwords do not match.",
     "successTitle": "Registration successful!",
     "successBody": "We sent a verification email. Confirm it before your first booking.",
-    "browseClubs": "Browse clubs"
+    "browseClubs": "Browse clubs",
+    "eyebrow": "// Sign up"
   },
   "ForgotPassword": {
     "title": "Forgot password",
@@ -62,7 +61,8 @@
     "email": "Email",
     "submit": "Send link",
     "sent": "If the email exists, we sent a password reset link.",
-    "backToLogin": "Back to log in"
+    "backToLogin": "Back to log in",
+    "eyebrow": "// Password reset"
   },
   "ResetPassword": {
     "title": "New password",
@@ -74,14 +74,16 @@
     "success": "Your password was changed successfully.",
     "toLogin": "Log in",
     "backToLogin": "Back to log in",
-    "missingToken": "Missing or invalid reset token."
+    "missingToken": "Missing or invalid reset token.",
+    "eyebrow": "// Password reset"
   },
   "VerifyEmail": {
     "title": "Email verification",
     "verifying": "Verifying…",
     "ok": "Email verified!",
     "toLogin": "Log in",
-    "error": "The link is invalid or expired."
+    "error": "The link is invalid or expired.",
+    "eyebrow": "// Email verification"
   },
   "Admin": {
     "title": "Manage",
@@ -138,7 +140,11 @@
     "startsAt": "Starts",
     "endsAt": "Ends",
     "capacity": "Capacity",
-    "feeLabel": "Fee ({currency})"
+    "feeLabel": "Fee ({currency})",
+    "eyebrow": "// Club admin",
+    "durationsTitle": "Booking lengths",
+    "durationsHelp": "The lengths players can book on your schedule. Players pick from these only — they cannot set a range of their own.",
+    "minutesShort": "min"
   },
   "Calendar": {
     "title": "Calendar",
@@ -163,7 +169,12 @@
     "noShow": "No-show",
     "move": "Move",
     "movePrompt": "Moving “{name}” — pick a free slot.",
-    "cancelMove": "Cancel move"
+    "cancelMove": "Cancel move",
+    "eyebrow": "// Club admin",
+    "legendFree": "Free",
+    "legendBooked": "Booked",
+    "legendHold": "Held",
+    "legendBlocked": "Blocked"
   },
   "Home": {
     "eyebrow": "Sofia · tennis · and more sports",
@@ -177,13 +188,29 @@
     "supportedSports": "Supported sports: {count}",
     "legendTitle": "Slot states",
     "browseClubs": "Browse clubs",
-    "withCoachPrompt": "Want to play with a coach?"
+    "withCoachPrompt": "Want to play with a coach?",
+    "primaryCta": "Find a court",
+    "secondaryCta": "How it works",
+    "popularSportsLabel": "Popular sports",
+    "howItWorksEyebrow": "How it works",
+    "howItWorksTitle": "Three ways onto the court",
+    "stepCourtOnlyTitle": "Court only",
+    "stepCourtOnlyBody": "Pick a club, date and time — book the exact court you want in under a minute.",
+    "stepCourtCoachTitle": "Court + Coach",
+    "stepCourtCoachBody": "Add a coach to your booking in the same transaction — one reservation, no double-checking.",
+    "stepCoachFirstTitle": "Coach first",
+    "stepCoachFirstBody": "Pick your coach and their free times — we find a compatible court automatically.",
+    "heroCardClub": "Center Court",
+    "heroCardStatus": "Free right now",
+    "heroCardCoachTag": "Coach"
   },
   "Favorites": {
     "title": "Favorite clubs",
     "save": "Save",
     "saved": "Saved",
-    "empty": "You have no saved clubs."
+    "empty": "You have no saved clubs.",
+    "eyebrow": "// Account",
+    "subtitle": "Clubs you've saved for quick booking."
   },
   "Reviews": {
     "title": "Reviews",
@@ -234,7 +261,8 @@
     "workingHours": "Working hours",
     "dayOff": "Off",
     "yearsExp": "{n} yrs experience",
-    "worksWith": "Works with"
+    "worksWith": "Works with",
+    "jobTitle": "Tennis coach"
   },
   "Booking": {
     "title": "Book this slot",
@@ -267,7 +295,8 @@
     "cancelConfirmBody": "Booking {ref} at {club} on {when} will be cancelled.",
     "cancelConfirmNote": "Any refund follows the club's cancellation policy. The customer, the club and the coach are notified.",
     "keepBooking": "Keep booking",
-    "confirmCancel": "Cancel booking"
+    "confirmCancel": "Cancel booking",
+    "eyebrow": "// Account"
   },
   "SlotStates": {
     "FREE": "Free",
@@ -279,6 +308,7 @@
     "TOURNAMENT": "Tournament"
   },
   "Clubs": {
+    "eyebrow": "// Clubs",
     "title": "Clubs",
     "subtitle": "Pick a club to see its free courts.",
     "empty": "No clubs are available right now.",
@@ -346,7 +376,10 @@
     "memberships": "My memberships",
     "until": "until {date}",
     "mySchedule": "My schedule",
-    "coachProfile": "Coach profile"
+    "coachProfile": "Coach profile",
+    "eyebrow": "// Account",
+    "title": "Account",
+    "subtitle": "Manage your profile, bookings, and preferences."
   },
   "Toasts": {
     "booked": "Booking confirmed",
@@ -377,7 +410,8 @@
     "noLessons": "No lessons",
     "lessonCount": "{count, plural, =0 {no lessons} one {# lesson} other {# lessons}} this week",
     "export": "Export",
-    "lessonWith": "Lesson —"
+    "lessonWith": "Lesson —",
+    "eyebrow": "// Coach"
   },
   "CoachHours": {
     "title": "Working hours",
@@ -402,7 +436,8 @@
     "title": "Coach profile",
     "subtitle": "Your public profile and group sessions.",
     "coachesOnly": "This page is for coaches only.",
-    "backToAccount": "Back to account"
+    "backToAccount": "Back to account",
+    "eyebrow": "// Coach"
   },
   "GroupSessions": {
     "title": "Group sessions",
@@ -447,7 +482,10 @@
     "activate": "Activate",
     "suspend": "Suspend",
     "addAdmin": "Add admin",
-    "manage": "Manage"
+    "manage": "Manage",
+    "featureOnHome": "Feature on homepage",
+    "unfeature": "Remove from homepage",
+    "featuredBadge": "Featured on homepage"
   },
   "Team": {
     "title": "Team",
@@ -524,5 +562,76 @@
     "from": "From",
     "to": "To",
     "download": "Download CSV"
+  },
+  "Footer": {
+    "exploreHeading": "Explore",
+    "accountHeading": "Account",
+    "rights": "© {year} {appName}. All rights reserved.",
+    "supportHeading": "Support",
+    "docsLabel": "Help & FAQ",
+    "contactLabel": "Contact"
+  },
+  "Contact": {
+    "eyebrow": "// Contact",
+    "title": "Get in touch",
+    "subtitle": "Questions about a booking, a club, or coaching on PlaySlot? We're happy to help.",
+    "emailLabel": "Email us",
+    "responseNote": "We typically reply within one business day."
+  },
+  "Docs": {
+    "eyebrow": "// Help",
+    "title": "Help & FAQ",
+    "subtitle": "Everything you need to know about booking courts and coaches on PlaySlot.",
+    "q1": "How do I book a court?",
+    "a1": "Search by city, sport, date and time — from the homepage or the search icon in the header — then pick a free slot at a club and confirm. You can pay online by card or on-site at the club.",
+    "q2": "Can I book a coach together with my court?",
+    "a2": "Yes. When you select a free slot, if the club has coaches available for it you can add one to the same booking — one reservation, no separate back-and-forth.",
+    "q3": "How do I cancel or change a booking?",
+    "a3": "Open My Bookings and cancel the reservation from there. Any refund follows the club's own cancellation policy, and the club, coach and you are all notified automatically.",
+    "q4": "Do I need an account?",
+    "a4": "Yes — create a free account and verify your email before your first booking.",
+    "q5": "I'm a coach or a club — how do I get set up?",
+    "a5": "Coaches manage their profile and schedule from Coach Hub once linked to a club. Clubs are set up and managed by staff through the admin console. Reach out via our Contact page and we'll help you get onboarded.",
+    "contactCta": "Still have questions?",
+    "contactLink": "Contact us"
+  },
+  "Seo": {
+    "siteName": "PlaySlot",
+    "home": {
+      "title": "Book a court online and book a coach",
+      "description": "Book a court online in minutes and add a coach to the same reservation. Real availability across clubs, instant confirmation, no phone calls and no double-booking."
+    },
+    "clubs": {
+      "title": "Book a court online — clubs",
+      "description": "Pick a club and see real free availability by court and hour. Book a court online in under a minute, confirmed instantly."
+    },
+    "coaches": {
+      "title": "Book a coach online",
+      "description": "Book a coach for tennis, padel and more. See free hours, prices and levels, and reserve court and coach in a single booking."
+    },
+    "sessions": {
+      "title": "Group sessions with a coach",
+      "description": "Join a group session with a coach — see open spots, level and price, and book online in minutes."
+    },
+    "search": {
+      "title": "Find a free court by date and time",
+      "description": "Search free courts by city, sport, date and time. Compare clubs on availability and price, and book a court online right away."
+    },
+    "contact": {
+      "title": "Contact",
+      "description": "Get in touch with the PlaySlot team about court and coach bookings, or if you run a club and want to take online reservations."
+    },
+    "docs": {
+      "title": "Help and frequently asked questions",
+      "description": "How to book a court online, how to reserve a coach, cancellation and payment rules — answers to the most common PlaySlot questions."
+    },
+    "club": {
+      "title": "{name} — book a court online",
+      "description": "Book a court online at {name}, {city}. See real hour-by-hour availability, prices and free coaches, and reserve in minutes."
+    },
+    "coach": {
+      "title": "{name} — book a coach",
+      "description": "Book coach {name} online. See free hours, services and prices, and reserve court and coach in a single booking."
+    }
   }
 }

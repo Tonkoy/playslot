@@ -6,6 +6,7 @@ import {
   type CreateClubClosureInput,
   type ClubTeamDto,
   type ClubTeamMemberDto,
+  type FeaturedClubDto,
   type InviteResultDto,
   type PlatformClubDto,
   type PlatformCreateClubInput,
@@ -13,12 +14,27 @@ import {
   type UpsertClubInput,
 } from '@playslot/contracts';
 import { type Prisma, Role } from '@playslot/db';
-import { instantFromDayMinutes } from '@playslot/domain';
-import { AppException } from '../common/app-exception';
+import { formatInZone, instantFromDayMinutes } from '@playslot/domain';
+import { AppException, Errors } from '../common/app-exception';
 import { AuthService } from '../auth/auth.service';
+import { AvailabilityService } from '../availability/availability.service';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { hashPassword } from '../auth/password';
+
+// How many days ahead the homepage "featured club" card will search for the
+// club's soonest free slot before giving up (spec: keep this cheap — most
+// active clubs have a free slot today or tomorrow).
+const FEATURED_SEARCH_DAYS = 7;
+
+/** Add `days` calendar days to a "YYYY-MM-DD" string (UTC-anchored, DST-safe —
+ * we only ever use the result as a calendar date, never as an instant). */
+function shiftIsoDate(isoDate: string, days: number): string {
+  const [y, m, d] = isoDate.split('-').map(Number);
+  const dt = new Date(Date.UTC(y!, m! - 1, d!));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
 
 const PUBLIC_CLUB_SELECT = {
   id: true,
@@ -34,6 +50,7 @@ const PUBLIC_CLUB_SELECT = {
   photoUrl: true,
   rules: true,
   slotIntervalMin: true,
+  bookingDurationsMin: true,
   acceptsMultisport: true,
   paymentMethods: true,
   status: true,
@@ -59,6 +76,7 @@ export class ClubsService {
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
     private readonly auth: AuthService,
+    private readonly availability: AvailabilityService,
   ) {}
 
   /** Cities that have at least one active club (for the search location filter). */
@@ -261,13 +279,35 @@ export class ClubsService {
       .sort((a, b) => a.weekday - b.weekday);
   }
 
-  /** Update just the club-wide booking granularity (30 or 60 min). */
-  async updateSettings(clubId: number, slotIntervalMin: number, actorUserId: number) {
+  /**
+   * Update the club's scheduling settings: the booking granularity (30 or 60
+   * min) and the booking lengths it offers players. Durations must be whole
+   * multiples of the granularity — otherwise a player could be shown a length
+   * that can never line up with a real slot.
+   */
+  async updateSettings(
+    clubId: number,
+    input: { slotIntervalMin: number; bookingDurationsMin?: number[] },
+    actorUserId: number,
+  ) {
     const before = await this.prisma.club.findUnique({ where: { id: clubId } });
     if (!before) throw new AppException('not_found');
+
+    let bookingDurationsMin: number[] | undefined;
+    if (input.bookingDurationsMin) {
+      const cleaned = [...new Set(input.bookingDurationsMin)].sort((a, b) => a - b);
+      if (cleaned.some((d) => d % input.slotIntervalMin !== 0)) {
+        throw Errors.validation({ bookingDurationsMin: input.bookingDurationsMin });
+      }
+      bookingDurationsMin = cleaned;
+    }
+
     const club = await this.prisma.club.update({
       where: { id: clubId },
-      data: { slotIntervalMin },
+      data: {
+        slotIntervalMin: input.slotIntervalMin,
+        ...(bookingDurationsMin ? { bookingDurationsMin } : {}),
+      },
       select: PUBLIC_CLUB_SELECT,
     });
     await this.audit(actorUserId, 'club.settings', 'Club', clubId, before, club);
@@ -365,6 +405,7 @@ export class ClubsService {
         slug: true,
         name: true,
         status: true,
+        isFeatured: true,
         city: { select: { name: true } },
         members: { where: { role: Role.CLUB_ADMIN, status: 'ACTIVE' }, select: { id: true } },
       },
@@ -379,7 +420,65 @@ export class ClubsService {
       status: c.status,
       adminCount: c.members.length,
       coachCount: coachMap.get(c.id) ?? 0,
+      isFeatured: c.isFeatured,
     }));
+  }
+
+  /**
+   * Platform admin picks (or clears) the one club that headlines the homepage
+   * hero card. Featuring a club un-features whatever was featured before —
+   * exactly one club (or none) can be featured at a time.
+   */
+  async setFeatured(clubId: number, featured: boolean, actorUserId: number): Promise<{ isFeatured: boolean }> {
+    const before = await this.prisma.club.findUnique({ where: { id: clubId } });
+    if (!before) throw new AppException('not_found');
+
+    await this.prisma.$transaction(async (tx) => {
+      if (featured) {
+        await tx.club.updateMany({ where: { isFeatured: true, id: { not: clubId } }, data: { isFeatured: false } });
+      }
+      await tx.club.update({ where: { id: clubId }, data: { isFeatured: featured } });
+    });
+
+    await this.audit(actorUserId, featured ? 'club.featured' : 'club.unfeatured', 'Club', clubId, before, { isFeatured: featured });
+    return { isFeatured: featured };
+  }
+
+  /**
+   * Public: the featured club's soonest free slot, for the homepage hero card.
+   * Returns null when no club is featured, the featured club isn't ACTIVE, or
+   * it has no free slot within the search window — the homepage falls back to
+   * its illustrative placeholder in any of those cases.
+   */
+  async getFeaturedForHome(): Promise<FeaturedClubDto | null> {
+    const club = await this.prisma.club.findFirst({
+      where: { isFeatured: true, status: 'ACTIVE' },
+      select: { id: true, slug: true, name: true, address: true, timezone: true, city: { select: { name: true } } },
+    });
+    if (!club) return null;
+
+    const today = formatInZone(new Date(), club.timezone, 'yyyy-MM-dd');
+    for (let i = 0; i < FEATURED_SEARCH_DAYS; i++) {
+      const date = shiftIsoDate(today, i);
+      const day = await this.availability.getAvailability({ clubId: club.id, date });
+      const free = day.slots.filter((s) => s.state === 'FREE').sort((a, b) => a.start.localeCompare(b.start));
+      if (free.length === 0) continue;
+      const slot = free[0]!;
+      const court = day.courts.find((c) => c.id === slot.resourceId);
+      return {
+        club: { id: club.id, slug: club.slug, name: club.name, address: club.address, city: club.city.name },
+        slot: {
+          date,
+          start: slot.start,
+          end: slot.end,
+          priceCents: slot.priceCents,
+          currency: day.currency,
+          courtName: court?.name ?? '',
+          hasCoach: slot.coachIds.length > 0,
+        },
+      };
+    }
+    return null;
   }
 
   /** Full club record for a platform admin to manage (any status). */
@@ -407,7 +506,16 @@ export class ClubsService {
       });
     });
     await this.audit(actorUserId, 'club.created', 'Club', club.id, null, club);
-    return { id: club.id, slug: club.slug, name: club.name, city: club.city.name, status: club.status, adminCount: 0, coachCount: 0 };
+    return {
+      id: club.id,
+      slug: club.slug,
+      name: club.name,
+      city: club.city.name,
+      status: club.status,
+      adminCount: 0,
+      coachCount: 0,
+      isFeatured: false,
+    };
   }
 
   async addClubAdmin(clubId: number, input: AddMemberInput, actorUserId: number): Promise<InviteResultDto> {

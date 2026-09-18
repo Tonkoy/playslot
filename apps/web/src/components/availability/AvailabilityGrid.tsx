@@ -46,7 +46,7 @@ interface SelectedSlot {
   coachIds: number[];
 }
 
-export function AvailabilityGrid({ clubId }: { clubId: number }) {
+export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; initialDate?: string }) {
   const t = useTranslations('Grid');
   const st = useTranslations('SlotStates');
   const bk = useTranslations('Booking');
@@ -55,7 +55,9 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
   const locale = useLocale();
   const pathname = usePathname();
   const qc = useQueryClient();
-  const [date, setDate] = useState(todayIso());
+  const [date, setDate] = useState(
+    initialDate && /^\d{4}-\d{2}-\d{2}$/.test(initialDate) ? initialDate : todayIso(),
+  );
   const [duration, setDuration] = useState(60);
   const [selected, setSelected] = useState<SelectedSlot | null>(null);
   const [confirmedRef, setConfirmedRef] = useState<number | null>(null);
@@ -78,6 +80,16 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
   });
 
   const me = useQuery({ queryKey: ['me'], queryFn: getMe, retry: false });
+
+  // If the club doesn't offer the currently selected length (first load, or the
+  // club changed its settings), snap to the shortest one it does offer.
+  useEffect(() => {
+    const offered = query.data?.bookingDurationsMin;
+    const shortest = offered?.[0];
+    if (shortest === undefined || offered!.includes(duration)) return;
+    setSelected(null);
+    setDuration(shortest);
+  }, [query.data?.bookingDurationsMin, duration]);
 
   // Live updates (spec §20): refetch when another viewer books/cancels here.
   useEffect(() => {
@@ -135,7 +147,11 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
 
   const courts = query.data?.courts ?? [];
   // Booking-length options adapt to the club's slot time (30 → allow 30-min).
-  const durations = (query.data?.slotIntervalMin ?? 60) === 30 ? [30, 60, 90, 120] : [60, 90, 120];
+  // The club decides which booking lengths it offers (set with its scheduling
+  // and working hours); players pick from exactly that list and nothing else.
+  const durations = query.data?.bookingDurationsMin?.length
+    ? query.data.bookingDurationsMin
+    : [query.data?.slotIntervalMin ?? 60];
 
   return (
     <section aria-labelledby="grid-heading" style={{ marginTop: 8 }}>
@@ -144,36 +160,63 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
         style={{
           display: 'flex',
           flexWrap: 'wrap',
-          gap: 10,
-          alignItems: 'center',
+          gap: 16,
+          alignItems: 'flex-end',
           marginBottom: 14,
+          background: 'var(--surface)',
+          border: '1px solid var(--line)',
+          borderRadius: 'var(--radius)',
+          padding: 16,
         }}
       >
-        <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-          <button type="button" onClick={() => setDate(shiftDate(date, -1))} style={navBtn} aria-label={t('prevDay')}>
-            ‹
-          </button>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value || todayIso())}
-            style={dateInput}
-            aria-label={t('date')}
-          />
-          <button type="button" onClick={() => setDate(shiftDate(date, 1))} style={navBtn} aria-label={t('nextDay')}>
-            ›
-          </button>
-          <button type="button" onClick={() => setDate(todayIso())} style={todayBtn}>
-            {t('today')}
-          </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span style={labelText}>{t('date')}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button type="button" onClick={() => setDate(shiftDate(date, -1))} style={navBtn} aria-label={t('prevDay')}>
+              ‹
+            </button>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value || todayIso())}
+              style={dateInput}
+              aria-label={t('date')}
+            />
+            <button type="button" onClick={() => setDate(shiftDate(date, 1))} style={navBtn} aria-label={t('nextDay')}>
+              ›
+            </button>
+          </div>
         </div>
 
-        <label className="mono" style={{ display: 'inline-flex', gap: 8, alignItems: 'center', fontSize: 13 }}>
-          <span style={{ color: 'var(--ink-3)' }}>{t('duration')}</span>
+        <button
+          type="button"
+          onClick={() => setDate(todayIso())}
+          style={date === todayIso() ? todayBtnActive : todayBtn}
+        >
+          {t('today')}
+        </button>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span style={labelText}>{t('duration')}</span>
           <select
             value={duration}
-            onChange={(e) => setDuration(Number(e.target.value))}
-            style={dateInput}
+            // The length of a booking is fixed once a slot is picked: the grid
+            // only showed free slots for the current duration, so changing it
+            // underneath a selection would submit a range the player never saw
+            // offered. Locked while a slot is selected, and any change clears
+            // the selection so the two can never disagree.
+            disabled={selected !== null}
+            onChange={(e) => {
+              setSelected(null);
+              setCoachId(null);
+              setServiceId(null);
+              setDuration(Number(e.target.value));
+            }}
+            style={{
+              ...dateInput,
+              cursor: selected !== null ? 'not-allowed' : 'pointer',
+              opacity: selected !== null ? 0.55 : 1,
+            }}
           >
             {durations.map((d) => (
               <option key={d} value={d}>
@@ -181,7 +224,7 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
               </option>
             ))}
           </select>
-        </label>
+        </div>
       </div>
 
       <h2 id="grid-heading" className="sr-only" style={{ position: 'absolute', left: -9999 }}>
@@ -210,7 +253,7 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
           <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 120 + courts.length * 116 }}>
             <thead>
               <tr>
-                <th style={{ ...thStyle, textAlign: 'left', position: 'sticky', left: 0, background: 'var(--surface-2)', zIndex: 2 }}>
+                <th style={{ ...thStyle, textAlign: 'left', position: 'sticky', left: 0, background: 'var(--green-soft)', zIndex: 2 }}>
                   {t('time')}
                 </th>
                 {courts.map((c) => (
@@ -229,7 +272,7 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
                   <th
                     scope="row"
                     className="mono"
-                    style={{ ...timeCell, position: 'sticky', left: 0, background: 'var(--surface-2)', zIndex: 1 }}
+                    style={{ ...timeCell, position: 'sticky', left: 0, background: 'var(--green-soft)', zIndex: 1 }}
                   >
                     {time}
                   </th>
@@ -362,8 +405,8 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
             <div>
               {selectableCoaches.length > 0 && (
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--ink-2)' }}>
-                    {bk('coach')}
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <span style={labelText}>{bk('coach')}</span>
                     <select
                       value={coachId ?? ''}
                       onChange={(e) => {
@@ -372,7 +415,7 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
                         const c = selectableCoaches.find((x) => x.coachProfileId === v);
                         setServiceId(c?.services[0]?.id ?? null);
                       }}
-                      style={{ ...pillBtn, cursor: 'pointer' }}
+                      style={{ ...dateInput, cursor: 'pointer' }}
                     >
                       <option value="">{bk('noCoach')}</option>
                       {selectableCoaches.map((c) => (
@@ -383,12 +426,12 @@ export function AvailabilityGrid({ clubId }: { clubId: number }) {
                     </select>
                   </label>
                   {chosenCoach && chosenCoach.services.length > 0 && (
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--ink-2)' }}>
-                      {bk('service')}
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <span style={labelText}>{bk('service')}</span>
                       <select
                         value={serviceId ?? ''}
                         onChange={(e) => setServiceId(e.target.value ? Number(e.target.value) : null)}
-                        style={{ ...pillBtn, cursor: 'pointer' }}
+                        style={{ ...dateInput, cursor: 'pointer' }}
                       >
                         {chosenCoach.services.map((s) => (
                           <option key={s.id} value={s.id}>
@@ -449,7 +492,7 @@ const pillBtn: React.CSSProperties = {
   border: '1px solid var(--line-2)',
   background: 'var(--surface)',
   color: 'var(--ink)',
-  borderRadius: 'var(--radius-sm)',
+  borderRadius: 'var(--pill)',
   cursor: 'pointer',
   textDecoration: 'none',
   fontWeight: 600,
@@ -468,26 +511,29 @@ function GridSkeleton() {
   );
 }
 
+const labelText: React.CSSProperties = { fontWeight: 700, fontSize: 13, color: 'var(--ink)' };
 const navBtn: React.CSSProperties = {
-  minWidth: 44,
+  minWidth: 40,
   minHeight: 44,
   border: '1px solid var(--line-2)',
   background: 'var(--surface)',
-  color: 'var(--ink)',
+  color: 'var(--green-deep)',
   borderRadius: 'var(--radius-sm)',
   fontSize: 18,
   cursor: 'pointer',
 };
 const todayBtn: React.CSSProperties = {
   minHeight: 44,
-  padding: '0 14px',
+  padding: '0 18px',
   border: '1px solid var(--line-2)',
   background: 'var(--surface)',
-  color: 'var(--ink)',
+  color: 'var(--green-deep)',
   borderRadius: 'var(--radius-sm)',
   cursor: 'pointer',
-  fontWeight: 600,
+  fontSize: 14,
+  fontWeight: 700,
 };
+const todayBtnActive: React.CSSProperties = { ...todayBtn, background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', fontWeight: 800 };
 const dateInput: React.CSSProperties = {
   minHeight: 44,
   padding: '0 10px',
@@ -502,7 +548,8 @@ const thStyle: React.CSSProperties = {
   borderBottom: '1px solid var(--line)',
   fontSize: 13,
   textAlign: 'center',
-  background: 'var(--surface-2)',
+  background: 'var(--green-soft)',
+  color: 'var(--green-deep)',
   whiteSpace: 'nowrap',
 };
 const timeCell: React.CSSProperties = {

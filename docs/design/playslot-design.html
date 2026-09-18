@@ -5,43 +5,33 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
   :root{
-    --ground:#F5F7F2;
+    --ground:#FFFFFF;
     --surface:#FFFFFF;
-    --surface-2:#EDEFE8;
-    --ink:#14181B;
-    --ink-2:#464C4E;
-    --ink-3:#7B8184;
-    --line:#E1E4DB;
-    --line-2:#CDD1C6;
-    --lime:#C7F000;        /* brand accent — always ink text on top */
-    --lime-deep:#A6C900;
-    --teal:#0E9E9C;        /* info / coach */
-    --teal-soft:#D6EEEC;
-    --clay:#E4622E;        /* secondary highlight */
-    --clay-soft:#F8E2D6;
-    /* slot-state semantics (distinct from brand accent) */
-    --free:#1E9E57;   --free-soft:#DBF0E4;
+    --surface-2:#F3F7F4;
+    --ink:#12181B;
+    --ink-2:#4B564F;
+    --ink-3:#7C877F;
+    --line:#E7ECE8;
+    --line-2:#D7E0DA;
+    --green-deep:#123B2C; /* primary — dark surfaces, footers, primary buttons */
+    --green:#1E6B47;      /* primary accent — links, primary actions */
+    --green-soft:#E7F3EA;
+    --green-soft-2:#D8EEDD;
+    --lime:#CFEA6E;        /* brand highlight — always deep-green text on top */
+    --lime-deep:#B9D958;
+    --teal:#0E8F7C;        /* info / coach — distinct from primary green */
+    --teal-soft:#DFF3EE;
+    --clay:#D95B2E;        /* secondary highlight */
+    --clay-soft:#FBE4D8;
+    /* slot-state semantics (free reuses the brand green on purpose) */
+    --free:#1E6B47;   --free-soft:#E7F3EA;
     --held:#C98A06;   --held-soft:#F6EACB;
-    --booked:#9AA0A2; --booked-soft:#E7E9E4;
-    --event:#7A5AF0;  --event-soft:#E5DEFB;
-    --radius:14px; --radius-sm:9px;
-    --shadow:0 1px 2px rgba(20,24,27,.05),0 10px 30px rgba(20,24,27,.07);
-    --shadow-sm:0 1px 2px rgba(20,24,27,.06),0 3px 10px rgba(20,24,27,.05);
-    --maxw:1180px;
-  }
-  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-    --ground:#0E1113; --surface:#171B1E; --surface-2:#20262A; --ink:#F1F3EE; --ink-2:#B9BFC0; --ink-3:#828889;
-    --line:#272D30; --line-2:#39403F; --lime:#CBF33A; --lime-deep:#A6C900; --teal:#33B7B4; --teal-soft:#0F2E2D;
-    --clay:#F0774A; --clay-soft:#33190F; --free:#41B978; --free-soft:#12301F; --held:#DCA83A; --held-soft:#322611;
-    --booked:#6D7375; --booked-soft:#23282A; --event:#9B83F5; --event-soft:#1E1836;
-    --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 34px rgba(0,0,0,.5); --shadow-sm:0 1px 2px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.4);
-  }}
-  :root[data-theme="dark"]{
-    --ground:#0E1113; --surface:#171B1E; --surface-2:#20262A; --ink:#F1F3EE; --ink-2:#B9BFC0; --ink-3:#828889;
-    --line:#272D30; --line-2:#39403F; --lime:#CBF33A; --lime-deep:#A6C900; --teal:#33B7B4; --teal-soft:#0F2E2D;
-    --clay:#F0774A; --clay-soft:#33190F; --free:#41B978; --free-soft:#12301F; --held:#DCA83A; --held-soft:#322611;
-    --booked:#6D7375; --booked-soft:#23282A; --event:#9B83F5; --event-soft:#1E1836;
-    --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 34px rgba(0,0,0,.5); --shadow-sm:0 1px 2px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.4);
+    --booked:#8B948E; --booked-soft:#ECEFEA;
+    --event:#6E5AC9;  --event-soft:#E9E4FB;
+    --radius:18px; --radius-sm:12px; --pill:100px;
+    --shadow:0 1px 2px rgba(18,24,27,.05),0 24px 54px rgba(18,59,44,.12);
+    --shadow-sm:0 1px 2px rgba(18,24,27,.05),0 6px 16px rgba(18,59,44,.08);
+    --maxw:1240px;
   }
   *{box-sizing:border-box}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -54,8 +44,8 @@
   .hero{padding:60px 0 40px}
   .brandrow{display:flex;align-items:center;gap:14px;margin-bottom:34px}
   .logo{display:inline-flex;align-items:center;gap:11px;font-family:"Bricolage Grotesque";font-weight:800;font-size:26px;letter-spacing:-.03em;color:var(--ink)}
-  .mark{width:34px;height:34px;border-radius:9px;background:var(--ink);display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;padding:6px}
-  .mark i{border-radius:2px;background:var(--booked)}
+  .mark{width:34px;height:34px;border-radius:9px;background:var(--green-deep);display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;padding:6px}
+  .mark i{border-radius:2px;background:rgba(255,255,255,.32)}
   .mark i.on{background:var(--lime)}
   .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--teal)}
   .hero h1{font-size:clamp(38px,7vw,72px);font-weight:800;margin:14px 0 0}
@@ -98,9 +88,9 @@
   .card{border:1px solid var(--line);border-radius:var(--radius);padding:18px;background:var(--surface);box-shadow:var(--shadow-sm)}
   .card h4{font-size:14px;font-weight:700;margin-bottom:12px;font-family:"Bricolage Grotesque"}
   .btns{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-  .btn{font-family:"Hanken Grotesk";font-weight:600;font-size:14px;border-radius:10px;padding:10px 18px;border:1px solid transparent;cursor:default}
-  .btn.primary{background:var(--lime);color:#14181B;border-color:var(--lime-deep)}
-  .btn.dark{background:var(--ink);color:var(--surface)}
+  .btn{font-family:"Hanken Grotesk";font-weight:600;font-size:14px;border-radius:var(--pill);padding:10px 18px;border:1px solid transparent;cursor:default}
+  .btn.primary{background:var(--lime);color:var(--green-deep);border-color:var(--lime-deep)}
+  .btn.dark{background:var(--green-deep);color:var(--surface)}
   .btn.ghost{background:transparent;color:var(--ink);border-color:var(--line-2)}
   .btn.teal{background:var(--teal);color:#fff}
   .chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -122,22 +112,22 @@
   /* in-screen UI atoms */
   .appbar{display:flex;align-items:center;justify-content:space-between;padding:6px 4px 12px}
   .applogo{display:flex;align-items:center;gap:7px;font-family:"Bricolage Grotesque";font-weight:800;font-size:15px}
-  .applogo .m{width:18px;height:18px;border-radius:5px;background:var(--ink);display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1.5px;padding:3px}
-  .applogo .m i{border-radius:1px;background:var(--booked)} .applogo .m i.on{background:var(--lime)}
+  .applogo .m{width:18px;height:18px;border-radius:5px;background:var(--green-deep);display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1.5px;padding:3px}
+  .applogo .m i{border-radius:1px;background:rgba(255,255,255,.32)} .applogo .m i.on{background:var(--lime)}
   .seg{display:flex;background:var(--surface-2);border-radius:10px;padding:3px;gap:3px;font-size:11.5px;font-weight:600}
   .seg span{flex:1;text-align:center;padding:6px 4px;border-radius:8px;color:var(--ink-3)}
-  .seg span.act{background:var(--ink);color:var(--surface)}
+  .seg span.act{background:var(--green-deep);color:var(--surface)}
   .field{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:9px 11px;color:var(--ink-2);display:flex;align-items:center;gap:8px;margin-bottom:8px}
   .field .ic{color:var(--teal)}
   .clubcard{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:10px;background:var(--surface)}
-  .clubcard .ph{height:64px;background:linear-gradient(120deg,var(--teal) 0%,var(--ink) 120%);position:relative}
+  .clubcard .ph{height:64px;background:linear-gradient(120deg,var(--teal) 0%,var(--green-deep) 120%);position:relative}
   .clubcard .ph .fav{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.9);display:grid;place-items:center;font-size:11px}
   .clubcard .b{padding:9px 11px}
   .clubcard .b .nm{font-weight:700;font-size:13px}
   .clubcard .b .ad{color:var(--ink-3);font-size:11px;margin-top:1px}
   .clubcard .b .rowx{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
   .price{font-family:"IBM Plex Mono";font-weight:600;font-size:12.5px}
-  .mini-btn{background:var(--lime);color:#14181B;font-weight:700;font-size:11.5px;border-radius:8px;padding:5px 12px}
+  .mini-btn{background:var(--lime);color:var(--green-deep);font-weight:700;font-size:11.5px;border-radius:var(--pill);padding:5px 12px}
 
   /* the grid */
   .grid-wrap{border:1px solid var(--line);border-radius:12px;overflow:hidden}
@@ -165,7 +155,7 @@
   .summary{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface)}
   .srow{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;color:var(--ink-2)}
   .srow.tot{border-top:1px dashed var(--line);margin-top:6px;padding-top:8px;font-weight:700;color:var(--ink);font-size:13.5px}
-  .cta{display:block;text-align:center;background:var(--lime);color:#14181B;font-weight:700;border-radius:11px;padding:12px;margin-top:12px;font-size:13.5px}
+  .cta{display:block;text-align:center;background:var(--lime);color:var(--green-deep);font-weight:700;border-radius:var(--pill);padding:12px;margin-top:12px;font-size:13.5px}
   .confirm-ico{width:56px;height:56px;border-radius:50%;background:var(--free-soft);color:var(--free);display:grid;place-items:center;font-size:26px;margin:14px auto 10px}
   .center{text-align:center}
 
@@ -180,12 +170,12 @@
     <div class="brandrow">
       <span class="logo"><span class="mark"><i class="on"></i><i></i><i></i><i class="on"></i></span>PlaySlot</span>
     </div>
-    <span class="eyebrow">◍ Design Direction · v1</span>
+    <span class="eyebrow">◍ Design Direction · v2 — Deep Green</span>
     <h1>Book the <span class="lime">slot</span>.<br>Play the game.</h1>
     <p>The visual system for <b>PlaySlot</b> — a multi-sport court &amp; coach booking platform. Energetic where it counts, calm where you book. Built mobile-first around one hero object: the time-slot grid.</p>
     <div class="tags">
       <span class="tag">Bricolage Grotesque</span><span class="tag">Hanken Grotesk</span><span class="tag">IBM Plex Mono</span>
-      <span class="tag">Lime · Ink · Teal</span><span class="tag">Light + Dark</span><span class="tag">WCAG AA</span>
+      <span class="tag">Deep Green · Lime · White</span><span class="tag">Light only</span><span class="tag">WCAG AA</span>
     </div>
   </header>
 
@@ -198,24 +188,24 @@
         <span class="logo" style="font-size:30px"><span class="mark" style="width:40px;height:40px"><i class="on"></i><i></i><i></i><i class="on"></i></span>PlaySlot</span></div>
       <div class="card" style="flex:1;min-width:160px"><h4>Mark only</h4>
         <span class="mark" style="width:52px;height:52px"><i class="on"></i><i></i><i></i><i class="on"></i></span></div>
-      <div class="card" style="flex:1;min-width:160px;background:var(--ink)"><h4 style="color:var(--surface)">On ink</h4>
-        <span class="logo" style="color:#fff"><span class="mark" style="background:#0b0d0f"><i class="on"></i><i></i><i></i><i class="on"></i></span>PlaySlot</span></div>
+      <div class="card" style="flex:1;min-width:160px;background:var(--lime)"><h4 style="color:var(--green-deep)">On lime</h4>
+        <span class="logo" style="color:var(--green-deep)"><span class="mark"><i class="on"></i><i></i><i></i><i class="on"></i></span>PlaySlot</span></div>
     </div>
   </section>
 
   <!-- PALETTE -->
   <section>
     <div class="sh"><span class="n">02</span><h2>Color</h2></div>
-    <p class="sub">Lime is the single loud note — reserved for the primary action and the logo, always with ink text on top for contrast. Ink and a green-biased off-white do the heavy lifting; teal carries coaching, clay is a warm secondary.</p>
+    <p class="sub">Deep green is the primary brand surface — headers, footers, primary buttons — with lime kept as the one loud highlight, always on deep-green text. White does the heavy lifting elsewhere; teal carries coaching, clay is a warm secondary.</p>
     <div class="swgrid">
-      <div class="sw"><div class="chip" style="background:var(--lime)"></div><div class="meta"><b>Lime</b><span>#C7F000</span><div class="role">Brand · primary CTA</div></div></div>
-      <div class="sw"><div class="chip" style="background:var(--ink)"></div><div class="meta"><b>Ink</b><span>#14181B</span><div class="role">Text · dark surfaces</div></div></div>
-      <div class="sw"><div class="chip" style="background:var(--teal)"></div><div class="meta"><b>Court Teal</b><span>#0E9E9C</span><div class="role">Coaching · info</div></div></div>
-      <div class="sw"><div class="chip" style="background:var(--clay)"></div><div class="meta"><b>Clay</b><span>#E4622E</span><div class="role">Secondary accent</div></div></div>
-      <div class="sw"><div class="chip" style="background:var(--ground);border-bottom:1px solid var(--line)"></div><div class="meta"><b>Ground</b><span>#F5F7F2</span><div class="role">Page background</div></div></div>
-      <div class="sw"><div class="chip" style="background:var(--surface-2)"></div><div class="meta"><b>Surface-2</b><span>#EDEFE8</span><div class="role">Fields · fills</div></div></div>
-      <div class="sw"><div class="chip" style="background:var(--ink-2)"></div><div class="meta"><b>Ink-2</b><span>#464C4E</span><div class="role">Secondary text</div></div></div>
-      <div class="sw"><div class="chip" style="background:var(--line-2)"></div><div class="meta"><b>Line</b><span>#CDD1C6</span><div class="role">Borders</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--green-deep)"></div><div class="meta"><b>Green Deep</b><span>#123B2C</span><div class="role">Brand · primary surface</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--green)"></div><div class="meta"><b>Green</b><span>#1E6B47</span><div class="role">Primary accent · links</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--lime)"></div><div class="meta"><b>Lime</b><span>#CFEA6E</span><div class="role">Highlight · primary CTA</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--teal)"></div><div class="meta"><b>Court Teal</b><span>#0E8F7C</span><div class="role">Coaching · info</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--clay)"></div><div class="meta"><b>Clay</b><span>#D95B2E</span><div class="role">Secondary accent</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--ground);border-bottom:1px solid var(--line)"></div><div class="meta"><b>Ground</b><span>#FFFFFF</span><div class="role">Page background</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--surface-2)"></div><div class="meta"><b>Surface-2</b><span>#F3F7F4</span><div class="role">Fields · fills</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--line-2)"></div><div class="meta"><b>Line</b><span>#D7E0DA</span><div class="role">Borders</div></div></div>
     </div>
 
     <h3 style="font-size:16px;margin:26px 0 4px;font-family:'Bricolage Grotesque'">Slot-state semantics</h3>
@@ -252,7 +242,7 @@
     <div class="tok">
       <div class="card"><h4>Buttons</h4><div class="btns">
         <span class="btn primary">Reserve</span><span class="btn dark">Add coach</span><span class="btn ghost">Cancel</span><span class="btn teal">Message coach</span>
-      </div><p style="font-size:12px;color:var(--ink-3);margin:12px 0 0">Radius 10px · primary = lime + ink text (AA) · one primary per view.</p></div>
+      </div><p style="font-size:12px;color:var(--ink-3);margin:12px 0 0">Full pill radius · primary = lime + deep-green text (AA) · one primary per view.</p></div>
       <div class="card"><h4>Chips &amp; tags</h4><div class="chips">
         <span class="pill free">● Free</span><span class="pill coach">◍ Coach available</span><span class="pill">Clay</span><span class="pill">Indoor</span><span class="pill">Lit</span>
       </div><p style="font-size:12px;color:var(--ink-3);margin:12px 0 0">Radius 100px · used for filters &amp; facility flags.</p></div>
@@ -377,6 +367,6 @@
   </section>
 
   <footer class="wrap" style="padding-left:0;padding-right:0">
-    PlaySlot · design direction v1 · for review before UI coding (roadmap Phase PD). Palette is AA-checked in both themes; lime is used only as a fill with ink text on top, never as text on light grounds.
+    PlaySlot · design direction v2 · for review before UI coding (roadmap Phase PD). Palette is AA-checked; lime is used only as a fill with deep-green text on top, never as text on light grounds.
   </footer>
 </div>

@@ -83,7 +83,7 @@ export function ClubDetailsEditor({ clubId, club }: { clubId: number; club: Club
           type="button"
           onClick={() => save.mutate()}
           disabled={save.isPending}
-          style={{ minHeight: 44, padding: '0 20px', background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 700, cursor: 'pointer' }}
+          style={{ minHeight: 44, padding: '0 20px', background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', borderRadius: 'var(--pill)', fontWeight: 700, cursor: 'pointer' }}
         >
           {save.isPending ? '…' : t('save')}
         </button>

@@ -1,6 +1,13 @@
+import type { Metadata } from 'next';
+import { NOINDEX } from '@/lib/seo';
+
+/** Account/admin screen: kept out of the index so it never competes in search. */
+export const metadata: Metadata = NOINDEX;
+
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { SiteHeader } from '@/components/SiteHeader';
 import { VerifyEmail } from '@/components/auth/VerifyEmail';
+import { PageHeader } from '@/components/PageHeader';
 
 export default async function VerifyEmailPage({
   params,
@@ -17,9 +24,7 @@ export default async function VerifyEmailPage({
     <>
       <SiteHeader />
       <main style={{ maxWidth: 'var(--maxw)', margin: '0 auto', padding: '48px 20px' }}>
-        <h1 style={{ fontSize: 'clamp(24px, 5vw, 36px)', fontWeight: 800, textAlign: 'center', marginBottom: 24 }}>
-          {t('title')}
-        </h1>
+        <PageHeader eyebrow={t('eyebrow')} title={t('title')} align="center" />
         <VerifyEmail token={token ?? ''} />
       </main>
     </>

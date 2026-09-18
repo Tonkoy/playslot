@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SPORTS } from '@playslot/contracts';
 import { Link } from '@/i18n/navigation';
 import { getCities, searchAvailability } from '@/lib/api';
@@ -36,10 +36,20 @@ export function SearchClient() {
   const cities = useQuery({ queryKey: ['cities'], queryFn: getCities });
 
   const [cityId, setCityId] = useState<number | ''>('');
-  const [sport, setSport] = useState('');
-  const [date, setDate] = useState('');
+  const [sport, setSport] = useState('TENNIS');
+  const [date, setDate] = useState(todayIso());
   const [time, setTime] = useState('any');
-  const [applied, setApplied] = useState<Applied>({ date: todayIso() });
+  const [applied, setApplied] = useState<Applied>({ date: todayIso(), sport: 'TENNIS' });
+
+  // Default the location to Sofia once cities load (the app's one launch
+  // market) rather than leaving the field visibly empty.
+  useEffect(() => {
+    if (cityId !== '' || !cities.data) return;
+    const sofia = cities.data.find((c) => /sofia|софия/i.test(c.name));
+    if (!sofia) return;
+    setCityId(sofia.id);
+    setApplied((a) => ({ ...a, cityId: sofia.id }));
+  }, [cities.data, cityId]);
 
   const query = useQuery({
     queryKey: ['search', applied],
@@ -74,89 +84,92 @@ export function SearchClient() {
           e.preventDefault();
           submit();
         }}
-        style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--line)',
-          borderRadius: 'var(--radius)',
-          boxShadow: 'var(--shadow)',
-          padding: 18,
-          display: 'flex',
-          gap: 14,
-          alignItems: 'flex-end',
-          flexWrap: 'wrap',
-        }}
       >
-        {/* Location */}
-        <label style={{ ...field, flex: '2 1 200px' }}>
-          <span style={labelText}>{t('location')}</span>
-          <div style={{ position: 'relative' }}>
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="var(--ink-3)"
-              strokeWidth="1.6"
-              style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
-              aria-hidden
-            >
-              <circle cx="7" cy="7" r="5" />
-              <path d="m11 11 3.5 3.5" strokeLinecap="round" />
-            </svg>
-            <select
-              value={cityId}
-              onChange={(e) => setCityId(e.target.value === '' ? '' : Number(e.target.value))}
-              style={{ ...ctrl, paddingLeft: 34, width: '100%' }}
-            >
-              <option value="">{t('anyCity')}</option>
-              {cities.data?.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
+        <div
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--line)',
+            borderRadius: 'var(--radius)',
+            boxShadow: 'var(--shadow)',
+            padding: 18,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: 14,
+          }}
+        >
+          {/* Location */}
+          <label style={field}>
+            <span style={labelText}>{t('location')}</span>
+            <div style={{ position: 'relative' }}>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="var(--ink-3)"
+                strokeWidth="1.6"
+                style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+                aria-hidden
+              >
+                <circle cx="7" cy="7" r="5" />
+                <path d="m11 11 3.5 3.5" strokeLinecap="round" />
+              </svg>
+              <select
+                value={cityId}
+                onChange={(e) => setCityId(e.target.value === '' ? '' : Number(e.target.value))}
+                style={{ ...ctrl, paddingLeft: 34, width: '100%' }}
+              >
+                <option value="">{t('anyCity')}</option>
+                {cities.data?.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </label>
+
+          {/* Sport */}
+          <label style={field}>
+            <span style={labelText}>{t('sport')}</span>
+            <select value={sport} onChange={(e) => setSport(e.target.value)} style={ctrl}>
+              <option value="">{t('anySport')}</option>
+              {SPORTS.map((s) => (
+                <option key={s} value={s}>
+                  {s}
                 </option>
               ))}
             </select>
-          </div>
-        </label>
+          </label>
 
-        {/* Sport */}
-        <label style={{ ...field, flex: '1 1 130px' }}>
-          <span style={labelText}>{t('sport')}</span>
-          <select value={sport} onChange={(e) => setSport(e.target.value)} style={ctrl}>
-            <option value="">{t('anySport')}</option>
-            {SPORTS.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </label>
+          {/* Date */}
+          <label style={field}>
+            <span style={labelText}>
+              {t('date')} <span style={optionalText}>({t('optionalTag')})</span>
+            </span>
+            <DatePicker value={date} onChange={setDate} locale={locale} placeholder={t('anyDate')} />
+          </label>
 
-        {/* Date */}
-        <label style={{ ...field, flex: '1 1 150px' }}>
-          <span style={labelText}>
-            {t('date')} <span style={optionalText}>({t('optionalTag')})</span>
-          </span>
-          <DatePicker value={date} onChange={setDate} locale={locale} placeholder={t('anyDate')} />
-        </label>
-
-        {/* Time */}
-        <label style={{ ...field, flex: '1 1 150px' }}>
-          <span style={labelText}>
-            {t('time')} <span style={optionalText}>({t('optionalTag')})</span>
-          </span>
-          <select value={time} onChange={(e) => setTime(e.target.value)} style={ctrl}>
-            <option value="any">{t('anyTime')}</option>
-            <option value="morning">{t('morning')}</option>
-            <option value="afternoon">{t('afternoon')}</option>
-            <option value="evening">{t('evening')}</option>
-          </select>
-        </label>
+          {/* Time */}
+          <label style={field}>
+            <span style={labelText}>
+              {t('time')} <span style={optionalText}>({t('optionalTag')})</span>
+            </span>
+            <select value={time} onChange={(e) => setTime(e.target.value)} style={ctrl}>
+              <option value="any">{t('anyTime')}</option>
+              <option value="morning">{t('morning')}</option>
+              <option value="afternoon">{t('afternoon')}</option>
+              <option value="evening">{t('evening')}</option>
+            </select>
+          </label>
+        </div>
 
         <button
           type="submit"
           style={{
-            minHeight: 44,
-            padding: '0 26px',
+            width: '100%',
+            minHeight: 48,
+            marginTop: 14,
             background: 'var(--lime)',
             color: 'var(--on-lime)',
             border: 'none',
@@ -164,7 +177,6 @@ export function SearchClient() {
             fontWeight: 800,
             fontSize: 15,
             cursor: 'pointer',
-            flex: '0 0 auto',
           }}
         >
           {t('findCourt')}

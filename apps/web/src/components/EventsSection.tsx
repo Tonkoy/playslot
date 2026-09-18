@@ -161,7 +161,7 @@ const primaryBtn: React.CSSProperties = {
   background: 'var(--lime)',
   color: 'var(--on-lime)',
   border: 'none',
-  borderRadius: 'var(--radius-sm)',
+  borderRadius: 'var(--pill)',
   fontWeight: 700,
   cursor: 'pointer',
 };
@@ -171,7 +171,7 @@ const outlineBtn: React.CSSProperties = {
   background: 'var(--surface)',
   color: 'var(--ink)',
   border: '1px solid var(--line-2)',
-  borderRadius: 'var(--radius-sm)',
+  borderRadius: 'var(--pill)',
   fontWeight: 600,
   cursor: 'pointer',
 };

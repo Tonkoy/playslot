@@ -65,7 +65,7 @@ export function ClubExport({ clubId }: { clubId: number }) {
           type="button"
           onClick={download}
           disabled={busy}
-          style={{ minHeight: 46, padding: '0 20px', background: 'var(--ink)', color: 'var(--lime)', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 700, cursor: 'pointer' }}
+          style={{ minHeight: 46, padding: '0 20px', background: 'var(--green-deep)', color: 'var(--lime)', border: 'none', borderRadius: 'var(--pill)', fontWeight: 700, cursor: 'pointer' }}
         >
           {busy ? '…' : `↓ ${t('download')}`}
         </button>

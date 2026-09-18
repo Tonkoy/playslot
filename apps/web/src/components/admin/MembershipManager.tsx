@@ -309,8 +309,8 @@ const smallBtn: React.CSSProperties = {
   padding: '0 14px',
   border: '1px solid var(--line-2)',
   background: 'var(--surface)',
-  color: 'var(--ink)',
-  borderRadius: 'var(--radius-sm)',
+  color: 'var(--green-deep)',
+  borderRadius: 'var(--pill)',
   cursor: 'pointer',
   fontSize: 14,
 };

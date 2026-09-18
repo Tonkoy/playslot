@@ -131,7 +131,7 @@ export function CoachHoursEditor() {
                 background: 'var(--lime)',
                 color: 'var(--on-lime)',
                 border: 'none',
-                borderRadius: 'var(--radius-sm)',
+                borderRadius: 'var(--pill)',
                 fontWeight: 700,
                 cursor: invalid ? 'not-allowed' : 'pointer',
                 opacity: invalid ? 0.5 : 1,

@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Link, useRouter } from '@/i18n/navigation';
 import { googleLoginUrl, login } from '@/lib/api';
+import { authInput, authLabel, authPrimaryBtn, googleBtn } from './styles';
 
 export function LoginForm({ locale, returnTo }: { locale: string; returnTo: string }) {
   const t = useTranslations('Login');
@@ -22,7 +23,7 @@ export function LoginForm({ locale, returnTo }: { locale: string; returnTo: stri
     try {
       await login(email, password);
       await qc.invalidateQueries({ queryKey: ['me'] });
-      router.push(returnTo.startsWith('/') ? returnTo : '/admin');
+      router.push(returnTo.startsWith('/') ? returnTo : '/');
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -33,25 +34,25 @@ export function LoginForm({ locale, returnTo }: { locale: string; returnTo: stri
   return (
     <div style={{ maxWidth: 400, margin: '0 auto' }}>
       <form onSubmit={onSubmit} style={{ display: 'grid', gap: 12 }}>
-        <label style={labelStyle}>
+        <label style={authLabel}>
           {t('email')}
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={inputStyle}
+            style={authInput}
             autoComplete="email"
           />
         </label>
-        <label style={labelStyle}>
+        <label style={authLabel}>
           {t('password')}
           <input
             type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={inputStyle}
+            style={authInput}
             autoComplete="current-password"
           />
         </label>
@@ -62,7 +63,7 @@ export function LoginForm({ locale, returnTo }: { locale: string; returnTo: stri
           </div>
         )}
 
-        <button type="submit" disabled={busy} style={primaryBtn}>
+        <button type="submit" disabled={busy} style={authPrimaryBtn}>
           {busy ? '…' : t('submit')}
         </button>
       </form>
@@ -87,41 +88,3 @@ export function LoginForm({ locale, returnTo }: { locale: string; returnTo: stri
   );
 }
 
-const labelStyle: React.CSSProperties = {
-  display: 'grid',
-  gap: 6,
-  fontSize: 14,
-  color: 'var(--ink-2)',
-};
-const inputStyle: React.CSSProperties = {
-  minHeight: 44,
-  padding: '0 12px',
-  border: '1px solid var(--line-2)',
-  background: 'var(--surface)',
-  color: 'var(--ink)',
-  borderRadius: 'var(--radius-sm)',
-  fontFamily: 'inherit',
-  fontSize: 15,
-};
-const primaryBtn: React.CSSProperties = {
-  minHeight: 46,
-  background: 'var(--lime)',
-  color: 'var(--on-lime)',
-  border: 'none',
-  borderRadius: 'var(--radius-sm)',
-  fontWeight: 700,
-  cursor: 'pointer',
-  fontSize: 15,
-};
-const googleBtn: React.CSSProperties = {
-  display: 'block',
-  textAlign: 'center',
-  minHeight: 46,
-  lineHeight: '46px',
-  background: 'var(--surface)',
-  color: 'var(--ink)',
-  border: '1px solid var(--line-2)',
-  borderRadius: 'var(--radius-sm)',
-  fontWeight: 600,
-  textDecoration: 'none',
-};

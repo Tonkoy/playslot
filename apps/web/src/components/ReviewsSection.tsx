@@ -70,7 +70,7 @@ export function ReviewsSection({ clubId }: { clubId: number }) {
               type="button"
               onClick={() => submit.mutate()}
               disabled={submit.isPending}
-              style={{ ...ctrl, background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', fontWeight: 700, cursor: 'pointer' }}
+              style={{ ...ctrl, background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', borderRadius: 'var(--pill)', fontWeight: 700, cursor: 'pointer' }}
             >
               {t('submit')}
             </button>

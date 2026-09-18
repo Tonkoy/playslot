@@ -1,6 +1,25 @@
+import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { isAppLocale } from '@/i18n/routing';
+import { pageMetadata } from '@/lib/seo';
 import { GroupSessionsList } from '@/components/GroupSessionsList';
 import { SiteHeader } from '@/components/SiteHeader';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  if (!isAppLocale(locale)) return {};
+  const t = await getTranslations({ locale, namespace: 'Seo' });
+  return pageMetadata({
+    locale,
+    path: '/sessions',
+    title: t('sessions.title'),
+    description: t('sessions.description'),
+  });
+}
 
 export default async function SessionsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

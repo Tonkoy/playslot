@@ -58,9 +58,9 @@ describe('loadServerEnv', () => {
   };
 
   it('defaults MAIL_FROM when unset or empty', () => {
-    expect(loadServerEnv(baseServer).MAIL_FROM).toBe('PlaySlot <no-reply@playslot.app>');
+    expect(loadServerEnv(baseServer).MAIL_FROM).toBe('PlaySlot <no-reply@playslot.bg>');
     expect(loadServerEnv({ ...baseServer, MAIL_FROM: '' }).MAIL_FROM).toBe(
-      'PlaySlot <no-reply@playslot.app>',
+      'PlaySlot <no-reply@playslot.bg>',
     );
   });
 

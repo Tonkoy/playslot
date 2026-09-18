@@ -1,0 +1,15 @@
+# Never ship local state or secrets into the image.
+node_modules
+**/node_modules
+.git
+.env
+.env.*
+!.env.example
+**/dist
+**/.next
+**/.turbo
+.turbo
+**/coverage
+**/playwright-report
+**/test-results
+*.log

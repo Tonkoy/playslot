@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { resolve } from 'node:path';
 import { config as loadDotenv } from 'dotenv';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Logger } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -18,7 +19,7 @@ async function bootstrap(): Promise<void> {
   const env = loadServerEnv();
 
   // rawBody enables Stripe webhook signature verification (spec §17).
-  const app = await NestFactory.create(AppModule, { rawBody: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
   // Credentialed CORS: reflect the origin (can't use "*" with credentials). In
   // production, restrict to the web origin; in dev, reflect any localhost origin.
   app.enableCors({
@@ -30,9 +31,17 @@ async function bootstrap(): Promise<void> {
   app.use(cookieParser());
   app.enableShutdownHooks();
 
-  const port = new URL(env.API_BASE_URL).port || '3001';
-  await app.listen(Number(port));
-  new Logger('Bootstrap').log(`PlaySlot API listening on ${env.API_BASE_URL} (/api)`);
+  // Behind a platform proxy (Railway, Fly, a load balancer) every request
+  // arrives from the proxy's IP. Without this, `req.ip` is that one address
+  // and the global rate limiter throttles all users as if they were one.
+  app.set('trust proxy', 1);
+
+  // Hosting platforms inject PORT and route to it; fall back to the port in
+  // API_BASE_URL for local dev, where that URL carries an explicit port.
+  const port = Number(process.env.PORT) || Number(new URL(env.API_BASE_URL).port) || 3001;
+  // Bind all interfaces — inside a container, localhost isn't reachable.
+  await app.listen(port, '0.0.0.0');
+  new Logger('Bootstrap').log(`PlaySlot API listening on :${port} (/api)`);
 }
 
 void bootstrap();

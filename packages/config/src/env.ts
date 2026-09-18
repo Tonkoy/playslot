@@ -68,7 +68,7 @@ export const serverEnvSchema = coreEnvSchema.extend({
   MAIL_PROVIDER: z.enum(['resend', 'sendgrid', 'console']).optional(),
   // From-address shared by every provider (RFC 5322 "Name <addr>" or bare addr).
   MAIL_FROM: optionalString.pipe(
-    z.string().default('PlaySlot <no-reply@playslot.app>'),
+    z.string().default('PlaySlot <no-reply@playslot.bg>'),
   ),
   S3_ENDPOINT: optionalString,
   S3_BUCKET: optionalString,

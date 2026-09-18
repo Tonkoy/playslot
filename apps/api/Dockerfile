@@ -41,4 +41,7 @@ COPY --from=build /repo ./
 USER node
 # PORT is injected by the platform; main.ts prefers it over API_BASE_URL.
 EXPOSE 3001
-CMD ["node", "apps/api/dist/main.js"]
+# nest build emits dist/src/main.js, not dist/main.js: tsconfig's `include`
+# covers test/ and vitest.config.ts as well as src/, so TypeScript takes the
+# package root as rootDir and keeps the src/ folder in the output.
+CMD ["node", "apps/api/dist/src/main.js"]

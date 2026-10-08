@@ -47,8 +47,8 @@ Each scenario: ID, steps, expected result. Report results in
 | C5 | Export schedule (.ics) | File downloads and opens in a calendar |
 | C6 | Create a group session (date, time, court, capacity, price) | Created; visible in `/sessions` |
 | C7 | Invite players to the group session | Invited player sees it and can join |
-| C8 | Fill the group session to capacity | Next player is refused / waitlisted |
-| C9 | Coach edits profile: bio, rate, levels, languages, age groups | Saved and shown on public profile |
+| C8 | Fill the group session to capacity | Next player sees "Запълнено" and can't join; direct API call refused (422, reason `full`) with a specific message. No waitlist in MVP (§12) |
+| C9 | Coach edits profile: bio, levels, languages, age groups; changes a service price | Saved and shown on public profile; new service price shows on the coach list ("от …"), profile and booking dialog, and is what a lesson charges. No hourly rate anywhere (§12 Lesson price) |
 | C10 | Coach cannot see club admin settings or other coaches' data | Access denied |
 
 ## K — Club (club admin)
@@ -81,6 +81,6 @@ Each scenario: ID, steps, expected result. Report results in
 | A3 | Edit a setting in another club (e.g. a price) | Saved; reflected on that club's public page |
 | A4 | Create a new club and assign a club admin | New admin logs in and sees only that club |
 | A5 | Featured club setting | Featured club shows on home page |
-| A6 | User moderation (find a user, view, suspend) | Works; suspended user cannot log in |
+| A6 | User moderation: find a user, view, restrict with a note, then reinstate (paid / waived) | Restricted user **can still log in** but can't book a court/lesson or join a group session (server refuses, also via direct API, reason `suspended`); sees the reason and the 10 € reinstatement fee in My bookings and a banner on club pages; existing bookings stay and can be cancelled. Reinstating restores booking. Note saved in full; restrict and reinstate both in the audit log |
 | A7 | Platform stats | Numbers match the seeded data |
 | A8 | Verify email for an unverified user | Badge disappears; user can log in; audit log entry written; button not shown for verified users or platform admins |

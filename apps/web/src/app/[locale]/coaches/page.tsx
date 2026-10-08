@@ -56,6 +56,12 @@ export default async function CoachesPage({ params }: { params: Promise<{ locale
                   <Avatar name={coach.name} photoUrl={coach.photoUrl} size={52} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontFamily: 'var(--font-bricolage)', fontWeight: 700, fontSize: 19 }}>{coach.name}</div>
+                    {coach.ratingAvg != null && (
+                      <div style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 2 }}>
+                        <span style={{ color: 'var(--held)' }}>★</span> <strong>{coach.ratingAvg.toFixed(1)}</strong>{' '}
+                        <span style={{ color: 'var(--ink-3)' }}>({t('ratingCount', { count: coach.ratingCount })})</span>
+                      </div>
+                    )}
                     <div className="mono" style={{ color: 'var(--ink-3)', fontSize: 12, marginTop: 2 }}>
                       {[
                         coach.clubs.map((c) => c.name).join(' · '),

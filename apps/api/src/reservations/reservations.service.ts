@@ -21,6 +21,7 @@ import {
   resolvePrice,
   weekdayInZone,
 } from '@playslot/domain';
+import { assertInGoodStanding } from '../common/standing';
 import { AppException } from '../common/app-exception';
 import { normalizeLocale } from '../common/i18n';
 import { TurnstileService } from '../common/turnstile.service';
@@ -74,6 +75,7 @@ export class ReservationsService {
     if (source === 'WEB' && !actor.emailVerified) {
       throw new AppException('policy_violation', { reason: 'email_not_verified' });
     }
+    if (source === 'WEB') await assertInGoodStanding(this.prisma, actor.userId);
     if (source === 'WEB' && !(await this.turnstile.verify(input.turnstileToken))) {
       throw new AppException('validation_failed', { fields: { turnstile: ['failed'] } });
     }

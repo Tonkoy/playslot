@@ -11,3 +11,6 @@ export * from './events';
 export * from './group-sessions';
 export * from './org';
 export * from './profile';
+export * from './feedback';
+export * from './moderation';
+export * from './stats';

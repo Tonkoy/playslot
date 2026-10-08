@@ -23,7 +23,8 @@ type AuthMessageKey =
   | 'auth.password_reset'
   | 'auth.reset_sent'
   | 'auth.logged_out'
-  | 'auth.email_taken';
+  | 'auth.email_taken'
+  | 'account.suspended';
 
 const MESSAGES: Record<ApiLocale, Record<MessageKey, string>> = {
   bg: {
@@ -51,6 +52,8 @@ const MESSAGES: Record<ApiLocale, Record<MessageKey, string>> = {
     'auth.reset_sent': 'Ако имейлът съществува, изпратихме връзка за смяна на паролата.',
     'auth.logged_out': 'Излязохте успешно.',
     'auth.email_taken': 'Този имейл вече е регистриран.',
+    'account.suspended':
+      'Профилът ви е ограничен и не може да резервира. Платете такса за възстановяване, за да резервирате отново.',
   },
   en: {
     validation_failed: 'Invalid input.',
@@ -75,6 +78,8 @@ const MESSAGES: Record<ApiLocale, Record<MessageKey, string>> = {
     'auth.reset_sent': 'If the email exists, we sent a password reset link.',
     'auth.logged_out': 'Signed out.',
     'auth.email_taken': 'That email is already registered.',
+    'account.suspended':
+      'Your account is restricted from booking. Pay the reinstatement fee to book again.',
   },
 };
 

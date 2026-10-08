@@ -14,6 +14,7 @@ const CANCELLABLE = ['HOLD', 'PENDING_PAYMENT', 'CONFIRMED'];
 export function MyBookings() {
   const t = useTranslations('MyBookings');
   const tt = useTranslations('Toasts');
+  const st = useTranslations('ReservationStatus');
   const locale = useLocale();
   const router = useRouter();
   const qc = useQueryClient();
@@ -97,7 +98,7 @@ export function MyBookings() {
           color: r.status === 'CANCELLED' ? 'var(--ink-3)' : 'var(--teal)',
         }}
       >
-        {r.status}
+        {st.has(r.status) ? st(r.status) : r.status}
       </span>
       {CANCELLABLE.includes(r.status) && (
         <button

@@ -11,15 +11,20 @@ import { CoachingModule } from './coaching/coaching.module';
 import { CommunityModule } from './community/community.module';
 import { EventsModule } from './events/events.module';
 import { GroupSessionsModule } from './group-sessions/group-sessions.module';
+import { FeedbackModule } from './feedback/feedback.module';
 import { HealthModule } from './health/health.module';
 import { MailModule } from './mail/mail.module';
+import { ModerationModule } from './moderation/moderation.module';
 import { MembershipsModule } from './memberships/memberships.module';
 import { PaymentsModule } from './payments/payments.module';
+import { PricingModule } from './pricing/pricing.module';
 import { ProfileModule } from './profile/profile.module';
+import { PushModule } from './push/push.module';
 import { ProgramsModule } from './programs/programs.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ReservationsModule } from './reservations/reservations.module';
 import { ResourcesModule } from './resources/resources.module';
+import { StatsModule } from './stats/stats.module';
 import { SearchModule } from './search/search.module';
 
 /**
@@ -48,10 +53,15 @@ import { SearchModule } from './search/search.module';
     CoachingModule,
     SearchModule,
     CommunityModule,
+    FeedbackModule,
+    ModerationModule,
+    StatsModule,
     MembershipsModule,
     ProgramsModule,
     GroupSessionsModule,
+    PricingModule,
     ProfileModule,
+    PushModule,
     HealthModule,
   ],
   providers: [

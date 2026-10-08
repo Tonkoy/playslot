@@ -7,6 +7,7 @@ import { Link } from '@/i18n/navigation';
 import { Avatar } from '@/components/Avatar';
 import { GroupSessionsList } from '@/components/GroupSessionsList';
 import { SiteHeader } from '@/components/SiteHeader';
+import { Stars } from '@/components/Stars';
 import { getCoach } from '@/lib/api';
 import { minToHHMM } from '@/lib/tz';
 
@@ -72,6 +73,18 @@ export default async function CoachProfilePage({
     ...(coach.bio ? { description: coach.bio } : {}),
     ...(coach.photoUrl ? { image: coach.photoUrl } : {}),
     ...(coach.languages.length ? { knowsLanguage: coach.languages } : {}),
+    // Only real, first-party ratings from players who attended a session.
+    ...(coach.ratingAvg != null && coach.ratingCount > 0
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: coach.ratingAvg,
+            ratingCount: coach.ratingCount,
+            bestRating: 5,
+            worstRating: 1,
+          },
+        }
+      : {}),
     ...(coach.clubs.length
       ? {
           worksFor: coach.clubs.map((c) => ({
@@ -120,6 +133,16 @@ export default async function CoachProfilePage({
           <Avatar name={coach.name} photoUrl={coach.photoUrl} size={88} />
           <div style={{ minWidth: 0, flex: 1 }}>
             <h1 style={{ fontSize: 'clamp(24px, 4vw, 34px)', fontWeight: 800 }}>{coach.name}</h1>
+            <div style={{ fontSize: 14, color: 'var(--ink-2)', marginTop: 4 }}>
+              {coach.ratingAvg != null ? (
+                <>
+                  <span style={{ color: 'var(--held)' }}>★</span> <strong>{coach.ratingAvg.toFixed(1)}</strong>{' '}
+                  <span style={{ color: 'var(--ink-3)' }}>({t('ratingCount', { count: coach.ratingCount })})</span>
+                </>
+              ) : (
+                <span style={{ color: 'var(--ink-3)' }}>{t('noRatingsYet')}</span>
+              )}
+            </div>
             <div className="mono" style={{ color: 'var(--ink-3)', fontSize: 13, marginTop: 4 }}>
               {[
                 coach.clubs.map((c) => c.name).join(' · '),
@@ -201,6 +224,26 @@ export default async function CoachProfilePage({
           ))}
         </div>
         <p style={{ color: 'var(--ink-3)', fontSize: 13, marginTop: 20 }}>{t('bookHint')}</p>
+
+        {(coach.recentFeedback?.length ?? 0) > 0 && (
+          <>
+            <h2 style={{ fontSize: 20, fontWeight: 700, margin: '24px 0 10px' }}>{t('feedbackTitle')}</h2>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {coach.recentFeedback!.map((f) => (
+                <div key={f.id} style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                    <Stars value={f.rating} />
+                    <span className="mono" style={{ color: 'var(--ink-3)', fontSize: 12 }}>
+                      {f.authorName} ·{' '}
+                      {new Intl.DateTimeFormat(locale === 'bg' ? 'bg-BG' : 'en-US', { dateStyle: 'medium' }).format(new Date(f.createdAt))}
+                    </span>
+                  </div>
+                  {f.comment && <p style={{ color: 'var(--ink-2)', marginTop: 6, fontSize: 14 }}>{f.comment}</p>}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
 
         <GroupSessionsList coachProfileId={coach.coachProfileId} />
       </main>

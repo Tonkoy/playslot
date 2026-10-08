@@ -3,22 +3,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState } from 'react';
-import type { AvailabilitySlot, SlotState } from '@playslot/contracts';
+import type { AvailabilitySlot } from '@playslot/contracts';
 import { Link, usePathname } from '@/i18n/navigation';
 import { Modal } from '@/components/Modal';
 import { useToast } from '@/components/Toast';
 import { CLIENT_BASE, coachesForClub, createReservation, fetchAvailability, getMe } from '@/lib/api';
-
-// State → design token + non-color cue (icon). Never color-only (spec §7/§20).
-const STATE_STYLE: Record<SlotState, { bg: string; fg: string; icon: string; bookable: boolean }> = {
-  FREE: { bg: 'var(--free-soft)', fg: 'var(--free)', icon: '✓', bookable: true },
-  RESERVED: { bg: 'var(--reserved-soft)', fg: 'var(--reserved)', icon: '×', bookable: false },
-  MINE: { bg: 'var(--teal-soft)', fg: 'var(--teal)', icon: '★', bookable: false },
-  UNAVAILABLE: { bg: 'var(--booked-soft)', fg: 'var(--ink-3)', icon: '–', bookable: false },
-  PAST: { bg: 'var(--booked-soft)', fg: 'var(--ink-3)', icon: '·', bookable: false },
-  EVENT: { bg: 'var(--event-soft)', fg: 'var(--event)', icon: '◆', bookable: false },
-  TOURNAMENT: { bg: 'var(--event-soft)', fg: 'var(--event)', icon: '⚑', bookable: false },
-};
+import { SLOT_STYLE, stateTagStyle } from '@/lib/slotStates';
 
 function shiftDate(iso: string, days: number): string {
   const [y, m, d] = iso.split('-').map(Number);
@@ -279,16 +269,17 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
                   {courts.map((c) => {
                     const slot = byKey.get(`${c.id}@${time}`);
                     if (!slot) return <td key={c.id} style={{ ...cell, background: 'var(--ground)' }} aria-hidden />;
-                    const s = STATE_STYLE[slot.state];
+                    const s = SLOT_STYLE[slot.state];
                     const isSelected =
                       selected?.resourceId === c.id && selected?.start === slot.start;
                     const inner = (
                       <>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                          <span aria-hidden className="mono" style={{ color: s.fg, fontWeight: 700 }}>
+                        {/* Solid, filled state tag — colour plus icon plus label. */}
+                        <span style={stateTagStyle(s)}>
+                          <span aria-hidden className="mono" style={{ fontWeight: 700 }}>
                             {s.icon}
                           </span>
-                          <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{st(slot.state)}</span>
+                          {st(slot.state)}
                         </span>
                         {s.bookable && slot.priceCents != null && (
                           <span style={{ fontWeight: 700, fontSize: 14 }}>
@@ -298,16 +289,20 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
                       </>
                     );
                     const boxStyle: React.CSSProperties = {
-                      background: s.bg,
+                      background: s.soft,
                       border: '1px solid var(--line)',
+                      // A solid bar in the state's colour, so a column reads at a glance.
+                      borderLeft: `4px solid ${s.solid}`,
                       borderRadius: 'var(--radius-sm)',
-                      padding: '8px 8px',
+                      padding: '8px 8px 8px 7px',
                       minHeight: 52,
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: 2,
+                      alignItems: 'flex-start',
+                      gap: 4,
                       width: '100%',
                       textAlign: 'left',
+                      opacity: s.recessive ? 0.85 : 1,
                     };
                     return (
                       <td key={c.id} style={cell}>
@@ -333,9 +328,10 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
                               color: 'var(--ink)',
                               ...(isSelected
                                 ? {
-                                    background: 'var(--teal-soft)',
-                                    border: '2px solid var(--teal)',
-                                    padding: '7px 7px',
+                                    background: 'var(--free-soft)',
+                                    border: '2px solid var(--free)',
+                                    borderLeft: '6px solid var(--free)',
+                                    padding: '7px 7px 7px 5px',
                                   }
                                 : {}),
                             }}

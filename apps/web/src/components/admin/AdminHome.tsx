@@ -5,7 +5,9 @@ import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
 import { Link, useRouter } from '@/i18n/navigation';
 import { getMe, getMyClubs } from '@/lib/api';
+import { AdminStats } from './AdminStats';
 import { PlatformConsole } from './PlatformConsole';
+import { UsersModeration } from './UsersModeration';
 
 export function AdminHome() {
   const t = useTranslations('Admin');
@@ -27,7 +29,9 @@ export function AdminHome() {
         {t('signedInAs', { email: me.data!.user.email })}
       </p>
 
+      {isPlatform && <AdminStats scope="platform" />}
       {isPlatform && <PlatformConsole />}
+      {isPlatform && <UsersModeration />}
 
       <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>{t('yourClubs')}</h2>
 

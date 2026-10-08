@@ -3,6 +3,7 @@ import type { ServerEnv } from '@playslot/config';
 import { type CreateGroupSessionInput, type GroupSessionDto } from '@playslot/contracts';
 import { formatInZone } from '@playslot/domain';
 import { normalizeLocale } from '../common/i18n';
+import { assertInGoodStanding } from '../common/standing';
 import { AppException } from '../common/app-exception';
 import { SERVER_ENV } from '../config/app-config.module';
 import { MailService } from '../mail/mail.service';
@@ -104,6 +105,7 @@ export class GroupSessionsService {
     });
     if (!session || session.cancelledAt) throw new AppException('not_found');
     if (session.endsAt <= new Date()) throw new AppException('policy_violation', { reason: 'ended' });
+    await assertInGoodStanding(this.prisma, userId);
 
     try {
       return await this.prisma.$transaction(async (tx) => {

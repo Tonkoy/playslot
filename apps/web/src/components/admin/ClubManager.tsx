@@ -7,7 +7,10 @@ import { SPORTS } from '@playslot/contracts';
 import { Link, useRouter } from '@/i18n/navigation';
 import { ClosuresManager } from './ClosuresManager';
 import { ClubDetailsEditor } from './ClubDetailsEditor';
+import { PriceRulesManager } from './PriceRulesManager';
+import { AdminStats } from './AdminStats';
 import { ClubExport } from './ClubExport';
+import { ClubFeedback } from './ClubFeedback';
 import { EventManager } from './EventManager';
 import { MembershipManager } from './MembershipManager';
 import { TeamManager } from './TeamManager';
@@ -143,6 +146,9 @@ export function ClubManager({ clubId }: { clubId: number }) {
         </div>
       </div>
 
+      {/* ── Summary (club admins) ── */}
+      {(isPlatform || membership?.role === 'CLUB_ADMIN') && <AdminStats scope="club" clubId={clubId} />}
+
       {/* ── Club profile ── */}
       {club && <ClubDetailsEditor clubId={clubId} club={club} />}
 
@@ -184,6 +190,12 @@ export function ClubManager({ clubId }: { clubId: number }) {
           </p>
         )}
       </section>
+
+      {/* ── Prices ── */}
+      <PriceRulesManager clubId={clubId} />
+
+      {/* ── Player feedback on past sessions ── */}
+      <ClubFeedback clubId={clubId} />
 
       {/* ── Booking lengths offered to players ── */}
       <section style={card}>

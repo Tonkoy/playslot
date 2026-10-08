@@ -16,6 +16,11 @@ export interface CoachListItem {
   services: CoachServiceDto[];
   /** Weekly working hours (0=Sun…6=Sat); present on the single-coach view. */
   workingHours?: { weekday: number; startMin: number; endMin: number }[];
+  /** Average player rating (1 decimal) from session feedback; null = none yet. */
+  ratingAvg: number | null;
+  ratingCount: number;
+  /** Recent written feedback; present on the single-coach view. */
+  recentFeedback?: import('./feedback').CoachFeedbackDto[];
 }
 
 /** The coach's own editable public profile. */

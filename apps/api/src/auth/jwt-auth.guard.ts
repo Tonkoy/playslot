@@ -47,7 +47,8 @@ export class JwtAuthGuard implements CanActivate {
       where: { id: payload.sub },
       include: { roles: true },
     });
-    if (!user) {
+    // Deleted (anonymized) accounts lose every session they still hold.
+    if (!user || user.deletedAt) {
       if (isPublic) return true;
       throw new AppException('unauthenticated');
     }

@@ -111,6 +111,62 @@ export interface Me {
   roles: string[];
 }
 
+type PriceRuleDto = import('@playslot/contracts').PriceRuleDto;
+type UpsertPriceRuleInput = import('@playslot/contracts').UpsertPriceRuleInput;
+
+export function adminListPriceRules(clubId: number): Promise<PriceRuleDto[]> {
+  return apiFetch(`/clubs/${clubId}/price-rules`);
+}
+
+export function adminCreatePriceRule(
+  clubId: number,
+  input: UpsertPriceRuleInput,
+): Promise<PriceRuleDto> {
+  return apiFetch(`/clubs/${clubId}/price-rules`, { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function adminUpdatePriceRule(
+  clubId: number,
+  ruleId: number,
+  input: UpsertPriceRuleInput,
+): Promise<PriceRuleDto> {
+  return apiFetch(`/clubs/${clubId}/price-rules/${ruleId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
+export function adminDeletePriceRule(clubId: number, ruleId: number): Promise<{ ok: true }> {
+  return apiFetch(`/clubs/${clubId}/price-rules/${ruleId}`, { method: 'DELETE' });
+}
+
+export function adminPreviewPrice(
+  clubId: number,
+  query: { date: string; startMin: number; durationMin: number; resourceId?: number },
+): Promise<import('@playslot/contracts').PricePreviewDto> {
+  const qs = new URLSearchParams({
+    date: query.date,
+    startMin: String(query.startMin),
+    durationMin: String(query.durationMin),
+    ...(query.resourceId ? { resourceId: String(query.resourceId) } : {}),
+  });
+  return apiFetch(`/clubs/${clubId}/price-rules/preview?${qs.toString()}`);
+}
+
+export function getPushConfig(): Promise<import('@playslot/contracts').PushConfigDto> {
+  return apiFetch('/me/push');
+}
+
+export function subscribePush(
+  input: import('@playslot/contracts').PushSubscribeInput,
+): Promise<{ ok: true }> {
+  return apiFetch('/me/push', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function unsubscribePush(endpoint: string): Promise<{ ok: true }> {
+  return apiFetch('/me/push', { method: 'DELETE', body: JSON.stringify({ endpoint }) });
+}
+
 export function getMyUserProfile(): Promise<import('@playslot/contracts').UserProfileDto> {
   return apiFetch('/me/profile');
 }
@@ -567,4 +623,57 @@ export async function fetchAvailability(params: {
     throw new Error(body?.message ?? `Availability request failed (${res.status})`);
   }
   return (await res.json()) as AvailabilityResponse;
+}
+
+// ── session feedback (player) + club view ──
+export function getMyFeedback(): Promise<import('@playslot/contracts').FeedbackItemDto[]> {
+  return apiFetch('/me/feedback');
+}
+export function submitFeedback(input: import('@playslot/contracts').FeedbackInput): Promise<{ ok: true }> {
+  return apiFetch('/me/feedback', { method: 'POST', body: JSON.stringify(input) });
+}
+export function adminGetClubFeedback(clubId: number): Promise<import('@playslot/contracts').ClubFeedbackDto> {
+  return apiFetch(`/clubs/${clubId}/feedback`);
+}
+
+// ── account standing + platform moderation ──
+export function getMyStanding(): Promise<import('@playslot/contracts').AccountStandingDto> {
+  return apiFetch('/me/standing');
+}
+export function platformListUsers(q: string, onlySuspended: boolean): Promise<import('@playslot/contracts').PlatformUserDto[]> {
+  const qs = new URLSearchParams();
+  if (q.trim()) qs.set('q', q.trim());
+  if (onlySuspended) qs.set('suspended', '1');
+  return apiFetch(`/platform/users?${qs.toString()}`);
+}
+export function platformSuspendUser(
+  id: number,
+  input: import('@playslot/contracts').SuspendUserInput,
+): Promise<{ ok: true; cancelled: number }> {
+  return apiFetch(`/platform/users/${id}/suspend`, { method: 'POST', body: JSON.stringify(input) });
+}
+export function platformReinstateUser(id: number, feePaid: boolean): Promise<{ ok: true }> {
+  return apiFetch(`/platform/users/${id}/reinstate`, { method: 'POST', body: JSON.stringify({ feePaid }) });
+}
+export function platformVerifyUserEmail(id: number): Promise<{ ok: true; alreadyVerified: boolean }> {
+  return apiFetch(`/platform/users/${id}/verify-email`, { method: 'POST' });
+}
+export function platformDeleteUser(id: number, note?: string): Promise<import('@playslot/contracts').DeleteUserResultDto> {
+  return apiFetch(`/platform/users/${id}`, { method: 'DELETE', body: JSON.stringify({ note }) });
+}
+
+// ── admin dashboard stats ──
+export function getAdminStats(args: {
+  from?: string;
+  to?: string;
+  /** Platform view: optional club filter. Club view: required, uses the club endpoint. */
+  clubId?: number;
+  scope: 'platform' | 'club';
+}): Promise<import('@playslot/contracts').AdminStatsDto> {
+  const qs = new URLSearchParams();
+  if (args.from) qs.set('from', args.from);
+  if (args.to) qs.set('to', args.to);
+  if (args.scope === 'platform' && args.clubId) qs.set('clubId', String(args.clubId));
+  const base = args.scope === 'club' ? `/clubs/${args.clubId}/stats` : '/platform/stats';
+  return apiFetch(`${base}?${qs.toString()}`);
 }

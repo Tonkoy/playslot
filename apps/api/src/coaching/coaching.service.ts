@@ -58,8 +58,23 @@ export class CoachingService {
       where: { coachProfileId, type: 'COACH' },
       select: { availabilityRules: { orderBy: [{ weekday: 'asc' }, { startMin: 'asc' }] } },
     });
+    // Only written feedback is worth showing; ratings alone live in the average.
+    const recent = await this.prisma.sessionFeedback.findMany({
+      where: { coachProfileId, comment: { not: null } },
+      select: { id: true, rating: true, comment: true, createdAt: true, user: { select: { name: true, deletedAt: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    });
     return {
       ...mapped!,
+      recentFeedback: recent.map((f) => ({
+        id: f.id,
+        rating: f.rating,
+        comment: f.comment,
+        // First name only: public page, and the player never opted into more.
+        authorName: f.user.deletedAt ? '—' : (f.user.name.split(' ')[0] ?? f.user.name),
+        createdAt: f.createdAt.toISOString(),
+      })),
       workingHours: (resource?.availabilityRules ?? []).map((r) => ({
         weekday: r.weekday,
         startMin: r.startMin,
@@ -89,6 +104,13 @@ export class CoachingService {
       select: { id: true, name: true, slug: true },
     });
     const byId = new Map(clubs.map((c) => [c.id, c]));
+    const ratings = await this.prisma.sessionFeedback.groupBy({
+      by: ['coachProfileId'],
+      where: { coachProfileId: { in: coaches.map((c) => c.id) } },
+      _avg: { rating: true },
+      _count: { _all: true },
+    });
+    const ratingById = new Map(ratings.map((r) => [r.coachProfileId, r]));
     return coaches.map((c) => ({
       coachProfileId: c.id,
       name: c.user?.name ?? 'Coach',
@@ -100,6 +122,11 @@ export class CoachingService {
       levels: c.levels,
       worksWith: c.worksWith,
       clubs: c.clubs.map((x) => byId.get(x.clubId)).filter((x): x is NonNullable<typeof x> => !!x),
+      ratingAvg:
+        ratingById.get(c.id)?._avg.rating != null
+          ? Math.round(ratingById.get(c.id)!._avg.rating! * 10) / 10
+          : null,
+      ratingCount: ratingById.get(c.id)?._count._all ?? 0,
       services: c.services.map((s) => ({
         id: s.id,
         name: s.name,

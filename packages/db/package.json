@@ -20,6 +20,7 @@
     "migrate:deploy": "prisma migrate deploy",
     "migrate:status": "prisma migrate status",
     "seed": "tsx prisma/seed.ts",
+    "seed:360": "tsx prisma/seed-360.ts",
     "studio": "prisma studio",
     "db:backup": "tsx scripts/backup.ts",
     "db:restore": "tsx scripts/restore.ts",

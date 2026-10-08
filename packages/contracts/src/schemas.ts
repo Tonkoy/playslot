@@ -161,10 +161,76 @@ export const upsertCourtSchema = z.object({
   isIndoor: z.boolean().optional(),
   hasLighting: z.boolean().optional(),
   minReservationMin: z.number().int().min(15).max(240).default(60),
-  slotIntervalMin: z.number().int().min(15).max(120).default(30),
+  slotIntervalMin: z.number().int().min(15).max(120).default(60),
   allowHalfHour: z.boolean().default(false),
 });
 export type UpsertCourtInput = z.infer<typeof upsertCourtSchema>;
+
+/**
+ * A club's price rule. Every field except the price narrows *when* the rule
+ * applies; leaving one null means "any". Overlaps are resolved by priority,
+ * then specificity, then recency — see resolvePrice in @playslot/domain.
+ */
+export const upsertPriceRuleSchema = z
+  .object({
+    /** Null = every court in the club. */
+    resourceId: z.number().int().positive().nullish(),
+    /** Null = court rental rather than a coaching service. */
+    serviceId: z.number().int().positive().nullish(),
+    /** Bitmask, bit i = weekday i (0=Sun … 6=Sat). Null = every day. */
+    weekdayMask: z.number().int().min(0).max(127).nullish(),
+    /** Minutes from local midnight; both or neither. Null = all day. */
+    startMin: z.number().int().min(0).max(1440).nullish(),
+    endMin: z.number().int().min(0).max(1440).nullish(),
+    /** Season window. Null = always in season. */
+    validFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
+    validUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
+    /** The duration the price is quoted for; other lengths are pro-rated. */
+    durationMin: z.number().int().min(15).max(480).default(60),
+    priceCents: z.number().int().min(0).max(10_000_00),
+    priority: z.number().int().min(0).max(1000).default(0),
+    active: z.boolean().default(true),
+  })
+  .refine((r) => (r.startMin == null) === (r.endMin == null), {
+    message: 'start_and_end_together',
+    path: ['endMin'],
+  })
+  .refine((r) => r.startMin == null || r.endMin == null || r.startMin < r.endMin, {
+    message: 'end_after_start',
+    path: ['endMin'],
+  })
+  .refine((r) => !r.validFrom || !r.validUntil || r.validFrom <= r.validUntil, {
+    message: 'until_after_from',
+    path: ['validUntil'],
+  });
+export type UpsertPriceRuleInput = z.infer<typeof upsertPriceRuleSchema>;
+
+export interface PriceRuleDto {
+  id: number;
+  resourceId: number | null;
+  resourceName: string | null;
+  serviceId: number | null;
+  weekdayMask: number | null;
+  startMin: number | null;
+  endMin: number | null;
+  validFrom: string | null; // YYYY-MM-DD
+  validUntil: string | null;
+  durationMin: number | null;
+  priceCents: number;
+  currency: string;
+  priority: number;
+  active: boolean;
+}
+
+/** "What would this slot cost?" — runs the real engine over the club's rules. */
+export interface PricePreviewDto {
+  priceCents: number | null;
+  currency: string;
+  /** Which rule won, so the admin can see why. */
+  ruleId: number | null;
+  /** Set when no rule matches — that slot would be unbookable. */
+  error: string | null;
+}
 
 export const availabilityRuleSchema = z.object({
   weekday: z.number().int().min(0).max(6),

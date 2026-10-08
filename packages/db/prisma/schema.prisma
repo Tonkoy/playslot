@@ -101,6 +101,13 @@ enum PaymentStatus {
   PARTIALLY_REFUNDED
 }
 
+/// Why a platform admin restricted an account (lifted by the reinstatement fee).
+enum SuspensionReason {
+  NO_SHOW
+  NON_PAYMENT
+  OTHER
+}
+
 enum ClubStatus {
   PENDING
   ACTIVE
@@ -140,6 +147,15 @@ model User {
   subscribed      Boolean   @default(false) // newsletter / marketing opt-in
   notifyByEmail   Boolean   @default(true) // transactional email notifications on/off
 
+  // Moderation (platform admin). A suspended account can sign in but cannot
+  // book until the reinstatement fee is settled; a deleted one is anonymized
+  // (kept only so club books and invoices stay consistent) and cannot sign in.
+  suspendedAt           DateTime?
+  suspensionReason      SuspensionReason?
+  suspensionNote        String?
+  reinstatementFeeCents Int? // owed to lift the suspension (10 € by default)
+  deletedAt             DateTime?
+
   roles         UserRole[]
   memberships   ClubMember[]
   coachProfile  CoachProfile?
@@ -148,10 +164,12 @@ model User {
   tokens        VerificationToken[]
   oauthAccounts OAuthAccount[]
   favorites     Favorite[]
+  pushSubscriptions PushSubscription[]
   reviews       Review[]
   membershipSubscriptions Membership[]
   eventRegistrations EventRegistration[]
   groupSessionRegistrations GroupSessionRegistration[]
+  sessionFeedback SessionFeedback[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -290,6 +308,23 @@ model PlayerProfile {
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+/// A browser's Web Push endpoint. One row per browser/device a user allows
+/// notifications on; the endpoint is the unique identity the push service
+/// gives us, and a 410/404 from that service means we should delete the row.
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  endpoint  String   @unique
+  p256dh    String // client public key for payload encryption
+  auth      String // client auth secret
+  userAgent String? // so a user can tell their devices apart
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
 model VerificationToken {
   id        Int                 @id @default(autoincrement())
   userId    Int
@@ -347,6 +382,7 @@ model Club {
   memberships     Membership[]
   events          Event[]
   groupSessions   GroupSession[]
+  sessionFeedback SessionFeedback[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -384,7 +420,7 @@ model Resource {
   isIndoor          Boolean?
   hasLighting       Boolean?
   minReservationMin Int            @default(60)
-  slotIntervalMin   Int            @default(30)
+  slotIntervalMin   Int            @default(60) // 60 unless a club explicitly sets finer granularity
   allowHalfHour     Boolean        @default(false)
   coachProfileId    Int? // when type = COACH
 
@@ -420,6 +456,7 @@ model CoachProfile {
   clubs         CoachClub[]
   resources     Resource[]
   groupSessions GroupSession[]
+  feedback      SessionFeedback[]
 }
 
 // A coach-hosted open group session (spec §10/§22): backed by a real reservation
@@ -443,10 +480,38 @@ model GroupSession {
   club          Club                       @relation(fields: [clubId], references: [id])
   reservation   Reservation                @relation(fields: [reservationId], references: [id], onDelete: Cascade)
   registrations GroupSessionRegistration[]
+  feedback      SessionFeedback[]
 
   @@index([coachProfileId])
   @@index([clubId])
   @@index([startsAt])
+}
+
+/// A player's rating of something they actually attended: a past court/lesson
+/// booking or a group training. Exactly one of reservationId / groupSessionId
+/// is set; coachProfileId is resolved server-side so coach ratings aggregate.
+model SessionFeedback {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  clubId         Int
+  reservationId  Int?
+  groupSessionId Int?
+  coachProfileId Int?
+  rating         Int // 1–5
+  comment        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  club         Club          @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  reservation  Reservation?  @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  groupSession GroupSession? @relation(fields: [groupSessionId], references: [id], onDelete: Cascade)
+  coach        CoachProfile? @relation(fields: [coachProfileId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, reservationId])
+  @@unique([userId, groupSessionId])
+  @@index([coachProfileId])
+  @@index([clubId])
 }
 
 model GroupSessionRegistration {
@@ -563,6 +628,7 @@ model Reservation {
   resources    ReservationResource[]
   payment      Payment?
   groupSession GroupSession?
+  feedback     SessionFeedback[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

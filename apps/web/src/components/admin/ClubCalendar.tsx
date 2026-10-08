@@ -31,13 +31,19 @@ function shiftDate(iso: string, days: number): string {
   return dt.toISOString().slice(0, 10);
 }
 
+/**
+ * Status → solid step + tint, from the same slot-state tokens the public
+ * schedule uses: a booked slot is blue, awaiting payment amber, a block or
+ * no-show neutral. The status text is never the only cue (the row also shows
+ * the customer and a paid mark).
+ */
 const STATUS_STYLE: Record<string, { bg: string; fg: string }> = {
-  CONFIRMED: { bg: 'var(--teal-soft)', fg: 'var(--teal)' },
+  CONFIRMED: { bg: 'var(--mine-soft)', fg: 'var(--mine)' },
   HOLD: { bg: 'var(--held-soft)', fg: 'var(--held)' },
   PENDING_PAYMENT: { bg: 'var(--held-soft)', fg: 'var(--held)' },
-  BLOCK: { bg: 'var(--booked-soft)', fg: 'var(--ink-3)' },
-  NO_SHOW: { bg: 'var(--booked-soft)', fg: 'var(--ink-3)' },
-  COMPLETED: { bg: 'var(--surface-2)', fg: 'var(--ink-3)' },
+  BLOCK: { bg: 'var(--booked-soft)', fg: 'var(--booked)' },
+  NO_SHOW: { bg: 'var(--reserved-soft)', fg: 'var(--reserved)' },
+  COMPLETED: { bg: 'var(--past-soft)', fg: 'var(--past)' },
 };
 
 type Selection =
@@ -47,6 +53,7 @@ type Selection =
 
 export function ClubCalendar({ clubId }: { clubId: number }) {
   const t = useTranslations('Calendar');
+  const st = useTranslations('ReservationStatus');
   const qc = useQueryClient();
   const [date, setDate] = useState(todayIso());
   const [selection, setSelection] = useState<Selection>(null);
@@ -220,13 +227,14 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
       {/* Legend */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, margin: '0 0 14px', fontSize: 12.5, color: 'var(--ink-2)' }}>
         {[
-          { bg: 'var(--green-soft)', border: 'var(--green)', label: t('legendFree') },
-          { bg: 'var(--teal-soft)', border: 'var(--teal)', label: t('legendBooked') },
-          { bg: 'var(--held-soft)', border: 'var(--held)', label: t('legendHold') },
-          { bg: 'var(--booked-soft)', border: 'var(--line-2)', label: t('legendBlocked') },
+          { solid: 'var(--free)', label: t('legendFree') },
+          { solid: 'var(--mine)', label: t('legendBooked') },
+          { solid: 'var(--held)', label: t('legendHold') },
+          { solid: 'var(--booked)', label: t('legendBlocked') },
         ].map((l) => (
           <span key={l.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <i style={{ width: 11, height: 11, borderRadius: 3, background: l.bg, border: `1px solid ${l.border}`, display: 'inline-block' }} />
+            {/* Solid swatch: the same step the cells are barred with. */}
+            <i style={{ width: 12, height: 12, borderRadius: 3, background: l.solid, display: 'inline-block' }} />
             {l.label}
           </span>
         ))}
@@ -280,10 +288,11 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
                               background: s.bg,
                               border:
                                 selection?.kind === 'entry' && selection.entry.id === hit.entry.id
-                                  ? '2px solid var(--teal)'
-                                  : `1px solid ${s.fg}`,
+                                  ? '2px solid var(--green-deep)'
+                                  : '1px solid var(--line)',
+                              borderLeft: `4px solid ${s.fg}`,
                               borderRadius: 'var(--radius-sm)',
-                              padding: '6px 8px',
+                              padding: '6px 8px 6px 7px',
                               cursor: 'pointer',
                               color: 'var(--ink)',
                             }}
@@ -291,8 +300,8 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
                             <span style={{ fontSize: 12, fontWeight: 700 }}>
                               {hit.entry.type === 'BLOCK' ? `⛔ ${t('block')}` : hit.entry.customerName ?? t('booking')}
                             </span>
-                            <span className="mono" style={{ display: 'block', fontSize: 10.5, color: s.fg }}>
-                              {hit.entry.status}
+                            <span className="mono" style={{ display: 'block', fontSize: 10.5, color: s.fg, fontWeight: 700 }}>
+                              {st.has(hit.entry.status) ? st(hit.entry.status) : hit.entry.status}
                               {hit.entry.type !== 'BLOCK' && (paid ? ' · ✓' : ' · •')}
                             </span>
                           </button>
@@ -310,13 +319,13 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
                             minHeight: 40,
                             background:
                               selection?.kind === 'free' && selection.courtId === c.id && selection.startMin === min
-                                ? 'var(--teal-soft)'
+                                ? 'var(--free-soft)'
                                 : moveEntry
                                   ? 'var(--free-soft)'
-                                  : 'var(--green-soft)',
+                                  : 'var(--surface-2)',
                             border:
                               selection?.kind === 'free' && selection.courtId === c.id && selection.startMin === min
-                                ? '2px solid var(--teal)'
+                                ? '2px solid var(--free)'
                                 : '1px dashed var(--line-2)',
                             borderRadius: 'var(--radius-sm)',
                             cursor: 'pointer',

@@ -30,17 +30,31 @@
   --clay: #d95b2e; /* secondary highlight / destructive-leaning actions */
   --clay-soft: #fbe4d8;
 
-  /* slot-state semantics */
-  --free: #1e6b47; /* reuses the brand green — a free slot is the "on brand" state */
-  --free-soft: #e7f3ea;
-  --held: #c98a06;
+  /*
+   * Slot-state semantics. Each state has a SOLID step (used as a filled chip or
+   * bar; white text on top clears 4.5:1) and a SOFT tint (used as a cell wash,
+   * dark ink on top). Hues are kept apart — green / red / blue / amber / violet
+   * / neutral — but colour is never the only cue: every chip also carries its
+   * icon and its label (spec §7/§20).
+   */
+  --on-state: #ffffff; /* text/icon on any solid state step */
+
+  --free: #1a6b45; /* brand green — a free slot is the "on brand" state */
+  --free-soft: #dfeae5;
+  --reserved: #c43c2c; /* taken by someone else */
+  --reserved-soft: #f7e4e1;
+  --mine: #1f6fb5; /* my own booking — blue, never confused with "free" */
+  --mine-soft: #e0ebf5;
+  --event: #8f6209; /* club event */
+  --event-soft: #efe9dd;
+  --tournament: #7a4fc4; /* tournament */
+  --tournament-soft: #ece6f7;
+  --held: #c98a06; /* on hold / awaiting payment */
   --held-soft: #f6eacb;
-  --booked: #8b948e;
-  --booked-soft: #ecefea;
-  --reserved: #c94a3a;
-  --reserved-soft: #fbe3de;
-  --event: #6e5ac9;
-  --event-soft: #e9e4fb;
+  --booked: #667068; /* unavailable — deliberately neutral */
+  --booked-soft: #eaebea;
+  --past: #7c877f; /* in the past — the most recessive state */
+  --past-soft: #f1f3f1;
 
   --radius: 18px;
   --radius-sm: 12px;

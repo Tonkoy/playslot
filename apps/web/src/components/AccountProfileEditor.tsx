@@ -3,14 +3,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
+import { PLAYER_LEVELS, type PlayerLevel } from '@playslot/contracts';
 import { getMyUserProfile, updateMyUserProfile } from '@/lib/api';
 import { Avatar } from './Avatar';
+import { PushNotificationToggle } from './PushNotificationToggle';
 import { useToast } from './Toast';
 
 /** A user's own account settings: name, avatar, bio, notification + newsletter prefs. */
 export function AccountProfileEditor() {
   const t = useTranslations('AccountSettings');
   const tt = useTranslations('Toasts');
+  const lv = useTranslations('Levels');
   const qc = useQueryClient();
   const toast = useToast();
 
@@ -20,6 +23,8 @@ export function AccountProfileEditor() {
   const [bio, setBio] = useState('');
   const [notify, setNotify] = useState(true);
   const [subscribed, setSubscribed] = useState(false);
+  const [level, setLevel] = useState<PlayerLevel | null>(null);
+  const [phone, setPhone] = useState('');
 
   useEffect(() => {
     if (!profile.data) return;
@@ -28,6 +33,8 @@ export function AccountProfileEditor() {
     setBio(profile.data.bio ?? '');
     setNotify(profile.data.notifyByEmail);
     setSubscribed(profile.data.subscribed);
+    setLevel(profile.data.level);
+    setPhone(profile.data.phone ?? '');
   }, [profile.data]);
 
   const save = useMutation({
@@ -38,6 +45,8 @@ export function AccountProfileEditor() {
         bio: bio.trim(),
         notifyByEmail: notify,
         subscribed,
+        level,
+        phone: phone.trim(),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['userProfile'] });
@@ -64,12 +73,70 @@ export function AccountProfileEditor() {
         <input value={name} onChange={(e) => setName(e.target.value)} style={input} />
       </label>
 
+      <label style={{ ...field, marginBottom: 12 }}>
+        {t('phone')}
+        <input
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder={t('phonePlaceholder')}
+          style={input}
+        />
+        <span style={{ color: 'var(--ink-3)', fontSize: 12 }}>{t('phoneHelp')}</span>
+      </label>
+
       <label style={{ ...field, marginBottom: 4 }}>
         {t('bio')}
         <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} style={{ ...input, minHeight: 76, padding: '8px 10px', resize: 'vertical' }} />
       </label>
 
-      <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+      {/* ── playing level ── */}
+      <fieldset style={{ border: 0, padding: 0, margin: '18px 0 0' }}>
+        <legend style={{ fontWeight: 600, fontSize: 14, padding: 0 }}>{t('levelTitle')}</legend>
+        <p style={{ color: 'var(--ink-3)', fontSize: 12, margin: '4px 0 10px' }}>{t('levelHelp')}</p>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {PLAYER_LEVELS.map((value) => {
+            const on = level === value;
+            const description = t(DESC_KEY[value]);
+            return (
+              <button
+                key={value}
+                type="button"
+                // Clicking the active level clears it — "not set" is a valid
+                // answer, and there is no other control to get back to it.
+                onClick={() => setLevel(on ? null : value)}
+                aria-pressed={on}
+                // Native tooltip on hover, and the same text is rendered below
+                // for the chosen level so touch users and screen readers get it.
+                title={description}
+                style={{
+                  minHeight: 40,
+                  padding: '0 16px',
+                  borderRadius: 'var(--pill)',
+                  border: `2px solid ${on ? 'var(--green-deep)' : 'var(--line-2)'}`,
+                  background: on ? 'var(--lime)' : 'var(--surface)',
+                  color: on ? 'var(--on-lime)' : 'var(--ink)',
+                  fontWeight: 600,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                }}
+              >
+                {lv(value)}
+              </button>
+            );
+          })}
+        </div>
+        <p style={{ color: 'var(--ink-2)', fontSize: 13, margin: '10px 0 0', minHeight: 34 }}>
+          {level ? t(DESC_KEY[level]) : t('levelNone')}
+        </p>
+      </fieldset>
+
+      <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
+        {/* Browser push is per-device and saves itself, so it sits outside the
+            form's Save button rather than pretending to be part of it. */}
+        <PushNotificationToggle />
         <label style={toggleRow}>
           <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
           <span>
@@ -118,3 +185,10 @@ const input: React.CSSProperties = {
   fontFamily: 'inherit',
 };
 const toggleRow: React.CSSProperties = { display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer' };
+
+/** Level → the AccountSettings key holding its plain-language description. */
+const DESC_KEY: Record<PlayerLevel, 'levelBeginnerDesc' | 'levelIntermediateDesc' | 'levelAdvancedDesc'> = {
+  beginner: 'levelBeginnerDesc',
+  intermediate: 'levelIntermediateDesc',
+  advanced: 'levelAdvancedDesc',
+};

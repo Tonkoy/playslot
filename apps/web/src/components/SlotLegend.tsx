@@ -1,18 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { SLOT_STATES, type SlotState } from '@playslot/contracts';
-
-// Each slot state → design token + a non-color cue (icon), per spec §7/§20.
-const STATE_STYLE: Record<SlotState, { bg: string; fg: string; icon: string }> = {
-  FREE: { bg: 'var(--free-soft)', fg: 'var(--free)', icon: '✓' },
-  RESERVED: { bg: 'var(--reserved-soft)', fg: 'var(--reserved)', icon: '×' },
-  MINE: { bg: 'var(--teal-soft)', fg: 'var(--teal)', icon: '★' },
-  UNAVAILABLE: { bg: 'var(--booked-soft)', fg: 'var(--ink-3)', icon: '–' },
-  PAST: { bg: 'var(--booked-soft)', fg: 'var(--ink-3)', icon: '·' },
-  EVENT: { bg: 'var(--event-soft)', fg: 'var(--event)', icon: '◆' },
-  TOURNAMENT: { bg: 'var(--event-soft)', fg: 'var(--event)', icon: '⚑' },
-};
+import { SLOT_STATES } from '@playslot/contracts';
+import { SLOT_STYLE } from '@/lib/slotStates';
 
 /** Compact legend of the slot-state colours/icons, shown above a schedule grid. */
 export function SlotLegend() {
@@ -21,12 +11,15 @@ export function SlotLegend() {
 
   return (
     <section style={{ margin: '4px 0 14px' }}>
-      <div className="mono" style={{ fontSize: 12, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+      <div
+        className="mono"
+        style={{ fontSize: 12, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}
+      >
         {t('title')}
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         {SLOT_STATES.map((state) => {
-          const s = STATE_STYLE[state];
+          const s = SLOT_STYLE[state];
           return (
             <span
               key={state}
@@ -34,20 +27,33 @@ export function SlotLegend() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 7,
-                background: s.bg,
-                border: '1px solid var(--line)',
+                // Solid fill: the state's own colour carries the chip.
+                background: s.solid,
+                color: 'var(--on-state)',
+                border: '1px solid transparent',
                 borderRadius: 999,
-                padding: '5px 11px 5px 7px',
+                padding: '5px 12px 5px 6px',
               }}
             >
               <span
                 aria-hidden="true"
                 className="mono"
-                style={{ width: 20, height: 20, display: 'inline-grid', placeItems: 'center', borderRadius: 5, background: 'var(--surface)', color: s.fg, fontWeight: 700, fontSize: 12 }}
+                style={{
+                  width: 20,
+                  height: 20,
+                  display: 'inline-grid',
+                  placeItems: 'center',
+                  borderRadius: 999,
+                  // A translucent white disc keeps the icon legible on any step.
+                  background: 'rgba(255, 255, 255, 0.22)',
+                  color: 'var(--on-state)',
+                  fontWeight: 700,
+                  fontSize: 12,
+                }}
               >
                 {s.icon}
               </span>
-              <span style={{ fontSize: 13, color: 'var(--ink)' }}>{st(state)}</span>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>{st(state)}</span>
             </span>
           );
         })}

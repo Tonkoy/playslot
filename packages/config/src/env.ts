@@ -70,6 +70,11 @@ export const serverEnvSchema = coreEnvSchema.extend({
   MAIL_FROM: optionalString.pipe(
     z.string().default('PlaySlot <no-reply@playslot.bg>'),
   ),
+  // web push (VAPID). Absent => PushService logs instead of sending, the same
+  // fallback the mail provider uses.
+  VAPID_PUBLIC_KEY: optionalString,
+  VAPID_PRIVATE_KEY: optionalString,
+  VAPID_SUBJECT: optionalString,
   S3_ENDPOINT: optionalString,
   S3_BUCKET: optionalString,
   S3_ACCESS_KEY_ID: optionalString,

@@ -6,7 +6,9 @@ export const metadata: Metadata = NOINDEX;
 
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { SiteHeader } from '@/components/SiteHeader';
+import { AccountStandingBanner } from '@/components/AccountStandingBanner';
 import { MyBookings } from '@/components/MyBookings';
+import { SessionFeedbackPanel } from '@/components/SessionFeedbackPanel';
 import { PageHeader } from '@/components/PageHeader';
 
 export default async function MyBookingsPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -19,7 +21,9 @@ export default async function MyBookingsPage({ params }: { params: Promise<{ loc
       <SiteHeader />
       <main style={{ maxWidth: 760, margin: '0 auto', padding: '32px 20px 64px' }}>
         <PageHeader eyebrow={t('eyebrow')} title={t('title')} />
+        <AccountStandingBanner />
         <MyBookings />
+        <SessionFeedbackPanel />
       </main>
     </>
   );

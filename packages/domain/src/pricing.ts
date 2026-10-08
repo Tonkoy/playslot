@@ -6,15 +6,26 @@
  * Money is integer minor units throughout (golden rule §2.6).
  */
 
+import { formatInZone } from './time';
+
 export interface PriceRuleLike {
   id: number;
   resourceId: number | null;
+  /** Court group: the rule applies to each of these courts (empty/absent = no group). */
+  resourceIds?: number[];
   serviceId: number | null;
   weekdayMask: number | null; // bit i set ⇒ active on weekday i (0=Sun … 6=Sat)
   startMin: number | null; // rule window, minutes from local midnight
   endMin: number | null;
   validFrom: Date | null;
   validUntil: Date | null;
+  /**
+   * Recurring yearly season, encoded month*100+day (1 Nov = 1101, 3 May = 503), both
+   * inclusive and in the club's local calendar. start > end wraps over New Year
+   * (1101 → 503 is the winter season). Both null/absent = every day of the year.
+   */
+  seasonStart?: number | null;
+  seasonEnd?: number | null;
   durationMin: number | null; // the duration `priceCents` is quoted for (default 60)
   priceCents: number;
   currency: string;
@@ -30,6 +41,8 @@ export interface PriceContext {
   date: Date; // absolute instant of the slot start (for validFrom/validUntil)
   resourceId?: number;
   serviceId?: number;
+  /** IANA zone used to read the local calendar date for recurring seasons (default Europe/Sofia). */
+  timeZone?: string;
 }
 
 export interface ResolvedPrice {
@@ -42,7 +55,7 @@ export class PricingError extends Error {}
 
 /** Specificity rank (spec §9): service+resource > resource > service > club-wide. */
 function specificity(rule: PriceRuleLike): number {
-  const hasResource = rule.resourceId !== null;
+  const hasResource = ruleCourts(rule).length > 0;
   const hasService = rule.serviceId !== null;
   if (hasResource && hasService) return 3;
   if (hasResource) return 2;
@@ -50,12 +63,33 @@ function specificity(rule: PriceRuleLike): number {
   return 0;
 }
 
+/** Every court a rule is limited to: the legacy single court plus the court group. */
+export function ruleCourts(rule: Pick<PriceRuleLike, 'resourceId' | 'resourceIds'>): number[] {
+  const ids = new Set<number>(rule.resourceIds ?? []);
+  if (rule.resourceId !== null) ids.add(rule.resourceId);
+  return [...ids];
+}
+
+/** Month-day (month*100+day) of an instant on the club's local calendar. */
+export function monthDayInZone(instant: Date, timeZone = 'Europe/Sofia'): number {
+  return Number(formatInZone(instant, timeZone, 'MMdd'));
+}
+
+/** True when a month-day lies in a recurring season; start > end wraps New Year. */
+export function inSeason(monthDay: number, start: number, end: number): boolean {
+  return start <= end ? monthDay >= start && monthDay <= end : monthDay >= start || monthDay <= end;
+}
+
 function matches(rule: PriceRuleLike, ctx: PriceContext): boolean {
   if (!rule.active) return false;
-  if (rule.resourceId !== null && rule.resourceId !== ctx.resourceId) return false;
+  const courts = ruleCourts(rule);
+  if (courts.length > 0 && (ctx.resourceId === undefined || !courts.includes(ctx.resourceId))) return false;
   if (rule.serviceId !== null && rule.serviceId !== ctx.serviceId) return false;
   if (rule.validFrom && ctx.date < rule.validFrom) return false;
   if (rule.validUntil && ctx.date >= rule.validUntil) return false;
+  if (rule.seasonStart != null && rule.seasonEnd != null) {
+    if (!inSeason(monthDayInZone(ctx.date, ctx.timeZone), rule.seasonStart, rule.seasonEnd)) return false;
+  }
   if (rule.weekdayMask !== null && (rule.weekdayMask & (1 << ctx.weekday)) === 0) return false;
   // Rule window must overlap the slot window (half-open).
   if (rule.startMin !== null && rule.endMin !== null) {

@@ -45,3 +45,4 @@ EXPOSE 3001
 # covers test/ and vitest.config.ts as well as src/, so TypeScript takes the
 # package root as rootDir and keeps the src/ folder in the output.
 CMD ["node", "apps/api/dist/src/main.js"]
+# deploy trigger 2026-10-08

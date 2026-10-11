@@ -24,7 +24,7 @@ describe('Payments (e2e, mock provider)', () => {
     ctx = await createTestApp();
     await resetDb(ctx.prisma);
     const { prisma } = ctx;
-    const city = await prisma.city.create({ data: { name: 'Sofia' } });
+    const city = await prisma.city.create({ data: { name: 'Sofia', slug: 'sofia' } });
     const club = await prisma.club.create({
       data: { slug: 'pay-club', name: 'Pay Club', address: 'x', cityId: city.id, status: 'ACTIVE', currency: 'EUR', timezone: tz, slotIntervalMin: 60 },
     });

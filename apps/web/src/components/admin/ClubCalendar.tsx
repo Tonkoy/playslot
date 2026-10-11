@@ -12,9 +12,11 @@ import {
   createManualBooking,
   getCalendar,
   markReservationNoShow,
+  confirmReservation,
   markReservationPaid,
   rescheduleReservation,
 } from '@/lib/api';
+import { errorMessage } from '@/lib/errors';
 import { hhmmToMin, localHHMM, minToHHMM, zonedIso } from '@/lib/tz';
 
 const DAY_START = 7 * 60;
@@ -38,13 +40,27 @@ function shiftDate(iso: string, days: number): string {
  * the customer and a paid mark).
  */
 const STATUS_STYLE: Record<string, { bg: string; fg: string }> = {
+  LESSON: { bg: 'var(--teal-soft)', fg: 'var(--teal)' },
+  GROUP: { bg: 'var(--tournament-soft)', fg: 'var(--tournament)' },
   CONFIRMED: { bg: 'var(--mine-soft)', fg: 'var(--mine)' },
   HOLD: { bg: 'var(--held-soft)', fg: 'var(--held)' },
+  PENDING_APPROVAL: { bg: 'var(--held-soft)', fg: 'var(--held)' },
   PENDING_PAYMENT: { bg: 'var(--held-soft)', fg: 'var(--held)' },
   BLOCK: { bg: 'var(--booked-soft)', fg: 'var(--booked)' },
   NO_SHOW: { bg: 'var(--reserved-soft)', fg: 'var(--reserved)' },
   COMPLETED: { bg: 'var(--past-soft)', fg: 'var(--past)' },
 };
+
+/**
+ * What the cell is, for colour and legend: a group training and a lesson read
+ * differently from a plain court booking, and a block from both.
+ */
+function entryKind(e: CalendarEntry): string {
+  if (e.type === 'BLOCK') return 'BLOCK';
+  if (e.groupSession) return 'GROUP';
+  if (e.coachName) return 'LESSON';
+  return e.status;
+}
 
 type Selection =
   | { kind: 'free'; courtId: number; startMin: number }
@@ -54,6 +70,8 @@ type Selection =
 export function ClubCalendar({ clubId }: { clubId: number }) {
   const t = useTranslations('Calendar');
   const st = useTranslations('ReservationStatus');
+  const te = useTranslations('Errors');
+  const tt = useTranslations('Toasts');
   const qc = useQueryClient();
   const [date, setDate] = useState(todayIso());
   const [selection, setSelection] = useState<Selection>(null);
@@ -75,7 +93,9 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
   const step = cal.data?.slotIntervalMin ?? 60;
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['calendar', clubId, date] });
-  const onErr = (e: unknown) => window.alert(e instanceof Error ? e.message : String(e));
+  // Say why it was refused — "club closed", "already taken" — rather than the
+  // server's generic line (QA-09).
+  const onErr = (e: unknown) => window.alert(errorMessage(e, te, tt('error')));
 
   const bookMut = useMutation({
     mutationFn: (v: { startMin: number; courtId: number }) =>
@@ -120,6 +140,17 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
     },
     onError: onErr,
   });
+  // Approving a booking the club was asked to confirm (spec §16): the player
+  // gets the "confirmed" email the moment this succeeds.
+  const confirmMut = useMutation({
+    mutationFn: (id: number) => confirmReservation(clubId, id),
+    onSuccess: () => {
+      invalidate();
+      setSelection(null);
+    },
+    onError: onErr,
+  });
+
   const paidMut = useMutation({
     mutationFn: (id: number) => markReservationPaid(clubId, id),
     onSuccess: invalidate,
@@ -149,6 +180,19 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
       const s = hhmmToMin(localHHMM(e.startsAt));
       const en = hhmmToMin(localHHMM(e.endsAt));
       if (min >= s && min < en) return { entry: e, isStart: min === s };
+    }
+    return null;
+  }
+
+  /** Club closure covering this court at this minute, if any (QA-03). */
+  function closureAt(courtId: number, min: number): { reason: string } | null {
+    for (const c of cal.data?.closures ?? []) {
+      if (!c.resourceIds.includes(courtId)) continue;
+      const s = hhmmToMin(localHHMM(c.startsAt));
+      const e = hhmmToMin(localHHMM(c.endsAt));
+      // A window that runs to the next day's 00:00 covers the rest of this day.
+      const end = e <= s ? 24 * 60 : e;
+      if (min >= s && min < end) return { reason: c.reason };
     }
     return null;
   }
@@ -229,8 +273,11 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
         {[
           { solid: 'var(--free)', label: t('legendFree') },
           { solid: 'var(--mine)', label: t('legendBooked') },
+          { solid: 'var(--teal)', label: t('legendLesson') },
+          { solid: 'var(--tournament)', label: t('legendGroup') },
           { solid: 'var(--held)', label: t('legendHold') },
           { solid: 'var(--booked)', label: t('legendBlocked') },
+          { solid: 'var(--past)', label: t('legendClosed') },
         ].map((l) => (
           <span key={l.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             {/* Solid swatch: the same step the cells are barred with. */}
@@ -275,7 +322,8 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
                     const hit = entryAt(c.id, min);
                     if (hit) {
                       if (!hit.isStart) return <td key={c.id} style={{ ...cell, background: 'var(--surface-2)' }} aria-hidden />;
-                      const s = STATUS_STYLE[hit.entry.type === 'BLOCK' ? 'BLOCK' : hit.entry.status] ?? STATUS_STYLE.CONFIRMED!;
+                      const kind = entryKind(hit.entry);
+                      const s = STATUS_STYLE[kind] ?? STATUS_STYLE[hit.entry.status] ?? STATUS_STYLE.CONFIRMED!;
                       const paid = hit.entry.paymentStatus === 'CAPTURED';
                       return (
                         <td key={c.id} style={cell}>
@@ -298,13 +346,63 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
                             }}
                           >
                             <span style={{ fontSize: 12, fontWeight: 700 }}>
-                              {hit.entry.type === 'BLOCK' ? `⛔ ${t('block')}` : hit.entry.customerName ?? t('booking')}
+                              {hit.entry.groupSession
+                                ? `⚑ ${hit.entry.groupSession.title}`
+                                : hit.entry.type === 'BLOCK'
+                                  ? `⛔ ${hit.entry.blockReason ?? t('block')}`
+                                  : (hit.entry.customerName ?? t('booking'))}
                             </span>
+                            {/* What kind of session it is — a lesson named its coach, a
+                                group training its headcount (QA-03). */}
+                            {hit.entry.groupSession ? (
+                              <span style={{ display: 'block', fontSize: 11, color: 'var(--ink-2)' }}>
+                                {hit.entry.coachName ? `${hit.entry.coachName} · ` : ''}
+                                {t('registered', {
+                                  n: hit.entry.groupSession.registered,
+                                  cap: hit.entry.groupSession.capacity,
+                                })}
+                              </span>
+                            ) : (
+                              hit.entry.coachName && (
+                                <span style={{ display: 'block', fontSize: 11, color: 'var(--ink-2)' }}>
+                                  {t('withCoach', { name: hit.entry.coachName })}
+                                </span>
+                              )
+                            )}
                             <span className="mono" style={{ display: 'block', fontSize: 10.5, color: s.fg, fontWeight: 700 }}>
                               {st.has(hit.entry.status) ? st(hit.entry.status) : hit.entry.status}
                               {hit.entry.type !== 'BLOCK' && (paid ? ' · ✓' : ' · •')}
                             </span>
                           </button>
+                        </td>
+                      );
+                    }
+                    // Closed by a club closure: not a free slot, and not bookable.
+                    const closed = closureAt(c.id, min);
+                    if (closed) {
+                      return (
+                        <td key={c.id} style={cell}>
+                          <div
+                            title={closed.reason}
+                            style={{
+                              minHeight: 40,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'center',
+                              background: 'var(--past-soft)',
+                              border: '1px solid var(--line)',
+                              borderLeft: '4px solid var(--past)',
+                              borderRadius: 'var(--radius-sm)',
+                              padding: '4px 8px 4px 7px',
+                              color: 'var(--ink-2)',
+                              fontSize: 11.5,
+                            }}
+                          >
+                            <strong style={{ fontSize: 12 }}>{t('closed')}</strong>
+                            <span style={{ color: 'var(--ink-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {closed.reason}
+                            </span>
+                          </div>
                         </td>
                       );
                     }
@@ -391,6 +489,16 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
         )}
         {selection?.kind === 'entry' && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {selection.entry.status === 'PENDING_APPROVAL' && (
+              <button
+                type="button"
+                disabled={confirmMut.isPending}
+                onClick={() => confirmMut.mutate(selection.entry.id)}
+                style={{ ...smallBtn, background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', fontWeight: 700 }}
+              >
+                {confirmMut.isPending ? '…' : t('confirmBooking')}
+              </button>
+            )}
             {selection.entry.type !== 'BLOCK' && (
               <button type="button" onClick={() => paidMut.mutate(selection.entry.id)} style={smallBtn}>
                 {t('markPaid')}

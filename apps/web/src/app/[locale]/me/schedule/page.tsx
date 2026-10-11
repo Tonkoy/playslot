@@ -18,7 +18,7 @@ export default async function CoachSchedulePage({ params }: { params: Promise<{ 
     <>
       <SiteHeader />
       <main style={{ maxWidth: 'var(--maxw)', margin: '0 auto', padding: '32px 20px 64px' }}>
-        <PageHeader eyebrow={t('eyebrow')} title={t('title')} subtitle={t('subtitle')} />
+        <PageHeader title={t('title')} subtitle={t('subtitle')} />
         <CoachScheduleClient />
       </main>
     </>

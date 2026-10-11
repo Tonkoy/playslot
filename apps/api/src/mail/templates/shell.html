@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="bg">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <title>{{subject}}</title>
+    <!--
+      PlaySlot email shell. Table layout and inline styles only — Gmail, Outlook
+      and Apple Mail strip <style> blocks and modern CSS. Colours mirror the app
+      tokens: deep green #123b2c, lime #cfea6e, ink #12181b, line #e7ece8.
+      Every string here is Bulgarian; the dynamic copy is passed in by the API.
+    -->
+  </head>
+  <body style="margin:0;padding:0;background:#f3f7f4;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">{{preheader}}</div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f3f7f4;">
+      <tr>
+        <td align="center" style="padding:24px 12px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;">
+            <!-- brand bar -->
+            <tr>
+              <td style="padding:0 0 16px 4px;font:700 18px/1.2 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#123b2c;">
+                PlaySlot
+              </td>
+            </tr>
+
+            <!-- card -->
+            <tr>
+              <td style="background:#ffffff;border:1px solid #e7ece8;border-radius:18px;padding:28px 28px 24px;">
+                {{{BODY}}}
+              </td>
+            </tr>
+
+            <!-- footer -->
+            <tr>
+              <td style="padding:18px 8px 0;font:400 12px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#7c877f;">
+                Получавате това писмо, защото имате профил в PlaySlot.<br />
+                <a href="{{site_url}}" style="color:#1e6b47;text-decoration:none;">playslot.bg</a>
+                &nbsp;·&nbsp;
+                <a href="{{site_url}}/bg/me" style="color:#1e6b47;text-decoration:none;">Профил и настройки</a>
+                {{#if unsubscribe_url}}
+                &nbsp;·&nbsp;<a href="{{unsubscribe_url}}" style="color:#7c877f;text-decoration:underline;">Откажи известията</a>
+                {{/if}}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

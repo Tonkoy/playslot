@@ -18,7 +18,7 @@ export default async function AdminPage({ params }: { params: Promise<{ locale: 
     <>
       <SiteHeader />
       <main style={{ maxWidth: 880, margin: '0 auto', padding: '32px 20px 64px' }}>
-        <PageHeader eyebrow={t('eyebrow')} title={t('title')} />
+        <PageHeader title={t('title')} />
         <AdminHome />
       </main>
     </>

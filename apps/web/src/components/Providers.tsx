@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
+import { GlobalLoader } from './GlobalLoader';
 import { SearchModalHost } from './SearchModalHost';
 import { SearchModalProvider } from './SearchModalContext';
 import { ToastProvider } from './Toast';
@@ -20,6 +21,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <SearchModalProvider>
           {children}
           <SearchModalHost />
+          {/* Request feedback for the whole app (reads + writes). */}
+          <GlobalLoader />
         </SearchModalProvider>
       </ToastProvider>
     </QueryClientProvider>

@@ -54,7 +54,7 @@ export default async function DocsPage({ params }: { params: Promise<{ locale: s
       <JsonLd data={faqGraph} />
       <SiteHeader />
       <main style={{ maxWidth: 'var(--maxw)', margin: '0 auto', padding: '32px 20px 64px' }}>
-        <PageHeader eyebrow={t('eyebrow')} title={t('title')} subtitle={t('subtitle')} />
+        <PageHeader title={t('title')} subtitle={t('subtitle')} />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 720 }}>
           {faqs.map((item) => (

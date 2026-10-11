@@ -24,7 +24,7 @@ export default async function VerifyEmailPage({
     <>
       <SiteHeader />
       <main style={{ maxWidth: 'var(--maxw)', margin: '0 auto', padding: '48px 20px' }}>
-        <PageHeader eyebrow={t('eyebrow')} title={t('title')} align="center" />
+        <PageHeader title={t('title')} align="center" />
         <VerifyEmail token={token ?? ''} />
       </main>
     </>

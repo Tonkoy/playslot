@@ -1,5 +1,6 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { SPORTS } from '@playslot/contracts';
+import { enumLabel } from '@/lib/enums';
 import { SiteHeader } from '@/components/SiteHeader';
 import { HeroSearchButton } from '@/components/HeroSearchButton';
 import { SiteFooter } from '@/components/SiteFooter';
@@ -42,6 +43,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   ];
   const t = await getTranslations('Home');
   const c = await getTranslations('Common');
+  const te = await getTranslations('Enums');
   // Platform-admin-picked club headlining the homepage (spec: Platform console
   // "Feature on homepage"); falls back to the illustrative example below when
   // no club is featured, the API is unreachable, or it has no free slot soon.
@@ -161,7 +163,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                     color: 'var(--green-deep)',
                   }}
                 >
-                  {s}
+                  {enumLabel(te, 'Sport', s)}
                 </span>
               ))}
             </div>

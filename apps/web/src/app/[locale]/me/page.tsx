@@ -7,6 +7,7 @@ export const metadata: Metadata = NOINDEX;
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { AccountClient } from '@/components/AccountClient';
 import { SiteHeader } from '@/components/SiteHeader';
+import { APP_NAME } from '@/lib/brand';
 
 export default async function AccountPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -24,12 +25,11 @@ export default async function AccountPage({ params }: { params: Promise<{ locale
             fontSize: 12,
             fontWeight: 600,
             letterSpacing: '0.12em',
-            textTransform: 'uppercase',
             color: 'var(--green)',
             marginBottom: 16,
           }}
         >
-          {t('eyebrow')}
+          {APP_NAME}
         </span>
         <AccountClient />
       </main>

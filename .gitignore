@@ -39,3 +39,7 @@ pnpm-debug.log*
 
 # prisma
 prisma/*.db
+
+# generated email HTML (built from src/mail/templates)
+apps/api/.mail-preview/
+apps/api/.mail-build/

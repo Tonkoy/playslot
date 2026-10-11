@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  type CityDto,
   type AddMemberInput,
   type ClubClosureDto,
   type ClubJoinRequestInput,
@@ -14,7 +15,7 @@ import {
   type UpsertClubInput,
 } from '@playslot/contracts';
 import { type Prisma, Role } from '@playslot/db';
-import { formatInZone, instantFromDayMinutes } from '@playslot/domain';
+import { cityDisplayName, citySlug, formatInZone, instantFromDayMinutes } from '@playslot/domain';
 import { AppException, Errors } from '../common/app-exception';
 import { AuthService } from '../auth/auth.service';
 import { AvailabilityService } from '../availability/availability.service';
@@ -26,6 +27,55 @@ import { hashPassword } from '../auth/password';
 // club's soonest free slot before giving up (spec: keep this cheap — most
 // active clubs have a free slot today or tomorrow).
 const FEATURED_SEARCH_DAYS = 7;
+
+/** A closure may not be entered for more than a year at a time. */
+const MAX_CLOSURE_DAYS = 366;
+
+/** Every local calendar date from `from` to `to`, inclusive. */
+function daysBetween(from: string, to: string): string[] {
+  const out: string[] = [];
+  for (let d = from; d <= to; d = addDaysIso(d, 1)) out.push(d);
+  return out;
+}
+
+function addDaysIso(iso: string, n: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Local minutes from midnight for an instant, in the club's timezone. */
+function localMinutes(instant: Date, tz: string): number {
+  const [h, m] = formatInZone(instant, tz, 'HH:mm').split(':').map(Number);
+  return h! * 60 + m!;
+}
+
+/**
+ * Describe a closure window the way it was entered: local dates, all-day or a
+ * daily time window. `lastEnd` is the end of the final window of a multi-day
+ * timed closure.
+ */
+function closureShape(
+  start: Date,
+  end: Date,
+  tz: string,
+  lastEnd?: Date,
+): { fromDate: string; toDate: string; allDay: boolean; startMin: number | null; endMin: number | null } {
+  const startMin = localMinutes(start, tz);
+  const endMin = localMinutes(end, tz);
+  // A window ending at local midnight belongs to the previous day.
+  const allDay = startMin === 0 && endMin === 0;
+  const fromDate = formatInZone(start, tz, 'yyyy-MM-dd');
+  const toDate = formatInZone(new Date((lastEnd ?? end).getTime() - 60_000), tz, 'yyyy-MM-dd');
+  return {
+    fromDate,
+    toDate,
+    allDay,
+    startMin: allDay ? null : startMin,
+    endMin: allDay ? null : endMin,
+  };
+}
+
 
 /** Add `days` calendar days to a "YYYY-MM-DD" string (UTC-anchored, DST-safe —
  * we only ever use the result as a calendar date, never as an instant). */
@@ -51,6 +101,7 @@ const PUBLIC_CLUB_SELECT = {
   rules: true,
   slotIntervalMin: true,
   bookingDurationsMin: true,
+  requiresBookingApproval: true,
   acceptsMultisport: true,
   paymentMethods: true,
   status: true,
@@ -80,12 +131,55 @@ export class ClubsService {
   ) {}
 
   /** Cities that have at least one active club (for the search location filter). */
-  listCities() {
-    return this.prisma.city.findMany({
-      where: { clubs: { some: { status: 'ACTIVE' } } },
-      select: { id: true, name: true },
+  /**
+   * Cities for the search filter (only those with a visible club) or, with
+   * `all`, every city — what the admin forms pick from, so a club can never be
+   * filed under a new city invented by spelling (QA-02).
+   */
+  async listCities(all = false): Promise<CityDto[]> {
+    const rows = await this.prisma.city.findMany({
+      where: all ? {} : { clubs: { some: { status: 'ACTIVE' } } },
+      select: { id: true, name: true, slug: true, _count: { select: { clubs: true } } },
       orderBy: { name: 'asc' },
     });
+    return rows.map((c) => ({ id: c.id, name: c.name, slug: c.slug, clubCount: c._count.clubs }));
+  }
+
+  /** Platform admin adds a city; an existing slug returns that city instead. */
+  async createCity(input: { name: string }, actorUserId: number): Promise<CityDto> {
+    const name = cityDisplayName(input.name);
+    const slug = citySlug(name);
+    if (!slug) throw new AppException('validation_failed', { fields: { name: ['invalid'] } });
+    const existing = await this.prisma.city.findUnique({ where: { slug } });
+    if (existing) return { id: existing.id, name: existing.name, slug: existing.slug };
+    const city = await this.prisma.city.create({ data: { name, slug } });
+    await this.audit(actorUserId, 'city.created', 'City', city.id, null, city);
+    return { id: city.id, name: city.name, slug: city.slug };
+  }
+
+  /**
+   * The city a club belongs to. An id is used as given; free text is matched on
+   * its slug first, so "Sofia", "sofia" and "София" all land on one city.
+   */
+  private async resolveCityId(
+    tx: Prisma.TransactionClient,
+    input: { cityId?: number; city?: string },
+  ): Promise<number> {
+    if (input.cityId) {
+      const found = await tx.city.findUnique({ where: { id: input.cityId }, select: { id: true } });
+      if (!found) throw new AppException('not_found', { reason: 'city' });
+      return found.id;
+    }
+    const name = cityDisplayName(input.city ?? '');
+    const slug = citySlug(name);
+    if (!slug) throw new AppException('validation_failed', { fields: { city: ['invalid'] } });
+    const city = await tx.city.upsert({
+      where: { slug },
+      create: { name, slug },
+      update: {},
+      select: { id: true },
+    });
+    return city.id;
   }
 
   // ── public reads (only ACTIVE clubs are visible) ──
@@ -212,52 +306,167 @@ export class ClubsService {
   // ── special days: club closures / downtime (applied to all courts) ──
 
   async listClosures(clubId: number): Promise<ClubClosureDto[]> {
+    const club = await this.prisma.club.findUnique({ where: { id: clubId }, select: { timezone: true } });
+    if (!club) throw new AppException('not_found');
     const rows = await this.prisma.resourceException.findMany({
       where: { resource: { clubId, type: 'COURT' }, endsAt: { gt: new Date() } },
       select: { startsAt: true, endsAt: true, reason: true },
       orderBy: { startsAt: 'asc' },
     });
-    // Identical windows across courts collapse into one closure with a court count.
-    const map = new Map<string, ClubClosureDto>();
+
+    // Identical windows across courts collapse into one window with a court count…
+    const windows = new Map<string, { start: Date; end: Date; reason: string; courtCount: number }>();
     for (const r of rows) {
       const key = `${r.startsAt.toISOString()}|${r.endsAt.toISOString()}|${r.reason}`;
-      const cur = map.get(key);
+      const cur = windows.get(key);
       if (cur) cur.courtCount++;
-      else map.set(key, { startsAt: r.startsAt.toISOString(), endsAt: r.endsAt.toISOString(), reason: r.reason, courtCount: 1 });
+      else windows.set(key, { start: r.startsAt, end: r.endsAt, reason: r.reason, courtCount: 1 });
     }
-    return [...map.values()];
+
+    // …and a timed closure's per-day windows collapse back into the one closure
+    // the admin entered (same reason, same daily window, consecutive days).
+    const ordered = [...windows.values()].sort((a, b) => a.start.getTime() - b.start.getTime());
+    const out: ClubClosureDto[] = [];
+    for (const w of ordered) {
+      const shape = closureShape(w.start, w.end, club.timezone);
+      const prev = out[out.length - 1];
+      if (
+        prev &&
+        prev.reason === w.reason &&
+        !prev.allDay &&
+        !shape.allDay &&
+        prev.startMin === shape.startMin &&
+        prev.endMin === shape.endMin &&
+        addDaysIso(prev.toDate, 1) === shape.fromDate
+      ) {
+        prev.toDate = shape.toDate;
+        prev.endsAt = w.end.toISOString();
+        prev.days++;
+        prev.courtCount = Math.max(prev.courtCount, w.courtCount);
+        continue;
+      }
+      out.push({
+        startsAt: w.start.toISOString(),
+        endsAt: w.end.toISOString(),
+        reason: w.reason,
+        courtCount: w.courtCount,
+        days: 1,
+        ...shape,
+      });
+    }
+    return out;
   }
 
+  /**
+   * Close the club for a date range. An all-day closure is one continuous
+   * window; a timed one ("09:00–12:00, 23–24 Oct") is one window **per day** —
+   * a single window would have closed the nights in between as well.
+   *
+   * A closure that would swallow live bookings is refused (spec §16): the
+   * admin sees which ones and cancels or moves them first.
+   */
   async createClosure(clubId: number, input: CreateClubClosureInput, actorUserId: number): Promise<ClubClosureDto> {
     const club = await this.prisma.club.findUnique({ where: { id: clubId }, select: { timezone: true } });
     if (!club) throw new AppException('not_found');
     const tz = club.timezone;
-    const start = input.allDay
-      ? instantFromDayMinutes(input.fromDate, 0, tz)
-      : instantFromDayMinutes(input.fromDate, input.startMin!, tz);
-    const end = input.allDay
-      ? instantFromDayMinutes(input.toDate, 24 * 60, tz)
-      : instantFromDayMinutes(input.fromDate, input.endMin!, tz);
-    if (end <= start) throw new AppException('validation_failed', { fields: { toDate: ['must be after start'] } });
+
+    const days = daysBetween(input.fromDate, input.toDate);
+    if (days.length > MAX_CLOSURE_DAYS) {
+      throw new AppException('validation_failed', { fields: { toDate: ['range_too_long'] } });
+    }
+    const windows = input.allDay
+      ? [{ start: instantFromDayMinutes(input.fromDate, 0, tz), end: instantFromDayMinutes(input.toDate, 24 * 60, tz) }]
+      : days.map((d) => ({
+          start: instantFromDayMinutes(d, input.startMin!, tz),
+          end: instantFromDayMinutes(d, input.endMin!, tz),
+        }));
+    if (windows.some((w) => w.end <= w.start)) {
+      throw new AppException('validation_failed', { fields: { toDate: ['must be after start'] } });
+    }
 
     const courts = await this.prisma.resource.findMany({
       where: { clubId, type: 'COURT', status: 'ACTIVE' },
       select: { id: true },
     });
     if (courts.length === 0) throw new AppException('policy_violation', { reason: 'no_courts' });
-    await this.prisma.resourceException.createMany({
-      data: courts.map((c) => ({ resourceId: c.id, startsAt: start, endsAt: end, reason: input.reason })),
+
+    await this.assertNoLiveBookings(clubId, windows);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.resourceException.createMany({
+        data: courts.flatMap((c) =>
+          windows.map((w) => ({ resourceId: c.id, startsAt: w.start, endsAt: w.end, reason: input.reason })),
+        ),
+      });
     });
-    await this.audit(actorUserId, 'club.closure_created', 'Club', clubId, null, { start, end, reason: input.reason, courts: courts.length });
-    return { startsAt: start.toISOString(), endsAt: end.toISOString(), reason: input.reason, courtCount: courts.length };
+    const first = windows[0]!;
+    const last = windows[windows.length - 1]!;
+    await this.audit(actorUserId, 'club.closure_created', 'Club', clubId, null, {
+      start: first.start,
+      end: last.end,
+      windows: windows.length,
+      reason: input.reason,
+      courts: courts.length,
+    });
+    return {
+      startsAt: first.start.toISOString(),
+      endsAt: last.end.toISOString(),
+      reason: input.reason,
+      courtCount: courts.length,
+      days: windows.length,
+      ...closureShape(first.start, input.allDay ? last.end : first.end, tz, input.allDay ? undefined : last.end),
+    };
   }
 
-  async deleteClosure(clubId: number, startsAt: string, endsAt: string, actorUserId: number): Promise<{ deleted: number }> {
+  /**
+   * Deletes every window of the closure: the range covers all of a timed
+   * closure's per-day windows, and `reason` keeps two closures over the same
+   * dates apart.
+   */
+  async deleteClosure(
+    clubId: number,
+    startsAt: string,
+    endsAt: string,
+    actorUserId: number,
+    reason?: string,
+  ): Promise<{ deleted: number }> {
     const res = await this.prisma.resourceException.deleteMany({
-      where: { resource: { clubId, type: 'COURT' }, startsAt: new Date(startsAt), endsAt: new Date(endsAt) },
+      where: {
+        resource: { clubId, type: 'COURT' },
+        startsAt: { gte: new Date(startsAt) },
+        endsAt: { lte: new Date(endsAt) },
+        ...(reason ? { reason } : {}),
+      },
     });
-    await this.audit(actorUserId, 'club.closure_deleted', 'Club', clubId, { startsAt, endsAt }, null);
+    await this.audit(actorUserId, 'club.closure_deleted', 'Club', clubId, { startsAt, endsAt, reason: reason ?? null }, null);
     return { deleted: res.count };
+  }
+
+  /** Bookings a closure would swallow — refuse rather than silently bury them. */
+  private async assertNoLiveBookings(clubId: number, windows: { start: Date; end: Date }[]): Promise<void> {
+    const clashes = await this.prisma.reservation.findMany({
+      where: {
+        clubId,
+        status: { in: ['HOLD', 'PENDING_PAYMENT', 'PENDING_APPROVAL', 'CONFIRMED'] },
+        // A staff block inside the closed window is not a customer booking.
+        type: { in: ['COURT', 'LESSON', 'EVENT', 'TOURNAMENT'] },
+        OR: windows.map((w) => ({ startsAt: { lt: w.end }, endsAt: { gt: w.start } })),
+      },
+      select: { id: true, startsAt: true, endsAt: true, user: { select: { name: true } } },
+      orderBy: { startsAt: 'asc' },
+      take: 50,
+    });
+    if (clashes.length === 0) return;
+    throw new AppException('policy_violation', {
+      reason: 'closure_overlaps_bookings',
+      reservationIds: clashes.map((c) => c.id),
+      bookings: clashes.map((c) => ({
+        id: c.id,
+        startsAt: c.startsAt.toISOString(),
+        endsAt: c.endsAt.toISOString(),
+        customerName: c.user?.name ?? null,
+      })),
+    });
   }
 
   /** Derived club opening hours: earliest open / latest close across active courts, per weekday. */
@@ -287,7 +496,7 @@ export class ClubsService {
    */
   async updateSettings(
     clubId: number,
-    input: { slotIntervalMin: number; bookingDurationsMin?: number[] },
+    input: { slotIntervalMin: number; bookingDurationsMin?: number[]; requiresBookingApproval?: boolean },
     actorUserId: number,
   ) {
     const before = await this.prisma.club.findUnique({ where: { id: clubId } });
@@ -307,6 +516,9 @@ export class ClubsService {
       data: {
         slotIntervalMin: input.slotIntervalMin,
         ...(bookingDurationsMin ? { bookingDurationsMin } : {}),
+        ...(input.requiresBookingApproval !== undefined
+          ? { requiresBookingApproval: input.requiresBookingApproval }
+          : {}),
       },
       select: PUBLIC_CLUB_SELECT,
     });
@@ -346,18 +558,14 @@ export class ClubsService {
         await tx.userRole.create({ data: { userId: user.id, role: Role.CLUB_ADMIN } });
       }
 
-      const city = await tx.city.upsert({
-        where: { name: input.city },
-        create: { name: input.city },
-        update: {},
-      });
+      const cityId = await this.resolveCityId(tx, { city: input.city });
 
       const created = await tx.club.create({
         data: {
           slug: await this.uniqueSlug(tx, input.clubName),
           name: input.clubName,
           address: '—',
-          cityId: city.id,
+          cityId,
           status: 'PENDING',
           members: { create: [{ userId: user.id, role: Role.CLUB_ADMIN }] },
         },
@@ -490,13 +698,13 @@ export class ClubsService {
 
   async createClubAsPlatform(input: PlatformCreateClubInput, actorUserId: number): Promise<PlatformClubDto> {
     const club = await this.prisma.$transaction(async (tx) => {
-      const city = await tx.city.upsert({ where: { name: input.city }, create: { name: input.city }, update: {} });
+      const cityId = await this.resolveCityId(tx, input);
       return tx.club.create({
         data: {
           slug: await this.uniqueSlug(tx, input.name),
           name: input.name,
           address: input.address ?? '—',
-          cityId: city.id,
+          cityId,
           status: 'ACTIVE',
           timezone: input.timezone,
           currency: input.currency,

@@ -5,10 +5,14 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Link, useRouter } from '@/i18n/navigation';
 import { googleLoginUrl, register } from '@/lib/api';
+import { errorMessage, fieldErrorsOf } from '@/lib/errors';
+import { FieldError } from '../FieldError';
 import { authInput, authLabel, authPrimaryBtn, googleBtn } from './styles';
 
 export function RegisterForm() {
   const t = useTranslations('Register');
+  const te = useTranslations('Errors');
+  const tt = useTranslations('Toasts');
   const router = useRouter();
   const qc = useQueryClient();
   const [name, setName] = useState('');
@@ -18,13 +22,17 @@ export function RegisterForm() {
   const [terms, setTerms] = useState(false);
   const [subscribe, setSubscribe] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Per-field codes from the API ({ password: ['password_upper', …] }).
+  const [fields, setFields] = useState<Record<string, string[]>>({});
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setFields({});
     if (password !== confirm) {
-      setError(t('passwordMismatch'));
+      setFields({ confirm: ['password_mismatch'] });
+      setError(null);
       return;
     }
     setBusy(true);
@@ -34,7 +42,10 @@ export function RegisterForm() {
       await qc.invalidateQueries({ queryKey: ['me'] });
       setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      // Validation errors belong under their fields; anything else is a banner.
+      const perField = fieldErrorsOf(err);
+      setFields(perField);
+      setError(Object.keys(perField).length > 0 ? null : errorMessage(err, te, tt('error')));
     } finally {
       setBusy(false);
     }
@@ -57,23 +68,67 @@ export function RegisterForm() {
       <form onSubmit={onSubmit} style={{ display: 'grid', gap: 12 }}>
         <label style={authLabel}>
           {t('name')}
-          <input value={name} onChange={(e) => setName(e.target.value)} required style={authInput} autoComplete="name" />
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            style={authInput}
+            autoComplete="name"
+            aria-invalid={Boolean(fields.name)}
+          />
+          <FieldError codes={fields.name} />
         </label>
         <label style={authLabel}>
           {t('email')}
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required style={authInput} autoComplete="email" />
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            style={authInput}
+            autoComplete="email"
+            aria-invalid={Boolean(fields.email)}
+          />
+          <FieldError codes={fields.email} />
         </label>
         <label style={authLabel}>
           {t('password')}
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} style={authInput} autoComplete="new-password" />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+            style={authInput}
+            autoComplete="new-password"
+            aria-invalid={Boolean(fields.password)}
+            aria-describedby="password-rules"
+          />
+          {/* The rules up front, so the first failure isn't a surprise. */}
+          <span id="password-rules" style={{ color: 'var(--ink-3)', fontSize: 12.5, marginTop: 4 }}>
+            {t('passwordHint')}
+          </span>
+          <FieldError codes={fields.password} />
         </label>
         <label style={authLabel}>
           {t('confirm')}
-          <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required style={authInput} autoComplete="new-password" />
+          <input
+            type="password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            required
+            style={authInput}
+            autoComplete="new-password"
+            aria-invalid={Boolean(fields.confirm)}
+          />
+          <FieldError codes={fields.confirm} />
         </label>
         <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 14, color: 'var(--ink-2)' }}>
           <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} required style={{ marginTop: 3 }} />
-          {t('acceptTerms')}
+          <span>
+            {t('acceptTerms')}
+            <FieldError codes={fields.acceptTerms} />
+          </span>
         </label>
         <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 14, color: 'var(--ink-2)' }}>
           <input type="checkbox" checked={subscribe} onChange={(e) => setSubscribe(e.target.checked)} style={{ marginTop: 3 }} />

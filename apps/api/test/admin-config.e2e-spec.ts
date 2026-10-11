@@ -18,7 +18,7 @@ describe('Club configuration (e2e)', () => {
     ctx = await createTestApp();
     await resetDb(ctx.prisma);
     const { prisma } = ctx;
-    const city = await prisma.city.create({ data: { name: 'Sofia' } });
+    const city = await prisma.city.create({ data: { name: 'Sofia', slug: 'sofia' } });
     const hash = await hashPassword(password);
 
     const admin = await prisma.user.create({

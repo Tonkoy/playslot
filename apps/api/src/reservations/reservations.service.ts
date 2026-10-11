@@ -40,6 +40,8 @@ interface Actor {
 
 interface ResolvedSlot {
   clubId: number;
+  /** The club asks to confirm player bookings before they count (spec §16). */
+  requiresBookingApproval: boolean;
   timezone: string;
   currency: string;
   slotIntervalMin: number;
@@ -109,6 +111,9 @@ export class ReservationsService {
 
     const online = requiresOnlinePayment(input.paymentMethod);
     const holdExpiresAt = new Date(Date.now() + this.env.HOLD_TTL_MIN * 60_000);
+    // Paying online settles it there and then; otherwise the club may want the
+    // last word, and the slot stays held until staff confirm (spec §16).
+    const needsApproval = !online && slot.requiresBookingApproval;
 
     const reservation = await this.runBookingTransaction({
       slot,
@@ -120,7 +125,7 @@ export class ReservationsService {
       paymentMethod: input.paymentMethod,
       participants: input.participants ?? null,
       holdExpiresAt,
-      finalStatus: online ? 'PENDING_PAYMENT' : 'CONFIRMED',
+      finalStatus: online ? 'PENDING_PAYMENT' : needsApproval ? 'PENDING_APPROVAL' : 'CONFIRMED',
     });
 
     this.events.emitAvailabilityChanged(slot.clubId);
@@ -141,6 +146,8 @@ export class ReservationsService {
         locale: normalizeLocale(u?.locale),
       });
       checkoutUrl = url;
+    } else if (needsApproval) {
+      await this.sendBookingReceivedEmail(reservation.id);
     } else {
       await this.sendConfirmationEmail(reservation.id);
     }
@@ -264,7 +271,7 @@ export class ReservationsService {
   async reschedule(clubId: number, reservationId: number, input: RescheduleInput, staffUserId: number) {
     const existing = await this.prisma.reservation.findFirst({ where: { id: reservationId, clubId } });
     if (!existing) throw new AppException('not_found');
-    if (!['HOLD', 'PENDING_PAYMENT', 'CONFIRMED'].includes(existing.status)) {
+    if (!['HOLD', 'PENDING_PAYMENT', 'PENDING_APPROVAL', 'CONFIRMED'].includes(existing.status)) {
       throw new AppException('policy_violation', { reason: 'not_reschedulable' });
     }
 
@@ -295,7 +302,9 @@ export class ReservationsService {
         );
         if (conflicts.length > 0) throw new AppException('availability_changed', { reason: 'overlap' });
 
-        const active = ['HOLD', 'PENDING_PAYMENT', 'CONFIRMED', 'COMPLETED'].includes(existing.status);
+        const active = ['HOLD', 'PENDING_PAYMENT', 'PENDING_APPROVAL', 'CONFIRMED', 'COMPLETED'].includes(
+          existing.status,
+        );
         for (const resourceId of slot.resourceIds) {
           await tx.$executeRaw(
             Prisma.sql`INSERT INTO "ReservationResource" ("reservationId", "resourceId", period, "isActive")
@@ -323,6 +332,31 @@ export class ReservationsService {
       if (isExclusionViolation(e)) throw new AppException('availability_changed', { reason: 'overlap' });
       throw e;
     }
+  }
+
+  /**
+   * Club staff approve a booking that was waiting for them: the second half of
+   * the two-step flow. Idempotent — confirming an already-confirmed booking is
+   * a no-op rather than an error, so a double click costs nothing.
+   */
+  async confirm(clubId: number, reservationId: number, staffUserId: number) {
+    const r = await this.prisma.reservation.findFirst({ where: { id: reservationId, clubId } });
+    if (!r) throw new AppException('not_found');
+    if (r.status === 'CONFIRMED') return { id: r.id, status: r.status };
+    if (r.status !== 'PENDING_APPROVAL') {
+      throw new AppException('policy_violation', { reason: 'not_awaiting_approval' });
+    }
+
+    await this.prisma.reservation.update({
+      where: { id: reservationId },
+      data: { status: 'CONFIRMED', holdExpiresAt: null },
+    });
+    await this.audit(this.prisma, staffUserId, 'reservation.confirmed', reservationId, {
+      from: r.status,
+    });
+    this.events.emitAvailabilityChanged(clubId);
+    await this.sendConfirmationEmail(reservationId);
+    return { id: reservationId, status: 'CONFIRMED' as const };
   }
 
   async markPaid(clubId: number, reservationId: number, staffUserId: number) {
@@ -368,7 +402,7 @@ export class ReservationsService {
     const dayStart = instantFromDayMinutes(isoDate, 0, tz);
     const dayEnd = instantFromDayMinutes(isoDate, 24 * 60, tz);
 
-    const [courts, reservations] = await Promise.all([
+    const [courts, reservations, closures] = await Promise.all([
       this.prisma.resource.findMany({
         where: { clubId, type: 'COURT' },
         select: { id: true, name: true },
@@ -377,37 +411,85 @@ export class ReservationsService {
       this.prisma.reservation.findMany({
         where: {
           clubId,
-          status: { in: ['HOLD', 'PENDING_PAYMENT', 'CONFIRMED', 'COMPLETED', 'NO_SHOW'] },
+          status: { in: ['HOLD', 'PENDING_PAYMENT', 'PENDING_APPROVAL', 'CONFIRMED', 'COMPLETED', 'NO_SHOW'] },
           startsAt: { lt: dayEnd },
           endsAt: { gt: dayStart },
         },
         include: {
-          resources: { select: { resourceId: true } },
+          resources: {
+            select: {
+              resourceId: true,
+              resource: {
+                select: { type: true, coachProfile: { select: { user: { select: { name: true } } } } },
+              },
+            },
+          },
           user: { select: { name: true } },
           payment: { select: { status: true } },
+          groupSession: { select: { title: true, capacity: true, _count: { select: { registrations: true } } } },
         },
       }),
+      // Closures are resource exceptions, not reservations — without these the
+      // calendar showed a closed day as free (QA-03).
+      this.prisma.resourceException.findMany({
+        where: {
+          resource: { clubId, type: 'COURT' },
+          startsAt: { lt: dayEnd },
+          endsAt: { gt: dayStart },
+        },
+        select: { resourceId: true, startsAt: true, endsAt: true, reason: true },
+        orderBy: { startsAt: 'asc' },
+      }),
     ]);
+
+    // Identical windows across courts collapse into one row with its courts.
+    const closureByWindow = new Map<string, { startsAt: Date; endsAt: Date; reason: string; resourceIds: number[] }>();
+    for (const c of closures) {
+      const key = `${c.startsAt.toISOString()}|${c.endsAt.toISOString()}|${c.reason}`;
+      const cur = closureByWindow.get(key);
+      if (cur) cur.resourceIds.push(c.resourceId);
+      else closureByWindow.set(key, { startsAt: c.startsAt, endsAt: c.endsAt, reason: c.reason, resourceIds: [c.resourceId] });
+    }
 
     return {
       date: isoDate,
       timezone: tz,
       slotIntervalMin: club.slotIntervalMin,
       courts,
-      entries: reservations.map((r) => ({
-        id: r.id,
-        type: r.type,
-        status: r.status,
-        source: r.source,
-        // Offset-aware ISO so the UI reads local wall-clock from HH:mm (like /availability).
-        startsAt: formatInZone(r.startsAt, tz),
-        endsAt: formatInZone(r.endsAt, tz),
-        resourceIds: r.resources.map((x) => x.resourceId),
-        customerName: r.type === 'BLOCK' ? null : (r.user?.name ?? null),
-        priceCents: r.priceCents,
-        currency: r.currency,
-        paymentMethod: r.paymentMethod,
-        paymentStatus: r.payment?.status ?? null,
+      entries: reservations.map((r) => {
+        const coachName =
+          r.resources.find((x) => x.resource.type === 'COACH')?.resource.coachProfile?.user.name ?? null;
+        const participants = r.participants as { reason?: string; name?: string } | null;
+        return {
+          id: r.id,
+          type: r.type,
+          status: r.status,
+          source: r.source,
+          // Offset-aware ISO so the UI reads local wall-clock from HH:mm (like /availability).
+          startsAt: formatInZone(r.startsAt, tz),
+          endsAt: formatInZone(r.endsAt, tz),
+          resourceIds: r.resources.map((x) => x.resourceId),
+          customerName: r.type === 'BLOCK' ? null : (r.user?.name ?? null),
+          priceCents: r.priceCents,
+          currency: r.currency,
+          paymentMethod: r.paymentMethod,
+          paymentStatus: r.payment?.status ?? null,
+          coachName,
+          groupSession: r.groupSession
+            ? {
+                title: r.groupSession.title,
+                registered: r.groupSession._count.registrations,
+                capacity: r.groupSession.capacity,
+              }
+            : null,
+          blockReason: r.type === 'BLOCK' ? (participants?.reason ?? null) : null,
+        };
+      }),
+      closures: [...closureByWindow.values()].map((c) => ({
+        startsAt: formatInZone(c.startsAt, tz),
+        endsAt: formatInZone(c.endsAt, tz),
+        reason: c.reason,
+        resourceIds: c.resourceIds,
       })),
     };
   }
@@ -533,7 +615,7 @@ export class ReservationsService {
     const isOwner = r.userId === userId;
     const isStaff = await this.isClubStaff(r.clubId, userId, roles);
     if (!isOwner && !isStaff) throw new AppException('forbidden');
-    if (!['HOLD', 'PENDING_PAYMENT', 'CONFIRMED'].includes(r.status)) {
+    if (!['HOLD', 'PENDING_PAYMENT', 'PENDING_APPROVAL', 'CONFIRMED'].includes(r.status)) {
       throw new AppException('policy_violation', { reason: 'not_cancellable' });
     }
 
@@ -594,6 +676,47 @@ export class ReservationsService {
    *   2. the club's admins/staff — a heads-up that a slot filled;
    *   3. for a LESSON, the selected coach — a new-lesson notice.
    */
+  /**
+   * Booking made, club's turn: the player hears that the slot is held, and the
+   * club hears that something is waiting for them.
+   */
+  private async sendBookingReceivedEmail(reservationId: number): Promise<void> {
+    const p = await this.loadReservationParties(reservationId);
+    if (!p) return;
+    if (p.customer) {
+      await this.mail
+        .sendBookingReceived(
+          p.customer.email,
+          {
+            clubName: p.clubName,
+            when: p.when,
+            priceCents: p.priceCents,
+            currency: p.currency,
+            what: p.what,
+            bookingRef: reservationId,
+          },
+          normalizeLocale(p.customer.locale),
+        )
+        .catch(() => undefined);
+    }
+    for (const s of p.staff) {
+      await this.mail
+        .sendStaffBookingNotice(
+          s.email,
+          {
+            clubName: p.clubName,
+            when: p.when,
+            customerName: p.customerName,
+            what: p.what,
+            priceCents: p.priceCents,
+            currency: p.currency,
+          },
+          normalizeLocale(s.locale),
+        )
+        .catch(() => undefined);
+    }
+  }
+
   private async sendConfirmationEmail(reservationId: number): Promise<void> {
     const p = await this.loadReservationParties(reservationId);
     if (!p) return;
@@ -602,7 +725,14 @@ export class ReservationsService {
       await this.mail
         .sendConfirmation(
           p.customer.email,
-          { clubName: p.clubName, when: p.when, priceCents: p.priceCents, currency: p.currency },
+          {
+            clubName: p.clubName,
+            when: p.when,
+            priceCents: p.priceCents,
+            currency: p.currency,
+            what: p.what,
+            bookingRef: reservationId,
+          },
           normalizeLocale(p.customer.locale),
         )
         .catch(() => undefined);
@@ -839,7 +969,13 @@ export class ReservationsService {
 
     const club = await this.prisma.club.findFirst({
       where: { id: opts.clubId, status: 'ACTIVE' },
-      select: { id: true, timezone: true, slotIntervalMin: true, currency: true },
+      select: {
+        id: true,
+        timezone: true,
+        slotIntervalMin: true,
+        currency: true,
+        requiresBookingApproval: true,
+      },
     });
     if (!club) throw new AppException('not_found');
 
@@ -883,13 +1019,16 @@ export class ReservationsService {
           throw new AppException('policy_violation', { reason: 'below_min_duration' });
         }
       }
+      // Club closure / court downtime — refused for players, staff walk-ins and
+      // blocks alike, so a closed day cannot be booked from any side (QA-04).
       if (r.exceptions.some((e) => e.startsAt < end && start < e.endsAt)) {
-        throw new AppException('availability_changed', { reason: 'exception' });
+        throw new AppException('availability_changed', { reason: 'club_closed' });
       }
     }
 
     return {
       clubId: club.id,
+      requiresBookingApproval: club.requiresBookingApproval,
       timezone: tz,
       currency: club.currency,
       slotIntervalMin: club.slotIntervalMin,
@@ -962,7 +1101,7 @@ export class ReservationsService {
     paymentMethod: PaymentMethod;
     participants: unknown;
     holdExpiresAt: Date | null;
-    finalStatus: 'CONFIRMED' | 'PENDING_PAYMENT';
+    finalStatus: 'CONFIRMED' | 'PENDING_PAYMENT' | 'PENDING_APPROVAL';
   }) {
     const { slot } = args;
     try {

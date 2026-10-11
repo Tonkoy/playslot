@@ -29,7 +29,7 @@ describe('Notifications (e2e)', () => {
     await resetDb(ctx.prisma);
     const { prisma } = ctx;
     const hash = await hashPassword(password);
-    const city = await prisma.city.create({ data: { name: 'Sofia' } });
+    const city = await prisma.city.create({ data: { name: 'Sofia', slug: 'sofia' } });
     const club = await prisma.club.create({
       data: { slug: 'notif-club', name: 'Notif Club', address: 'x', cityId: city.id, status: 'ACTIVE', currency: 'EUR', timezone: tz, slotIntervalMin: 60 },
     });

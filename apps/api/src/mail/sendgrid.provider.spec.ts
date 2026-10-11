@@ -67,6 +67,48 @@ describe('SendGridMailProvider', () => {
     expect(body.from).toEqual({ email: 'no-reply@playslot.app' });
   });
 
+  it('sends a dynamic template when the template id is configured', async () => {
+    const fetchMock = mockFetch({});
+    await new SendGridMailProvider({
+      ...env,
+      SENDGRID_TEMPLATE_BOOKING_CONFIRMED: 'd-abc123',
+    } as unknown as ServerEnv).send({
+      to: 'player@example.com',
+      subject: 'Потвърдена резервация — Ace',
+      html: '<p>fallback</p>',
+      template: { key: 'booking_confirmed', data: { heading: 'Часът ви е потвърден' } },
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
+    expect(body.template_id).toBe('d-abc123');
+    // The subject travels inside the data: the template's subject is {{subject}}.
+    expect(body.personalizations[0].dynamic_template_data).toEqual({
+      subject: 'Потвърдена резервация — Ace',
+      heading: 'Часът ви е потвърден',
+    });
+    expect(body.subject).toBeUndefined();
+    expect(body.content).toBeUndefined();
+  });
+
+  it('falls back to inline html when that template has no id in env', async () => {
+    const fetchMock = mockFetch({});
+    await new SendGridMailProvider(env).send({
+      to: 'player@example.com',
+      subject: 'S',
+      html: '<p>fallback</p>',
+      text: 'fallback',
+      template: { key: 'booking_confirmed', data: { heading: 'x' } },
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
+    expect(body.template_id).toBeUndefined();
+    expect(body.subject).toBe('S');
+    expect(body.content).toEqual([
+      { type: 'text/plain', value: 'fallback' },
+      { type: 'text/html', value: '<p>fallback</p>' },
+    ]);
+  });
+
   it('throws email_send_failed:<status> on a non-2xx response', async () => {
     mockFetch({ ok: false, status: 401, text: async () => 'unauthorized' });
     await expect(

@@ -272,7 +272,7 @@ export class CoachingService {
       ? await this.prisma.reservation.findMany({
           where: {
             type: 'LESSON',
-            status: { in: ['CONFIRMED', 'PENDING_PAYMENT'] },
+            status: { in: ['CONFIRMED', 'PENDING_PAYMENT', 'PENDING_APPROVAL'] },
             startsAt: { gte: start, lt: end },
             resources: { some: { resourceId: coachResource.id, isActive: true } },
           },

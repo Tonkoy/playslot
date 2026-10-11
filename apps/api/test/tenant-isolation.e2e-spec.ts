@@ -20,7 +20,7 @@ describe('Tenant isolation (e2e)', () => {
     await resetDb(ctx.prisma);
     const { prisma } = ctx;
 
-    const city = await prisma.city.create({ data: { name: 'Sofia' } });
+    const city = await prisma.city.create({ data: { name: 'Sofia', slug: 'sofia' } });
     const passwordHash = await hashPassword(password);
 
     const adminA = await prisma.user.create({

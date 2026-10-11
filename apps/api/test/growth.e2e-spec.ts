@@ -23,7 +23,7 @@ describe('Growth: search / favorites / reviews (e2e)', () => {
     ctx = await createTestApp();
     await resetDb(ctx.prisma);
     const { prisma } = ctx;
-    const city = await prisma.city.create({ data: { name: 'Sofia' } });
+    const city = await prisma.city.create({ data: { name: 'Sofia', slug: 'sofia' } });
     const hours = { create: Array.from({ length: 7 }, (_, weekday) => ({ weekday, startMin: 420, endMin: 1320 })) };
 
     const mk = async (slug: string, surface: 'CLAY' | 'HARD') => {

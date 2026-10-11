@@ -10,8 +10,11 @@ export class ConsoleMailProvider implements MailProvider {
   private readonly logger = new Logger('Mail');
 
   async send(input: SendEmailInput): Promise<void> {
-    this.logger.log(
-      `[dev-mail] To: ${input.to} | Subject: ${input.subject}\n${input.text ?? input.html}`,
-    );
+    // With a designed template, the data is what would be rendered — log that
+    // instead of the fallback HTML, so local dev shows what SendGrid would get.
+    const payload = input.template
+      ? `template=${input.template.key} ${JSON.stringify(input.template.data, null, 2)}`
+      : (input.text ?? input.html);
+    this.logger.log(`[dev-mail] To: ${input.to} | Subject: ${input.subject}\n${payload}`);
   }
 }

@@ -50,7 +50,8 @@ async function main() {
   ]);
 
   // ── city ──
-  const sofia = await prisma.city.create({ data: { name: 'Sofia' } });
+  // Bulgarian display name; the slug is what keeps spellings from forking.
+  const sofia = await prisma.city.create({ data: { name: 'София', slug: 'sofia' } });
 
   // ── users (one identity, many roles — golden rule §2.8) ──
   async function createUser(opts: {

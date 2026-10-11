@@ -4,14 +4,19 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Link, useRouter } from '@/i18n/navigation';
 import { resetPassword } from '@/lib/api';
+import { errorMessage, fieldErrorsOf } from '@/lib/errors';
+import { FieldError } from '../FieldError';
 import { authInput, authLabel, authPrimaryBtn } from './styles';
 
 export function ResetPasswordForm({ token }: { token: string }) {
   const t = useTranslations('ResetPassword');
+  const te = useTranslations('Errors');
+  const tt = useTranslations('Toasts');
   const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [fields, setFields] = useState<Record<string, string[]>>({});
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -31,7 +36,9 @@ export function ResetPasswordForm({ token }: { token: string }) {
       await resetPassword(token, password);
       setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const perField = fieldErrorsOf(err);
+      setFields(perField);
+      setError(Object.keys(perField).length > 0 ? null : errorMessage(err, te, tt('error')));
     } finally {
       setBusy(false);
     }
@@ -53,11 +60,31 @@ export function ResetPasswordForm({ token }: { token: string }) {
       <form onSubmit={onSubmit} style={{ display: 'grid', gap: 12 }}>
         <label style={authLabel}>
           {t('newPassword')}
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} style={authInput} autoComplete="new-password" />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+            style={authInput}
+            autoComplete="new-password"
+            aria-invalid={Boolean(fields.password)}
+          />
+          <span style={{ color: 'var(--ink-3)', fontSize: 12.5, marginTop: 4 }}>{t('passwordHint')}</span>
+          <FieldError codes={fields.password} />
         </label>
         <label style={authLabel}>
           {t('confirm')}
-          <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required style={authInput} autoComplete="new-password" />
+          <input
+            type="password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            required
+            style={authInput}
+            autoComplete="new-password"
+            aria-invalid={Boolean(fields.confirm)}
+          />
+          <FieldError codes={fields.confirm} />
         </label>
         {error && <div role="alert" style={{ color: 'var(--clay)', fontSize: 14 }}>{error}</div>}
         <button type="submit" disabled={busy} style={authPrimaryBtn}>

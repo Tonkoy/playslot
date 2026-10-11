@@ -34,4 +34,8 @@ export interface SearchResponse {
 export interface CityDto {
   id: number;
   name: string;
+  /** Transliterated identity ("София" and "Sofia" are both "sofia"). */
+  slug: string;
+  /** Clubs currently visible in this city (platform-admin listings). */
+  clubCount?: number;
 }

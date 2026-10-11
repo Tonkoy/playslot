@@ -6,6 +6,19 @@ import { MAIL_PROVIDER, type MailProvider, type SendEmailInput } from './mail-pr
 
 export type { SendEmailInput } from './mail-provider';
 
+/** Everything a booking email shows about the reservation. */
+export interface BookingInfo {
+  clubName: string;
+  when: string;
+  priceCents: number;
+  currency: string;
+  /** Court(s), as shown in the calendar. */
+  what?: string;
+  coachName?: string | null;
+  bookingRef?: number;
+  cancellationNote?: string | null;
+}
+
 /**
  * Transactional email (spec §19). Delegates the actual transport to a
  * {@link MailProvider} chosen from env (Resend / SendGrid / console) — this is
@@ -43,6 +56,21 @@ export class MailService {
       subject: copy.subject,
       text: `${copy.body}\n${link}`,
       html: emailShell(`<p>${copy.body}</p>${button(link, copy.cta)}<p>${link}</p>`),
+      template: {
+        key: 'verify_email',
+        data: {
+          preheader: locale === 'en' ? 'One click and your account is active.' : 'Един клик и профилът ви е активен.',
+          heading: locale === 'en' ? 'Confirm your email' : 'Потвърдете имейла си',
+          intro: copy.body,
+          cta_label: copy.cta,
+          cta_url: link,
+          expiry_note:
+            locale === 'en'
+              ? 'The link is valid for 24 hours. After that, request a new one from the sign-in page.'
+              : 'Връзката е валидна 24 часа. След това заявете нова от страницата за вход.',
+          site_url: this.siteUrl(),
+        },
+      },
     });
   }
 
@@ -70,6 +98,32 @@ export class MailService {
       html: emailShell(
         `<p>${copy.greeting}</p><p>${copy.body}</p>${button(this.webLink(locale, 'clubs'), copy.cta)}`,
       ),
+      template: {
+        key: 'welcome',
+        data: {
+          preheader:
+            locale === 'en'
+              ? 'Your account is ready — find a court or a coach.'
+              : 'Профилът ви е готов — намерете корт или треньор.',
+          heading: copy.greeting,
+          intro: copy.body,
+          steps:
+            locale === 'en'
+              ? [
+                  { number: 1, text: 'Pick a club and a day — you see real availability.' },
+                  { number: 2, text: 'Add a coach to the booking if you want a lesson.' },
+                  { number: 3, text: 'Confirm the slot and get an email with the details.' },
+                ]
+              : [
+                  { number: 1, text: 'Изберете клуб и ден — виждате реалната наличност.' },
+                  { number: 2, text: 'Добавете треньор към резервацията, ако искате урок.' },
+                  { number: 3, text: 'Потвърдете часа и получавате имейл с детайлите.' },
+                ],
+          cta_label: copy.cta,
+          cta_url: this.webLink(locale, 'clubs'),
+          site_url: this.siteUrl(),
+        },
+      },
     });
   }
 
@@ -101,9 +155,30 @@ export class MailService {
     });
   }
 
+  /** What a booking email shows in its details table. */
+  private bookingDetails(info: BookingInfo, locale: ApiLocale): { label: string; value: string }[] {
+    const l = (bg: string, en: string) => (locale === 'en' ? en : bg);
+    const rows = [
+      { label: l('Клуб', 'Club'), value: info.clubName },
+      { label: l('Кога', 'When'), value: info.when },
+    ];
+    if (info.what) rows.push({ label: l('Корт', 'Court'), value: info.what });
+    if (info.coachName) rows.push({ label: l('Треньор', 'Coach'), value: info.coachName });
+    rows.push({
+      label: l('Цена', 'Price'),
+      value: `${(info.priceCents / 100).toFixed(2)} ${info.currency}`,
+    });
+    if (info.bookingRef) rows.push({ label: l('Номер', 'Reference'), value: `#${info.bookingRef}` });
+    return rows;
+  }
+
+  /**
+   * The club has approved the slot — the second half of the two-step booking
+   * flow (the first is {@link sendBookingReceived}).
+   */
   async sendConfirmation(
     to: string,
-    info: { clubName: string; when: string; priceCents: number; currency: string },
+    info: BookingInfo,
     locale: ApiLocale = DEFAULT_LOCALE,
   ): Promise<void> {
     const price = `${(info.priceCents / 100).toFixed(2)} ${info.currency}`;
@@ -112,12 +187,87 @@ export class MailService {
         ? {
             subject: `Booking confirmed — ${info.clubName}`,
             body: `Your booking at ${info.clubName} on ${info.when} is confirmed. Total: ${price}.`,
+            heading: 'Your slot is confirmed',
+            intro: 'The club confirmed your booking. See you on court.',
+            status: 'Confirmed',
           }
         : {
             subject: `Потвърдена резервация — ${info.clubName}`,
             body: `Резервацията ви в ${info.clubName} на ${info.when} е потвърдена. Общо: ${price}.`,
+            heading: 'Часът ви е потвърден',
+            intro: 'Клубът потвърди резервацията ви. Очакваме ви на корта.',
+            status: 'Потвърдена',
           };
-    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+    await this.send({
+      to,
+      subject: copy.subject,
+      text: copy.body,
+      html: emailShell(`<p>${copy.body}</p>`),
+      template: {
+        key: 'booking_confirmed',
+        data: {
+          preheader: copy.intro,
+          status_label: copy.status,
+          heading: copy.heading,
+          intro: copy.intro,
+          details: this.bookingDetails(info, locale),
+          cta_label: locale === 'en' ? 'View booking' : 'Виж резервацията',
+          cta_url: this.webLink(locale, 'me/bookings'),
+          cancellation_note: info.cancellationNote ?? null,
+          site_url: this.siteUrl(),
+        },
+      },
+    });
+  }
+
+  /**
+   * The player's slot is held and the club has been asked to confirm it. Sent
+   * the moment the booking is made, so nobody is left wondering.
+   */
+  async sendBookingReceived(
+    to: string,
+    info: BookingInfo,
+    locale: ApiLocale = DEFAULT_LOCALE,
+  ): Promise<void> {
+    const price = `${(info.priceCents / 100).toFixed(2)} ${info.currency}`;
+    const copy =
+      locale === 'en'
+        ? {
+            subject: `Booking request received — ${info.clubName}`,
+            body: `We've held ${info.when} at ${info.clubName} for you (${price}). The club will confirm it shortly.`,
+            heading: 'We got your request',
+            intro: 'We held the slot for you. The club will confirm it and you will get a second email.',
+            status: 'Awaiting confirmation',
+            note: "If the club doesn't confirm, the booking lapses and you owe nothing.",
+          }
+        : {
+            subject: `Получена заявка за резервация — ${info.clubName}`,
+            body: `Запазихме ${info.when} в ${info.clubName} за вас (${price}). Клубът ще потвърди скоро.`,
+            heading: 'Получихме заявката ви',
+            intro: 'Запазихме часа за вас. Клубът ще го потвърди и ще получите второ писмо.',
+            status: 'Очаква потвърждение',
+            note: 'Ако клубът не потвърди часа, резервацията отпада и не дължите нищо.',
+          };
+    await this.send({
+      to,
+      subject: copy.subject,
+      text: copy.body,
+      html: emailShell(`<p>${copy.body}</p>`),
+      template: {
+        key: 'booking_received',
+        data: {
+          preheader: copy.status,
+          status_label: copy.status,
+          heading: copy.heading,
+          intro: copy.intro,
+          details: this.bookingDetails(info, locale),
+          cta_label: locale === 'en' ? 'View booking' : 'Виж резервацията',
+          cta_url: this.webLink(locale, 'me/bookings'),
+          note: copy.note,
+          site_url: this.siteUrl(),
+        },
+      },
+    });
   }
 
   /** Notify club admins/staff that a booking landed on their calendar (spec §19). */
@@ -473,6 +623,11 @@ export class MailService {
   }
 
   /** Build a locale-prefixed link into the web app (e.g. the clubs directory). */
+  /** Site root, for template footers. */
+  private siteUrl(): string {
+    return this.env.APP_BASE_URL.replace(/\/$/, '');
+  }
+
   private webLink(locale: ApiLocale, path: string): string {
     const base = this.env.APP_BASE_URL.replace(/\/$/, '');
     return `${base}/${locale}/${path.replace(/^\//, '')}`;

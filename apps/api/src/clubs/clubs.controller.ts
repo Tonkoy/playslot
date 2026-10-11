@@ -107,7 +107,7 @@ export class ClubsController {
     @Body(new ZodBody(deleteClubClosureSchema)) body: import('@playslot/contracts').DeleteClubClosureInput,
     @CurrentUser('id') userId: number,
   ) {
-    return this.clubs.deleteClosure(Number(clubId), body.startsAt, body.endsAt, userId);
+    return this.clubs.deleteClosure(Number(clubId), body.startsAt, body.endsAt, userId, body.reason);
   }
 
   @Patch(':clubId/settings')

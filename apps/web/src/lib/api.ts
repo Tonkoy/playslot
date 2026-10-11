@@ -20,6 +20,8 @@ import type {
   UpsertMembershipPlanInput,
 } from '@playslot/contracts';
 
+import { ApiRequestError } from './errors';
+
 /**
  * Thin typed client for the PlaySlot API. Server components use the server base
  * (API_BASE_URL, server-to-server); client components use the public base.
@@ -43,6 +45,8 @@ export interface ClubPublic {
   rules: string | null;
   slotIntervalMin: number;
   bookingDurationsMin: number[];
+  /** Player bookings wait for club staff to confirm them. */
+  requiresBookingApproval?: boolean;
   acceptsMultisport: boolean;
   paymentMethods: string[];
   status: string;
@@ -205,8 +209,11 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
   });
   if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(body?.message ?? `Request failed (${res.status})`);
+    // Keep the machine-readable parts: the UI explains the reason (QA-09).
+    const body = (await res.json().catch(() => null)) as Partial<
+      import('@playslot/contracts').ApiError
+    > | null;
+    throw new ApiRequestError(res.status, body, `Request failed (${res.status})`);
   }
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
@@ -344,12 +351,14 @@ export function adminUpdateClubSettings(
   clubId: number,
   slotIntervalMin: number,
   bookingDurationsMin?: number[],
+  requiresBookingApproval?: boolean,
 ): Promise<AdminClub> {
   return apiFetch(`/clubs/${clubId}/settings`, {
     method: 'PATCH',
     body: JSON.stringify({
       slotIntervalMin,
       ...(bookingDurationsMin ? { bookingDurationsMin } : {}),
+      ...(requiresBookingApproval !== undefined ? { requiresBookingApproval } : {}),
     }),
   });
 }
@@ -410,6 +419,11 @@ export function cancelReservationAsStaff(clubId: number, id: number, reason?: st
     method: 'POST',
     body: JSON.stringify({ reason }),
   });
+}
+
+/** Club staff approve a booking that was waiting for them. */
+export function confirmReservation(clubId: number, id: number): Promise<{ status: string }> {
+  return apiFetch(`/clubs/${clubId}/reservations/${id}/confirm`, { method: 'POST' });
 }
 
 export function markReservationPaid(clubId: number, id: number): Promise<{ paymentStatus: string }> {
@@ -535,8 +549,12 @@ export function searchAvailability(params: {
   return apiFetch(`/search?${qs.toString()}`);
 }
 
-export function getCities(): Promise<import('@playslot/contracts').CityDto[]> {
-  return apiFetch('/cities');
+export function getCities(all = false): Promise<import('@playslot/contracts').CityDto[]> {
+  return apiFetch(`/cities${all ? '?all=1' : ''}`);
+}
+/** Platform admin only: introduces a new city (existing slug returns that city). */
+export function platformCreateCity(name: string): Promise<import('@playslot/contracts').CityDto> {
+  return apiFetch('/cities', { method: 'POST', body: JSON.stringify({ name }) });
 }
 
 export function getMyReservations(): Promise<ReservationSummary[]> {

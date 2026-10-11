@@ -8,6 +8,8 @@ import { Link, usePathname } from '@/i18n/navigation';
 import { Modal } from '@/components/Modal';
 import { useToast } from '@/components/Toast';
 import { CLIENT_BASE, coachesForClub, createReservation, fetchAvailability, getMe } from '@/lib/api';
+import { enumLabel } from '@/lib/enums';
+import { errorMessage } from '@/lib/errors';
 import { SLOT_STYLE, stateTagStyle } from '@/lib/slotStates';
 
 function shiftDate(iso: string, days: number): string {
@@ -41,6 +43,8 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
   const st = useTranslations('SlotStates');
   const bk = useTranslations('Booking');
   const tt = useTranslations('Toasts');
+  const te = useTranslations('Errors');
+  const en = useTranslations('Enums');
   const toast = useToast();
   const locale = useLocale();
   const pathname = usePathname();
@@ -113,7 +117,7 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
       qc.invalidateQueries({ queryKey: ['availability', clubId] });
       toast(tt('booked'));
     },
-    onError: (e) => toast(e instanceof Error ? e.message : tt('error'), 'error'),
+    onError: (e) => toast(errorMessage(e, te, tt('error')), 'error'),
   });
 
   const money = useMemo(
@@ -250,7 +254,9 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
                   <th key={c.id} style={thStyle}>
                     <div style={{ fontWeight: 700 }}>{c.name}</div>
                     <div className="mono" style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 500 }}>
-                      {[c.surface, c.isIndoor ? t('indoor') : t('outdoor')].filter(Boolean).join(' · ')}
+                      {[enumLabel(en, 'Surface', c.surface), c.isIndoor ? t('indoor') : t('outdoor')]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </div>
                   </th>
                 ))}
@@ -446,7 +452,7 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
               )}
               {book.isError && (
                 <p role="alert" style={{ color: 'var(--clay)', fontSize: 13, marginBottom: 8 }}>
-                  {(book.error as Error).message}
+                  {errorMessage(book.error, te, tt('error'))}
                 </p>
               )}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

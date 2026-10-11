@@ -1,15 +1,16 @@
+import { APP_NAME } from '@/lib/brand';
+
 /**
- * Shared "inner page" header: eyebrow label + big heading + optional subtitle,
- * echoing the homepage hero's visual language so every page in the app reads
- * as the same product, not just the homepage.
+ * Shared "inner page" header: the product badge + big heading + optional
+ * subtitle, echoing the homepage hero's visual language so every page reads as
+ * the same product. The badge is always the product name — it used to repeat
+ * the heading ("// КЛУБОВЕ" above "Клубове"), which said nothing twice.
  */
 export function PageHeader({
-  eyebrow,
   title,
   subtitle,
   align = 'left',
 }: {
-  eyebrow: string;
   title: string;
   subtitle?: string;
   align?: 'left' | 'center';
@@ -32,11 +33,10 @@ export function PageHeader({
           fontSize: 12,
           fontWeight: 600,
           letterSpacing: '0.12em',
-          textTransform: 'uppercase',
           color: 'var(--green)',
         }}
       >
-        {eyebrow}
+        {APP_NAME}
       </span>
       <h1 style={{ fontSize: 'clamp(28px, 4.5vw, 44px)', fontWeight: 800, margin: '12px 0 0' }}>{title}</h1>
       {subtitle && (

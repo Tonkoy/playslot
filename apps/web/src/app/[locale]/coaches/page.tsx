@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { enumLabel } from '@/lib/enums';
 import { isAppLocale } from '@/i18n/routing';
 import { pageMetadata } from '@/lib/seo';
 import { Link } from '@/i18n/navigation';
@@ -29,6 +30,7 @@ export default async function CoachesPage({ params }: { params: Promise<{ locale
   const t = await getTranslations('Coaches');
   const lv = await getTranslations('Levels');
   const ag = await getTranslations('AgeGroups');
+  const te = await getTranslations('Enums');
   const level = (l: string) => (lv.has(l) ? lv(l) : l);
   const ageGroup = (g: string) => (ag.has(g) ? ag(g) : g);
   const coaches = (await getCoaches()) ?? [];
@@ -86,7 +88,9 @@ export default async function CoachesPage({ params }: { params: Promise<{ locale
                       <span key={g} className="mono" style={{ ...tag, color: 'var(--clay)', borderColor: 'var(--clay)' }}>{ageGroup(g)}</span>
                     ))}
                     {coach.languages.map((l) => (
-                      <span key={l} className="mono" style={{ ...tag, color: 'var(--teal)', borderColor: 'var(--teal)' }}>{l}</span>
+                      <span key={l} className="mono" style={{ ...tag, color: 'var(--teal)', borderColor: 'var(--teal)' }}>
+                        {enumLabel(te, 'Language', l)}
+                      </span>
                     ))}
                   </div>
                 )}

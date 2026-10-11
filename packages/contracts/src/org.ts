@@ -3,13 +3,23 @@ import { z } from 'zod';
 /** Platform-admin creates a club directly (spec §13). */
 export const platformCreateClubSchema = z.object({
   name: z.string().min(1).max(160),
-  city: z.string().min(1).max(120),
+  /** Preferred: an existing city. `city` (free text) stays for compatibility
+   * and is resolved to an existing city by slug before a new one is made. */
+  cityId: z.number().int().positive().optional(),
+  city: z.string().min(1).max(120).optional(),
   address: z.string().max(240).optional(),
   timezone: z.string().min(1).max(64).default('Europe/Sofia'),
   currency: z.string().length(3).default('EUR'),
   slotIntervalMin: z.union([z.literal(30), z.literal(60)]).default(60),
+}).refine((v) => v.cityId !== undefined || (v.city !== undefined && v.city.trim().length > 0), {
+  message: 'a city is required',
+  path: ['cityId'],
 });
 export type PlatformCreateClubInput = z.infer<typeof platformCreateClubSchema>;
+
+/** Platform admin adds a city (the only way a new city gets created in the UI). */
+export const createCitySchema = z.object({ name: z.string().min(2).max(120) });
+export type CreateCityInput = z.infer<typeof createCitySchema>;
 
 /** Add a person to a club by email — links an existing user or invites a new one. */
 export const addMemberSchema = z.object({

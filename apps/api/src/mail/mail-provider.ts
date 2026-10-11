@@ -12,11 +12,24 @@ import { SendGridMailProvider } from './sendgrid.provider';
  * console fallback when no key is configured.
  */
 
+/**
+ * Which designed template an email belongs to. The ids live in env
+ * (SENDGRID_TEMPLATE_*) and the HTML in src/mail/templates; a provider without
+ * templates (Resend, console) just sends `html` instead.
+ */
+export type MailTemplateKey = 'welcome' | 'verify_email' | 'booking_received' | 'booking_confirmed';
+
 export interface SendEmailInput {
   to: string;
   subject: string;
+  /** Always built: the fallback when the template id isn't configured. */
   html: string;
   text?: string;
+  /** Designed template + its data; used when the provider supports templates. */
+  template?: {
+    key: MailTemplateKey;
+    data: Record<string, unknown>;
+  };
 }
 
 export interface MailProvider {

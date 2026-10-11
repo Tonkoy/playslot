@@ -70,6 +70,13 @@ export const serverEnvSchema = coreEnvSchema.extend({
   MAIL_FROM: optionalString.pipe(
     z.string().default('PlaySlot <no-reply@playslot.bg>'),
   ),
+  // SendGrid dynamic templates (apps/api/src/mail/templates, uploaded with
+  // `pnpm --filter @playslot/api mail:sync`). When an id is missing, that email
+  // falls back to the inline HTML in MailService — nothing silently stops.
+  SENDGRID_TEMPLATE_WELCOME: optionalString,
+  SENDGRID_TEMPLATE_VERIFY_EMAIL: optionalString,
+  SENDGRID_TEMPLATE_BOOKING_RECEIVED: optionalString,
+  SENDGRID_TEMPLATE_BOOKING_CONFIRMED: optionalString,
   // web push (VAPID). Absent => PushService logs instead of sending, the same
   // fallback the mail provider uses.
   VAPID_PUBLIC_KEY: optionalString,

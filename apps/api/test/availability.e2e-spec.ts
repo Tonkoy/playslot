@@ -20,7 +20,7 @@ describe('Availability (e2e)', () => {
     await resetDb(ctx.prisma);
     const { prisma } = ctx;
 
-    const city = await prisma.city.create({ data: { name: 'Sofia' } });
+    const city = await prisma.city.create({ data: { name: 'Sofia', slug: 'sofia' } });
     const club = await prisma.club.create({
       data: {
         slug: 'grid-club',

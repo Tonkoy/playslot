@@ -75,6 +75,20 @@ export interface CalendarEntry {
   currency: string;
   paymentMethod: string;
   paymentStatus: string | null;
+  /** Coach on a lesson, so staff can tell lessons from plain court bookings. */
+  coachName: string | null;
+  /** Set when the entry is a group training. */
+  groupSession: { title: string; registered: number; capacity: number } | null;
+  /** Reason a staff block was made (maintenance, tournament…). */
+  blockReason: string | null;
+}
+
+/** A club closure / court downtime window, shown as closed on the calendar. */
+export interface CalendarClosure {
+  startsAt: string;
+  endsAt: string;
+  reason: string;
+  resourceIds: number[];
 }
 
 export interface CalendarResponse {
@@ -83,6 +97,7 @@ export interface CalendarResponse {
   slotIntervalMin: number;
   courts: { id: number; name: string }[];
   entries: CalendarEntry[];
+  closures: CalendarClosure[];
 }
 
 export type ReservationNextAction = 'PAY' | 'CONFIRMED';

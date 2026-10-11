@@ -14,6 +14,12 @@ describe('reservation state machine', () => {
 
   it('allows the online payment path', () => {
     expect(canTransition('HOLD', 'PENDING_PAYMENT')).toBe(true);
+    // Two-step booking: held for the club, then confirmed or declined.
+    expect(canTransition('HOLD', 'PENDING_APPROVAL')).toBe(true);
+    expect(canTransition('PENDING_APPROVAL', 'CONFIRMED')).toBe(true);
+    expect(canTransition('PENDING_APPROVAL', 'CANCELLED')).toBe(true);
+    expect(canTransition('PENDING_APPROVAL', 'COMPLETED')).toBe(false);
+    expect(occupiesInventory('PENDING_APPROVAL')).toBe(true);
     expect(canTransition('PENDING_PAYMENT', 'CONFIRMED')).toBe(true);
     expect(canTransition('PENDING_PAYMENT', 'CANCELLED')).toBe(true);
   });

@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import { enumLabel } from '@/lib/enums';
 import { useEffect, useState } from 'react';
 import { COACH_LEVELS, WORKS_WITH } from '@playslot/contracts';
 import { Link } from '@/i18n/navigation';
@@ -14,6 +15,7 @@ const LANGUAGES = ['bg', 'en'];
 /** The coach edits their public profile: photo, description and hourly rate. */
 export function CoachProfileEditor({ name }: { name: string }) {
   const t = useTranslations('CoachProfile');
+  const te = useTranslations('Enums');
   const lv = useTranslations('Levels');
   const ag = useTranslations('AgeGroups');
   const tt = useTranslations('Toasts');
@@ -172,7 +174,7 @@ export function CoachProfileEditor({ name }: { name: string }) {
                 className="mono"
                 style={chip(on)}
               >
-                {l.toUpperCase()}
+                {enumLabel(te, 'Language', l)}
               </button>
             );
           })}

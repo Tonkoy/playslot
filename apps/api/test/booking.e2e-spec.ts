@@ -18,6 +18,7 @@ describe('Booking core & concurrency (e2e)', () => {
   let courtId: number;
   let verifiedCookie: string[];
   let unverifiedCookie: string[];
+  let adminCookie: string[];
 
   const at = (isoDate: string, min: number) => instantFromDayMinutes(isoDate, min, tz).toISOString();
   // Near-future dates within the 14-day max-advance window (spec §12), so bookings
@@ -29,12 +30,13 @@ describe('Booking core & concurrency (e2e)', () => {
   const DAY_D = day(5); // verified-email gate
   const DAY_E = day(6); // misaligned
   const DAY_F = day(7); // auth
+  const DAY_G = day(8); // club-confirmed booking (spec §16)
 
   beforeAll(async () => {
     ctx = await createTestApp();
     await resetDb(ctx.prisma);
     const { prisma } = ctx;
-    const city = await prisma.city.create({ data: { name: 'Sofia' } });
+    const city = await prisma.city.create({ data: { name: 'Sofia', slug: 'sofia' } });
     const hash = await hashPassword(password);
 
     const club = await prisma.club.create({
@@ -86,11 +88,23 @@ describe('Booking core & concurrency (e2e)', () => {
         roles: { create: [{ role: 'PLAYER' }] },
       },
     });
+    const admin = await prisma.user.create({
+      data: {
+        email: 'club-admin@playslot.test',
+        name: 'Club Admin',
+        passwordHash: hash,
+        emailVerifiedAt: new Date(),
+        roles: { create: [{ role: 'CLUB_ADMIN' }] },
+      },
+    });
+    await prisma.clubMember.create({ data: { clubId, userId: admin.id, role: 'CLUB_ADMIN' } });
+
     const login = async (email: string) =>
       (await request(ctx.app.getHttpServer()).post('/auth/login').send({ email, password }).expect(200))
         .headers['set-cookie'] as unknown as string[];
     verifiedCookie = await login('v@playslot.test');
     unverifiedCookie = await login('u@playslot.test');
+    adminCookie = await login('club-admin@playslot.test');
   });
 
   afterAll(async () => {
@@ -196,6 +210,48 @@ describe('Booking core & concurrency (e2e)', () => {
       .set('Cookie', verifiedCookie)
       .send(bookingBody(DAY_E, 630))
       .expect(422);
+  });
+
+  // ── two-step booking: the club has the last word (spec §16) ──
+  it('holds the slot as PENDING_APPROVAL and confirms it on the club\'s nod', async () => {
+    const { prisma } = ctx;
+    await prisma.club.update({ where: { id: clubId }, data: { requiresBookingApproval: true } });
+
+    const booked = await http()
+      .post('/reservations')
+      .set('Cookie', verifiedCookie)
+      .send(bookingBody(DAY_G, 600))
+      .expect(201);
+    expect(booked.body.status).toBe('PENDING_APPROVAL');
+    const reservationId = booked.body.reservationId;
+
+    // The player was told we are holding it, not that it is confirmed.
+    expect(ctx.mail.bookingRequests.at(-1)?.to).toBe('v@playslot.test');
+    const confirmationsBefore = ctx.mail.confirmations.length;
+
+    // The held slot blocks a second booking exactly like a confirmed one.
+    await http()
+      .post('/reservations')
+      .set('Cookie', unverifiedCookie)
+      .send(bookingBody(DAY_G, 600))
+      .expect((res) => expect([403, 409, 422]).toContain(res.status));
+
+    // Club staff approve it → CONFIRMED, and the player hears about it.
+    const confirmed = await http()
+      .post(`/clubs/${clubId}/reservations/${reservationId}/confirm`)
+      .set('Cookie', adminCookie)
+      .expect(200);
+    expect(confirmed.body.status).toBe('CONFIRMED');
+    expect(ctx.mail.confirmations.length).toBe(confirmationsBefore + 1);
+    expect(ctx.mail.confirmations.at(-1)?.to).toBe('v@playslot.test');
+
+    // Confirming twice is a no-op, not an error.
+    await http()
+      .post(`/clubs/${clubId}/reservations/${reservationId}/confirm`)
+      .set('Cookie', adminCookie)
+      .expect(200);
+
+    await prisma.club.update({ where: { id: clubId }, data: { requiresBookingApproval: false } });
   });
 
   it('requires authentication', async () => {

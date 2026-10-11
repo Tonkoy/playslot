@@ -25,6 +25,8 @@ export type Role = (typeof ROLES)[number];
 export const RESERVATION_STATUSES = [
   'HOLD',
   'PENDING_PAYMENT',
+  /** Held while the club confirms it (spec §16). */
+  'PENDING_APPROVAL',
   'CONFIRMED',
   'COMPLETED',
   'NO_SHOW',

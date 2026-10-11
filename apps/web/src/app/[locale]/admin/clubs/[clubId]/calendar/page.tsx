@@ -27,7 +27,7 @@ export default async function CalendarPage({
         <Link href={`/admin/clubs/${clubId}`} style={{ color: 'var(--teal)', fontSize: 14 }}>
           ← {a('back')}
         </Link>
-        <PageHeader eyebrow={t('eyebrow')} title={t('title')} />
+        <PageHeader title={t('title')} />
         <ClubCalendar clubId={Number(clubId)} />
       </main>
     </>

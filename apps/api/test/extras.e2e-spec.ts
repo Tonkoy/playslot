@@ -23,7 +23,7 @@ describe('Extras: memberships + events (e2e)', () => {
     ctx = await createTestApp();
     await resetDb(ctx.prisma);
     const { prisma } = ctx;
-    const city = await prisma.city.create({ data: { name: 'Sofia' } });
+    const city = await prisma.city.create({ data: { name: 'Sofia', slug: 'sofia' } });
     const hash = await hashPassword(password);
 
     const admin = await prisma.user.create({
@@ -159,6 +159,116 @@ describe('Extras: memberships + events (e2e)', () => {
         .send({ startsAt: created.body.startsAt, endsAt: created.body.endsAt })
         .expect(200);
       expect(anyFree((await http().get(`/availability?clubId=${clubId}&date=${CLOSE_DAY}`).expect(200)).body)).toBe(true);
+    });
+
+    // QA-05: a timed closure used to build one window from the first day only,
+    // so the second day stayed open (and the night in between was closed).
+    it('a timed closure over two days closes the window on BOTH days', async () => {
+      const d1 = formatInZone(new Date(Date.now() + 6 * 86_400_000), tz, 'yyyy-MM-dd');
+      const d2 = formatInZone(new Date(Date.now() + 7 * 86_400_000), tz, 'yyyy-MM-dd');
+
+      const created = await http()
+        .post(`/clubs/${clubId}/closures`)
+        .set('Cookie', adminCookie)
+        .send({ fromDate: d1, toDate: d2, allDay: false, startMin: 9 * 60, endMin: 12 * 60, reason: 'Maintenance' })
+        .expect(201);
+      expect(created.body.days).toBe(2);
+
+      const freeAt = async (date: string, hhmm: string) => {
+        const res = await http().get(`/availability?clubId=${clubId}&date=${date}`).expect(200);
+        return (res.body.slots as { start: string; state: string }[])
+          .filter((s) => s.start.slice(11, 16) === hhmm)
+          .every((s) => s.state === 'FREE');
+      };
+
+      for (const day of [d1, d2]) {
+        expect(await freeAt(day, '10:00')).toBe(false); // inside the window
+        expect(await freeAt(day, '14:00')).toBe(true); // outside it
+      }
+
+      // The listing shows the two windows as the one closure that was entered.
+      const list = (await http().get(`/clubs/${clubId}/closures`).set('Cookie', adminCookie).expect(200)).body as {
+        reason: string;
+        fromDate: string;
+        toDate: string;
+        days: number;
+      }[];
+      const entered = list.find((c) => c.reason === 'Maintenance');
+      expect(entered).toMatchObject({ fromDate: d1, toDate: d2, days: 2 });
+
+      // Deleting removes every window of that closure.
+      await http()
+        .delete(`/clubs/${clubId}/closures`)
+        .set('Cookie', adminCookie)
+        .send({ startsAt: created.body.startsAt, endsAt: created.body.endsAt, reason: 'Maintenance' })
+        .expect(200);
+      expect(await freeAt(d2, '10:00')).toBe(true);
+    });
+
+    // QA-04: a closure must not silently bury live bookings, and nothing may be
+    // booked inside one — not from the public grid, not by staff.
+    it('refuses a closure over a live booking, and refuses walk-ins inside a closure', async () => {
+      const day = formatInZone(new Date(Date.now() + 8 * 86_400_000), tz, 'yyyy-MM-dd');
+      const startsAt = instantFromDayMinutes(day, 10 * 60, tz).toISOString();
+
+      const booking = await http()
+        .post(`/clubs/${clubId}/reservations`)
+        .set('Cookie', adminCookie)
+        .send({
+          startsAt,
+          durationMin: 60,
+          resourceIds: [courtId],
+          type: 'COURT',
+          paymentMethod: 'ON_SITE',
+          customer: { name: 'Closure Clash' },
+        })
+        .expect(201);
+
+      const refused = await http()
+        .post(`/clubs/${clubId}/closures`)
+        .set('Cookie', adminCookie)
+        .send({ fromDate: day, toDate: day, allDay: true, reason: 'Holiday' })
+        .expect(422);
+      expect(refused.body.error).toBe('policy_violation');
+      expect(refused.body.details.reason).toBe('closure_overlaps_bookings');
+      expect(refused.body.details.reservationIds).toContain(booking.body.reservationId);
+
+      // nothing was written
+      expect((await http().get(`/clubs/${clubId}/closures`).set('Cookie', adminCookie).expect(200)).body).toHaveLength(0);
+
+      // with the booking cancelled the closure goes through…
+      await http()
+        .post(`/clubs/${clubId}/reservations/${booking.body.reservationId}/cancel`)
+        .set('Cookie', adminCookie)
+        .send({ reason: 'closure' })
+        .expect(200);
+      await http()
+        .post(`/clubs/${clubId}/closures`)
+        .set('Cookie', adminCookie)
+        .send({ fromDate: day, toDate: day, allDay: true, reason: 'Holiday' })
+        .expect(201);
+
+      // …and then no one can book inside it, staff walk-ins included.
+      const walkIn = await http()
+        .post(`/clubs/${clubId}/reservations`)
+        .set('Cookie', adminCookie)
+        .send({
+          startsAt,
+          durationMin: 60,
+          resourceIds: [courtId],
+          type: 'COURT',
+          paymentMethod: 'ON_SITE',
+          customer: { name: 'Walk-in on a closed day' },
+        })
+        .expect(409);
+      expect(walkIn.body.details.reason).toBe('club_closed');
+
+      const block = await http()
+        .post(`/clubs/${clubId}/blocks`)
+        .set('Cookie', adminCookie)
+        .send({ startsAt, durationMin: 60, resourceIds: [courtId], reason: 'x' })
+        .expect(409);
+      expect(block.body.details.reason).toBe('club_closed');
     });
   });
 });

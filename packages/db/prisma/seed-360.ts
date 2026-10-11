@@ -61,7 +61,11 @@ function weekWindows(startMin: number, endMin: number) {
 }
 
 async function main() {
-  const sofia = await prisma.city.upsert({ where: { name: 'Sofia' }, update: {}, create: { name: 'Sofia' } });
+  const sofia = await prisma.city.upsert({
+    where: { slug: 'sofia' },
+    update: {},
+    create: { name: 'София', slug: 'sofia' },
+  });
 
   // ── club ──
   const clubData = {

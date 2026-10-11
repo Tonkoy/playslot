@@ -24,7 +24,7 @@ export default async function ResetPasswordPage({
     <>
       <SiteHeader />
       <main style={{ maxWidth: 'var(--maxw)', margin: '0 auto', padding: '48px 20px' }}>
-        <PageHeader eyebrow={t('eyebrow')} title={t('title')} subtitle={t('subtitle')} align="center" />
+        <PageHeader title={t('title')} subtitle={t('subtitle')} align="center" />
         <ResetPasswordForm token={token ?? ''} />
       </main>
     </>

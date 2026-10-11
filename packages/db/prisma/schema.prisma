@@ -70,6 +70,8 @@ enum ReservationType {
 enum ReservationStatus {
   HOLD
   PENDING_PAYMENT
+  /// Slot is held for the player while the club approves it (spec §16).
+  PENDING_APPROVAL
   CONFIRMED
   COMPLETED
   NO_SHOW
@@ -341,8 +343,11 @@ model VerificationToken {
 // ─── clubs & tenancy ───────────────────────────────────────────────────────────
 
 model City {
-  id    Int    @id @default(autoincrement())
-  name  String @unique
+  id   Int    @id @default(autoincrement())
+  name String @unique
+  /// Transliterated, lower-cased name ("София" and "Sofia" → "sofia"): the
+  /// city's real identity, so a different spelling can't create a twin.
+  slug String @unique
   clubs Club[]
 }
 
@@ -365,6 +370,9 @@ model Club {
   // schedule shows exactly these; the club sets them with its scheduling and
   // working hours, so players can never invent a range of their own.
   bookingDurationsMin Int[]         @default([60, 90, 120])
+  /// When on, a player's booking waits for the club to confirm it before it
+  /// counts as booked. The slot is held in the meantime.
+  requiresBookingApproval Boolean     @default(false)
   acceptsMultisport Boolean         @default(false)
   paymentMethods    PaymentMethod[]
   status            ClubStatus      @default(PENDING) // PENDING → platform-admin activates → ACTIVE

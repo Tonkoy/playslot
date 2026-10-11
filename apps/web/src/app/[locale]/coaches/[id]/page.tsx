@@ -5,6 +5,7 @@ import { NOINDEX, localeUrl, pageMetadata } from '@/lib/seo';
 import { JsonLd } from '@/components/JsonLd';
 import { Link } from '@/i18n/navigation';
 import { Avatar } from '@/components/Avatar';
+import { enumLabel } from '@/lib/enums';
 import { GroupSessionsList } from '@/components/GroupSessionsList';
 import { SiteHeader } from '@/components/SiteHeader';
 import { Stars } from '@/components/Stars';
@@ -44,6 +45,7 @@ export default async function CoachProfilePage({
   const t = await getTranslations('Coaches');
   const lv = await getTranslations('Levels');
   const ag = await getTranslations('AgeGroups');
+  const te = await getTranslations('Enums');
   const level = (l: string) => (lv.has(l) ? lv(l) : l);
   const ageGroup = (g: string) => (ag.has(g) ? ag(g) : g);
   const coach = await getCoach(Number(id));
@@ -154,7 +156,7 @@ export default async function CoachProfilePage({
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
               {coach.languages.map((l) => (
                 <span key={l} className="mono" style={chip}>
-                  {l.toUpperCase()}
+                  {enumLabel(te, 'Language', l)}
                 </span>
               ))}
               {coach.levels.map((l) => (

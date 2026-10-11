@@ -5,12 +5,14 @@ import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
 import { Link, useRouter } from '@/i18n/navigation';
 import { getMe, getMyClubs } from '@/lib/api';
+import { enumLabel } from '@/lib/enums';
 import { AdminStats } from './AdminStats';
 import { PlatformConsole } from './PlatformConsole';
 import { UsersModeration } from './UsersModeration';
 
 export function AdminHome() {
   const t = useTranslations('Admin');
+  const te = useTranslations('Enums');
   const router = useRouter();
   const me = useQuery({ queryKey: ['me'], queryFn: getMe, retry: false });
 
@@ -61,7 +63,8 @@ export function AdminHome() {
               <span>
                 <span style={{ fontWeight: 700, fontSize: 17 }}>{m.club.name}</span>
                 <span className="mono" style={{ display: 'block', color: 'var(--ink-3)', fontSize: 12 }}>
-                  {m.role} · {m.club.status} · {m.club.slotIntervalMin}‑min slots
+                  {enumLabel(te, 'Role', m.role)} · {enumLabel(te, 'ClubStatus', m.club.status)} ·{' '}
+                  {t('slotLength', { n: m.club.slotIntervalMin })}
                 </span>
               </span>
               <span aria-hidden style={{ color: 'var(--teal)' }}>

@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { SPORTS } from '@playslot/contracts';
+import { enumLabel } from '@/lib/enums';
+import { APP_NAME } from '@/lib/brand';
 import { Link, useRouter } from '@/i18n/navigation';
 import { ClosuresManager } from './ClosuresManager';
 import { ClubDetailsEditor } from './ClubDetailsEditor';
@@ -58,8 +60,12 @@ export function ClubManager({ clubId }: { clubId: number }) {
   });
 
   const settingsMut = useMutation({
-    mutationFn: (v: { slotIntervalMin: number; bookingDurationsMin?: number[] }) =>
-      adminUpdateClubSettings(clubId, v.slotIntervalMin, v.bookingDurationsMin),
+    mutationFn: (v: {
+      slotIntervalMin: number;
+      bookingDurationsMin?: number[];
+      requiresBookingApproval?: boolean;
+    }) =>
+      adminUpdateClubSettings(clubId, v.slotIntervalMin, v.bookingDurationsMin, v.requiresBookingApproval),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['myClubs'] });
       qc.invalidateQueries({ queryKey: ['platformClub', clubId] });
@@ -98,6 +104,7 @@ export function ClubManager({ clubId }: { clubId: number }) {
   if (!club) return <p style={{ color: 'var(--ink-3)' }}>…</p>;
 
   const interval = club.slotIntervalMin ?? 60;
+  const requiresApproval = club.requiresBookingApproval ?? false;
   // Only lengths that divide evenly into the club's granularity can ever line
   // up with a real slot, so the choices are filtered by it below.
   const offeredDurations = (club.bookingDurationsMin?.length
@@ -120,12 +127,11 @@ export function ClubManager({ clubId }: { clubId: number }) {
             fontSize: 12,
             fontWeight: 600,
             letterSpacing: '0.12em',
-            textTransform: 'uppercase',
             color: 'var(--green)',
             marginBottom: 8,
           }}
         >
-          {t('eyebrow')}
+          {APP_NAME}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <h1 style={{ fontSize: 'clamp(22px, 4vw, 32px)', fontWeight: 800 }}>{club?.name}</h1>
@@ -242,6 +248,29 @@ export function ClubManager({ clubId }: { clubId: number }) {
         </div>
       </section>
 
+      {/* ── Who confirms a booking ── */}
+      <section style={card}>
+        <h2 style={h2}>{t('approvalTitle')}</h2>
+        <p style={{ color: 'var(--ink-2)', fontSize: 14, margin: '4px 0 14px' }}>{t('approvalHelp')}</p>
+        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={requiresApproval}
+            disabled={settingsMut.isPending}
+            onChange={(e) =>
+              settingsMut.mutate({ slotIntervalMin: interval, requiresBookingApproval: e.target.checked })
+            }
+            style={{ marginTop: 3 }}
+          />
+          <span>
+            <strong>{t('approvalToggle')}</strong>
+            <span style={{ display: 'block', color: 'var(--ink-3)', fontSize: 13, marginTop: 2 }}>
+              {requiresApproval ? t('approvalOn') : t('approvalOff')}
+            </span>
+          </span>
+        </label>
+      </section>
+
       {/* ── Courts ── */}
       <section style={card}>
         <h2 style={h2}>{t('courtsTitle')}</h2>
@@ -339,6 +368,7 @@ function CourtRow({
   onToggle: () => void;
   t: ReturnType<typeof useTranslations>;
 }) {
+  const te = useTranslations('Enums');
   const inactive = court.status !== 'ACTIVE';
   return (
     <div
@@ -355,7 +385,12 @@ function CourtRow({
     >
       <span style={{ fontWeight: 700, minWidth: 120 }}>{court.name}</span>
       <span className="mono" style={{ fontSize: 12, color: 'var(--ink-3)' }}>
-        {[court.sport, court.surface, court.isIndoor ? t('indoor') : t('outdoor'), court.hasLighting ? t('lights') : null]
+        {[
+          enumLabel(te, 'Sport', court.sport),
+          enumLabel(te, 'Surface', court.surface),
+          court.isIndoor ? t('indoor') : t('outdoor'),
+          court.hasLighting ? t('lights') : null,
+        ]
           .filter(Boolean)
           .join(' · ')}
       </span>
@@ -388,6 +423,7 @@ function CourtFields({
   busy: boolean;
   t: ReturnType<typeof useTranslations>;
 }) {
+  const te = useTranslations('Enums');
   return (
     <form
       onSubmit={(e) => {
@@ -410,7 +446,7 @@ function CourtFields({
         <select value={value.sport} onChange={(e) => onChange({ ...value, sport: e.target.value })} style={fieldInput}>
           {SPORTS.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {enumLabel(te, 'Sport', s)}
             </option>
           ))}
         </select>
@@ -424,7 +460,7 @@ function CourtFields({
         >
           {SURFACES.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {enumLabel(te, 'Surface', s)}
             </option>
           ))}
         </select>

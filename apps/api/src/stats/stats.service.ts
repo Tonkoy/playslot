@@ -7,7 +7,8 @@ import { PrismaService } from '../prisma/prisma.service';
 const TZ = 'Europe/Sofia';
 /** Money counts once the slot is committed; a no-show still owes the court. */
 const EARNED = new Set(['CONFIRMED', 'COMPLETED', 'NO_SHOW']);
-const PENDING = new Set(['PENDING_PAYMENT']);
+/** Booked but not yet money in the till: awaiting payment or the club's nod. */
+const PENDING = new Set(['PENDING_PAYMENT', 'PENDING_APPROVAL']);
 const MAX_RANGE_DAYS = 366;
 const TOP_N = 5;
 

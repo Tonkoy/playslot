@@ -26,7 +26,7 @@ describe('Club Operating System (e2e)', () => {
     ctx = await createTestApp();
     await resetDb(ctx.prisma);
     const { prisma } = ctx;
-    const city = await prisma.city.create({ data: { name: 'Sofia' } });
+    const city = await prisma.city.create({ data: { name: 'Sofia', slug: 'sofia' } });
     const hash = await hashPassword(password);
 
     const staff = await prisma.user.create({

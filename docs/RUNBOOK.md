@@ -62,3 +62,56 @@ constraint (spec §8). If a customer reports one:
 - Global: 120 req/min/IP; auth endpoints 10 req/min/IP (429 = `rate_limited`).
   Front with Cloudflare WAF in production. For multi-instance, back the throttler
   and SSE with Redis.
+
+## Transactional email (SendGrid)
+
+Four designed emails go out as SendGrid **dynamic templates**. The HTML lives in
+`apps/api/src/mail/templates/` (one shell + one body per email) and is uploaded
+from the repo, so every environment has the same templates and nothing is
+hand-edited in the SendGrid UI.
+
+| Email | Template file | Sent when |
+|---|---|---|
+| Регистрация / добре дошли | `welcome.html` | the user confirms their email |
+| Потвърждение на имейл | `verify-email.html` | registration, and "resend verification" |
+| Заявка за резервация | `booking-received.html` | a player books at a club that confirms bookings |
+| Потвърдена резервация | `booking-confirmed.html` | club staff press "Потвърди" (or a booking is auto-confirmed) |
+
+### One-time setup
+
+1. **Sender.** SendGrid → Settings → Sender Authentication. Either verify a
+   single sender (fast, for testing) or authenticate the `playslot.bg` domain
+   (required for production volume). Put the result in `MAIL_FROM`, e.g.
+   `MAIL_FROM="PlaySlot <no-reply@playslot.bg>"`.
+2. **API key.** Settings → API Keys → Create API Key, with **Mail Send** and
+   **Template Engine** permissions. Put it in `.env` as `SENDGRID_API_KEY`.
+   The key is shown once — store it in the password manager too.
+3. **Upload the templates and record their ids:**
+   ```
+   pnpm --filter @playslot/api mail:sync
+   ```
+   It prints `SENDGRID_TEMPLATE_*=d-…` lines; paste them into `.env`.
+4. Optional: `MAIL_PROVIDER=sendgrid` pins the transport. Without it the
+   provider is chosen by which key is present (SendGrid, then Resend, then the
+   console logger).
+
+### Day-to-day
+
+- `pnpm --filter @playslot/api mail:preview` renders the four templates to
+  `apps/api/.mail-preview/*.html` with sample data — no network, no sending.
+- `pnpm --filter @playslot/api mail:test -- --to you@example.com` sends one of
+  each to a real inbox. Add `--only booking_confirmed` for a single email.
+- Changing copy in the templates: edit the HTML, run `mail:sync` again. Each run
+  adds a new active version in SendGrid, so the old one stays in its history.
+- **Without template ids the app still sends** — it falls back to the plain
+  inline HTML in `MailService`. A missing id degrades the design, never the
+  delivery.
+
+### Two-step booking
+
+A club can require confirmation (club admin → Управление → "Потвърждение на
+резервации"). With it on, a player's on-site booking is created as
+`PENDING_APPROVAL`: the slot is held (the no-overlap constraint counts it), the
+player gets "заявката е получена", and staff see a **Потвърди** button on the
+calendar entry. Confirming sends "потвърдена резервация". Online-paid bookings
+are unaffected — payment confirms them, as before.

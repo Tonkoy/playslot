@@ -22,7 +22,6 @@ import { GoogleOAuthService } from './google-oauth.service';
 
 const OAUTH_STATE_COOKIE = 'playslot_oauth_state';
 
-// Tighter limit on sensitive auth endpoints (spec §20): 10 req/min/IP (relaxed
 // under test). Applied per-route so /auth/me stays on the global default.
 const AUTH_LIMIT = {
   default: { ttl: 60_000, limit: process.env.NODE_ENV === 'test' ? 100_000 : 10 },

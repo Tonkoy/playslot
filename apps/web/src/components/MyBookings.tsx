@@ -6,15 +6,17 @@ import { useEffect, useState } from 'react';
 import type { ReservationSummary } from '@playslot/contracts';
 import { useRouter } from '@/i18n/navigation';
 import { cancelMyReservation, getMe, getMyReservations } from '@/lib/api';
+import { enumLabel } from '@/lib/enums';
 import { Modal } from './Modal';
 import { useToast } from './Toast';
 
-const CANCELLABLE = ['HOLD', 'PENDING_PAYMENT', 'CONFIRMED'];
+const CANCELLABLE = ['HOLD', 'PENDING_PAYMENT', 'PENDING_APPROVAL', 'CONFIRMED'];
 
 export function MyBookings() {
   const t = useTranslations('MyBookings');
   const tt = useTranslations('Toasts');
   const st = useTranslations('ReservationStatus');
+  const te = useTranslations('Enums');
   const locale = useLocale();
   const router = useRouter();
   const qc = useQueryClient();
@@ -82,7 +84,8 @@ export function MyBookings() {
       <div>
         <div style={{ fontWeight: 700 }}>{r.clubName ?? `#${r.clubId}`}</div>
         <div className="mono" style={{ color: 'var(--ink-3)', fontSize: 12 }}>
-          {dtf.format(new Date(r.startsAt))} · {r.type} · {money(r.priceCents, r.currency)}
+          {dtf.format(new Date(r.startsAt))} · {enumLabel(te, 'ReservationType', r.type)} ·{' '}
+          {money(r.priceCents, r.currency)}
         </div>
         <div className="mono" style={{ color: 'var(--ink-3)', fontSize: 12, marginTop: 2 }}>
           {t('bookingRef')}: <strong>#{r.id}</strong>

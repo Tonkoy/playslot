@@ -8,6 +8,8 @@
 export type ReservationStatus =
   | 'HOLD'
   | 'PENDING_PAYMENT'
+  /** Held for the player while the club decides (spec §16). */
+  | 'PENDING_APPROVAL'
   | 'CONFIRMED'
   | 'COMPLETED'
   | 'NO_SHOW'
@@ -21,6 +23,9 @@ export type ReservationStatus =
 export const OCCUPYING_STATUSES: readonly ReservationStatus[] = [
   'HOLD',
   'PENDING_PAYMENT',
+  // A slot awaiting the club's confirmation is held, or two players could be
+  // waiting on the same hour.
+  'PENDING_APPROVAL',
   'CONFIRMED',
   'COMPLETED',
 ];
@@ -30,8 +35,10 @@ export function occupiesInventory(status: ReservationStatus): boolean {
 }
 
 const TRANSITIONS: Record<ReservationStatus, readonly ReservationStatus[]> = {
-  HOLD: ['CONFIRMED', 'PENDING_PAYMENT', 'CANCELLED'],
-  PENDING_PAYMENT: ['CONFIRMED', 'CANCELLED'],
+  HOLD: ['CONFIRMED', 'PENDING_PAYMENT', 'PENDING_APPROVAL', 'CANCELLED'],
+  PENDING_PAYMENT: ['CONFIRMED', 'PENDING_APPROVAL', 'CANCELLED'],
+  // The club either confirms it or turns it down (a decline is a cancel).
+  PENDING_APPROVAL: ['CONFIRMED', 'CANCELLED'],
   CONFIRMED: ['COMPLETED', 'NO_SHOW', 'CANCELLED'],
   COMPLETED: ['REFUNDED'],
   NO_SHOW: [],

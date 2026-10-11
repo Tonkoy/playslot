@@ -28,7 +28,7 @@ interface CoachAvail {
 }
 
 // Reservation statuses that occupy inventory for availability (spec §7).
-const OCCUPYING_STATUSES = ['CONFIRMED', 'PENDING_PAYMENT', 'HOLD'] as const;
+const OCCUPYING_STATUSES = ['CONFIRMED', 'PENDING_PAYMENT', 'PENDING_APPROVAL', 'HOLD'] as const;
 
 @Injectable()
 export class AvailabilityService {

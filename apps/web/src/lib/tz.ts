@@ -70,3 +70,18 @@ export function hhmmToMin(hhmm: string): number {
 export function minToHHMM(min: number): string {
   return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
 }
+
+/**
+ * A compact local date range: "27.10.2026" for one day, "27–28.10.2026" inside
+ * one month, "27.10 – 2.11.2026" inside one year, both dates in full otherwise.
+ * Takes plain YYYY-MM-DD dates (no instants), so nothing can shift a day.
+ */
+export function formatDateRange(fromDate: string, toDate: string): string {
+  const [fy, fm, fd] = fromDate.split('-');
+  const [ty, tm, td] = toDate.split('-');
+  const day = (d: string) => String(Number(d));
+  if (fromDate === toDate) return `${day(fd!)}.${fm}.${fy}`;
+  if (fy === ty && fm === tm) return `${day(fd!)}–${day(td!)}.${fm}.${fy}`;
+  if (fy === ty) return `${day(fd!)}.${fm} – ${day(td!)}.${tm}.${fy}`;
+  return `${day(fd!)}.${fm}.${fy} – ${day(td!)}.${tm}.${ty}`;
+}

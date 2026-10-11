@@ -90,6 +90,17 @@ export class ClubOpsController {
     return this.reservations.cancel(Number(id), user.id, user.roles, body.reason);
   }
 
+  /** Approve a booking that is waiting for the club (spec §16). */
+  @Post('reservations/:id/confirm')
+  @HttpCode(200)
+  confirm(
+    @Param('clubId') clubId: string,
+    @Param('id') id: string,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.reservations.confirm(Number(clubId), Number(id), userId);
+  }
+
   @Post('reservations/:id/mark-paid')
   @HttpCode(200)
   markPaid(

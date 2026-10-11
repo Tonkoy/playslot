@@ -13,6 +13,7 @@ export class FakeMail {
   resets: { to: string; link: string }[] = [];
   welcomes: { to: string; name: string }[] = [];
   confirmations: { to: string }[] = [];
+  bookingRequests: { to: string }[] = [];
   cancellations: { to: string; refundCents: number }[] = [];
   staffNotices: { to: string; customerName: string; what: string }[] = [];
   coachNotices: { to: string; customerName: string }[] = [];
@@ -48,6 +49,10 @@ export class FakeMail {
   }
   async sendConfirmation(to: string, _info: unknown, _locale?: ApiLocale) {
     this.confirmations.push({ to });
+  }
+  /** "We got your request" — sent while the club still has to confirm. */
+  async sendBookingReceived(to: string, _info: unknown, _locale?: ApiLocale) {
+    this.bookingRequests.push({ to });
   }
   async sendCancellation(
     to: string,

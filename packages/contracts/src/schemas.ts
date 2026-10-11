@@ -3,56 +3,75 @@ import { SPORTS } from './enums';
 
 /**
  * Shared request schemas (spec §13). Zod is the single validation source for API
- * and web (golden rule §2.9). Keep messages generic here; the API localizes
- * user-facing errors via the error contract (§14).
+ * and web (golden rule §2.9).
+ *
+ * Validation messages are **codes**, not sentences: the API returns them under
+ * `details.fields` and the web renders the user's language from them (§14). An
+ * English zod default must never reach the screen.
  */
+
+/** Field-level validation codes. The web has a bg/en label for each. */
+export const FIELD_ERROR_CODES = [
+  'required',
+  'too_long',
+  'email_invalid',
+  'password_min',
+  'password_max',
+  'password_lower',
+  'password_upper',
+  'password_digit',
+  'password_mismatch',
+  'terms_required',
+  'phone_invalid',
+] as const;
+export type FieldErrorCode = (typeof FIELD_ERROR_CODES)[number];
 
 const password = z
   .string()
-  .min(8, 'Password must be at least 8 characters')
-  .max(200)
-  .regex(/[a-z]/, 'Password must contain a lowercase letter')
-  .regex(/[A-Z]/, 'Password must contain an uppercase letter')
-  .regex(/[0-9]/, 'Password must contain a digit');
+  .min(8, 'password_min')
+  .max(200, 'password_max')
+  .regex(/[a-z]/, 'password_lower')
+  .regex(/[A-Z]/, 'password_upper')
+  .regex(/[0-9]/, 'password_digit');
 
 export const registerSchema = z
   .object({
-    name: z.string().min(1).max(120),
-    email: z.string().email().max(200),
+    name: z.string().min(1, 'required').max(120, 'too_long'),
+    email: z.string().email('email_invalid').max(200, 'too_long'),
     password,
-    confirm: z.string(),
+    confirm: z.string().min(1, 'required'),
     turnstileToken: z.string().optional(),
     acceptTerms: z.literal(true, {
-      errorMap: () => ({ message: 'You must accept the terms' }),
+      errorMap: () => ({ message: 'terms_required' }),
     }),
     subscribe: z.boolean().optional(),
     isVisible: z.boolean().optional(),
   })
   .refine((d) => d.password === d.confirm, {
-    message: 'Passwords do not match',
+    message: 'password_mismatch',
     path: ['confirm'],
   });
 export type RegisterInput = z.infer<typeof registerSchema>;
 
 export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
+  email: z.string().email('email_invalid'),
+  password: z.string().min(1, 'required'),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 
-export const verifyEmailSchema = z.object({ token: z.string().min(1) });
-export const resendVerificationSchema = z.object({ email: z.string().email() });
-export const forgotPasswordSchema = z.object({ email: z.string().email() });
-export const resetPasswordSchema = z.object({ token: z.string().min(1), password });
+export const verifyEmailSchema = z.object({ token: z.string().min(1, 'required') });
+export const resendVerificationSchema = z.object({ email: z.string().email('email_invalid') });
+export const forgotPasswordSchema = z.object({ email: z.string().email('email_invalid') });
+export const resetPasswordSchema = z.object({ token: z.string().min(1, 'required'), password });
 
 export const clubJoinRequestSchema = z.object({
-  clubName: z.string().min(1).max(160),
-  city: z.string().min(1).max(120),
-  phone: z.string().min(3).max(40),
-  ownerName: z.string().min(1).max(120),
-  email: z.string().email(),
+  clubName: z.string().min(1, 'required').max(160, 'too_long'),
+  city: z.string().min(1, 'required').max(120, 'too_long'),
+  phone: z.string().min(3, 'phone_invalid').max(40, 'too_long'),
+  ownerName: z.string().min(1, 'required').max(120, 'too_long'),
+  email: z.string().email('email_invalid'),
   password,
-  acceptTerms: z.literal(true),
+  acceptTerms: z.literal(true, { errorMap: () => ({ message: 'terms_required' }) }),
   turnstileToken: z.string().optional(),
 });
 export type ClubJoinRequestInput = z.infer<typeof clubJoinRequestSchema>;
@@ -112,6 +131,8 @@ export const clubSettingsSchema = z.object({
     .min(1)
     .max(8)
     .optional(),
+  /** When on, a player's booking waits for club staff to confirm it. */
+  requiresBookingApproval: z.boolean().optional(),
 });
 export type ClubSettingsInput = z.infer<typeof clubSettingsSchema>;
 
@@ -134,14 +155,25 @@ export type CreateClubClosureInput = z.infer<typeof createClubClosureSchema>;
 export const deleteClubClosureSchema = z.object({
   startsAt: z.string().datetime({ offset: true }),
   endsAt: z.string().datetime({ offset: true }),
+  /** Narrows the delete to one closure when two share the same range. */
+  reason: z.string().max(200).optional(),
 });
 export type DeleteClubClosureInput = z.infer<typeof deleteClubClosureSchema>;
 
 export interface ClubClosureDto {
-  startsAt: string; // ISO
+  /** First window's start and last window's end (ISO), for delete + display. */
+  startsAt: string;
   endsAt: string;
   reason: string;
   courtCount: number;
+  /** The closure as entered: local dates and, when timed, the daily window. */
+  fromDate: string; // YYYY-MM-DD in the club's timezone
+  toDate: string;
+  allDay: boolean;
+  startMin: number | null;
+  endMin: number | null;
+  /** How many daily windows this closure holds (1 for a single day / all-day). */
+  days: number;
 }
 
 export const surfaceEnum = z.enum([

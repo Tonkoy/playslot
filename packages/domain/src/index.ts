@@ -1,4 +1,5 @@
 export * from './money';
+export * from './city';
 export * from './time';
 export * from './pricing';
 export * from './availability';

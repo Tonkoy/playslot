@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { SPORTS } from '@playslot/contracts';
+import { enumLabel } from '@/lib/enums';
 import { Link } from '@/i18n/navigation';
 import { getCities, searchAvailability } from '@/lib/api';
 import { DatePicker } from './DatePicker';
@@ -32,8 +33,9 @@ interface Applied {
 export function SearchClient() {
   const t = useTranslations('Search');
   const locale = useLocale();
+  const te = useTranslations('Enums');
 
-  const cities = useQuery({ queryKey: ['cities'], queryFn: getCities });
+  const cities = useQuery({ queryKey: ['cities'], queryFn: () => getCities() });
 
   const [cityId, setCityId] = useState<number | ''>('');
   const [sport, setSport] = useState('TENNIS');
@@ -136,7 +138,7 @@ export function SearchClient() {
               <option value="">{t('anySport')}</option>
               {SPORTS.map((s) => (
                 <option key={s} value={s}>
-                  {s}
+                  {enumLabel(te, 'Sport', s)}
                 </option>
               ))}
             </select>

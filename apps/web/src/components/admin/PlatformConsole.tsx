@@ -6,12 +6,15 @@ import { useState } from 'react';
 import type { PlatformClubDto } from '@playslot/contracts';
 import { Link } from '@/i18n/navigation';
 import {
+  getCities,
   platformAddAdmin,
+  platformCreateCity,
   platformCreateClub,
   platformListClubs,
   platformSetClubStatus,
   platformSetFeatured,
 } from '@/lib/api';
+import { enumLabel } from '@/lib/enums';
 import { AddMemberForm } from './AddMemberForm';
 
 /** Super-admin console: all clubs, create a club, assign club admins. */
@@ -21,17 +24,38 @@ export function PlatformConsole() {
   const clubs = useQuery({ queryKey: ['platformClubs'], queryFn: platformListClubs });
 
   const [name, setName] = useState('');
-  const [city, setCity] = useState('');
+  // A club is filed under an existing city: free text is how "София" and
+  // "Sofia" became two cities and the default search found neither (QA-02).
+  const [cityId, setCityId] = useState<number | ''>('');
+  const [newCity, setNewCity] = useState('');
+  const [addingCity, setAddingCity] = useState(false);
   const [slot, setSlot] = useState<30 | 60>(60);
   const [expanded, setExpanded] = useState<number | null>(null);
 
+  const cities = useQuery({ queryKey: ['cities', 'all'], queryFn: () => getCities(true) });
+
   const create = useMutation({
     mutationFn: () =>
-      platformCreateClub({ name, city, slotIntervalMin: slot, timezone: 'Europe/Sofia', currency: 'EUR' }),
+      platformCreateClub({
+        name,
+        cityId: Number(cityId),
+        slotIntervalMin: slot,
+        timezone: 'Europe/Sofia',
+        currency: 'EUR',
+      }),
     onSuccess: () => {
       setName('');
-      setCity('');
       qc.invalidateQueries({ queryKey: ['platformClubs'] });
+    },
+  });
+
+  const addCity = useMutation({
+    mutationFn: () => platformCreateCity(newCity.trim()),
+    onSuccess: (c) => {
+      setNewCity('');
+      setAddingCity(false);
+      setCityId(c.id);
+      qc.invalidateQueries({ queryKey: ['cities'] });
     },
   });
   const status = useMutation({
@@ -62,8 +86,48 @@ export function PlatformConsole() {
         </label>
         <label style={fieldLabel}>
           {t('city')}
-          <input required value={city} onChange={(e) => setCity(e.target.value)} style={fieldInput} />
+          <select
+            required
+            value={cityId}
+            onChange={(e) => setCityId(e.target.value ? Number(e.target.value) : '')}
+            style={{ ...fieldInput, minWidth: 160 }}
+          >
+            <option value="">{t('cityPlaceholder')}</option>
+            {cities.data?.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
         </label>
+        {addingCity ? (
+          <span style={{ display: 'inline-flex', gap: 6, alignItems: 'end' }}>
+            <label style={fieldLabel}>
+              {t('newCity')}
+              <input
+                value={newCity}
+                onChange={(e) => setNewCity(e.target.value)}
+                placeholder={t('newCityPlaceholder')}
+                style={fieldInput}
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => addCity.mutate()}
+              disabled={newCity.trim().length < 2 || addCity.isPending}
+              style={smallBtn}
+            >
+              {addCity.isPending ? '…' : t('saveCity')}
+            </button>
+            <button type="button" onClick={() => setAddingCity(false)} style={smallBtn}>
+              {t('cancel')}
+            </button>
+          </span>
+        ) : (
+          <button type="button" onClick={() => setAddingCity(true)} style={smallBtn}>
+            + {t('addCity')}
+          </button>
+        )}
         <label style={fieldLabel}>
           {t('slot')}
           <select value={slot} onChange={(e) => setSlot(Number(e.target.value) as 30 | 60)} style={fieldInput}>
@@ -71,11 +135,12 @@ export function PlatformConsole() {
             <option value={30}>30 {t('min')}</option>
           </select>
         </label>
-        <button type="submit" disabled={create.isPending} style={primaryBtn}>
+        <button type="submit" disabled={create.isPending || cityId === ''} style={primaryBtn}>
           {create.isPending ? '…' : t('createClub')}
         </button>
       </form>
       {create.isError && <p style={{ color: 'var(--clay)', fontSize: 13, marginTop: 8 }}>{(create.error as Error).message}</p>}
+      {addCity.isError && <p style={{ color: 'var(--clay)', fontSize: 13, marginTop: 8 }}>{(addCity.error as Error).message}</p>}
 
       {/* all clubs */}
       <h3 style={{ fontSize: 15, fontWeight: 700, margin: '18px 0 10px' }}>{t('allClubs')}</h3>
@@ -115,6 +180,7 @@ function ClubRow({
   onAdminAdded: () => void;
   t: ReturnType<typeof useTranslations>;
 }) {
+  const te = useTranslations('Enums');
   const active = c.status === 'ACTIVE';
   return (
     <div
@@ -127,7 +193,8 @@ function ClubRow({
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <span style={{ fontWeight: 700 }}>{c.name}</span>
         <span className="mono" style={{ fontSize: 12, color: 'var(--ink-3)' }}>
-          {c.city} · {c.status} · {t('adminsCount', { n: c.adminCount })} · {t('coachesCount', { n: c.coachCount })}
+          {c.city} · {enumLabel(te, 'ClubStatus', c.status)} · {t('adminsCount', { n: c.adminCount })} ·{' '}
+          {t('coachesCount', { n: c.coachCount })}
         </span>
         {c.isFeatured && (
           <span

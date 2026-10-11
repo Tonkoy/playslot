@@ -10,6 +10,7 @@ import {
   type SuspensionReasonCode,
 } from '@playslot/contracts';
 import { platformDeleteUser, platformListUsers, platformReinstateUser, platformSuspendUser, platformVerifyUserEmail } from '@/lib/api';
+import { enumLabel } from '@/lib/enums';
 import { Modal } from '../Modal';
 import { useToast } from '../Toast';
 
@@ -27,6 +28,7 @@ type Dialog =
 export function UsersModeration() {
   const t = useTranslations('Moderation');
   const tt = useTranslations('Toasts');
+  const tn = useTranslations('Enums');
   const locale = useLocale();
   const qc = useQueryClient();
   const toast = useToast();
@@ -138,7 +140,7 @@ export function UsersModeration() {
                 </div>
                 <div className="mono" style={{ color: 'var(--ink-3)', fontSize: 12, wordBreak: 'break-all' }}>
                   {u.email}
-                  {u.phone ? ` · ${u.phone}` : ''} · {u.roles.join(', ') || '—'} · {t('since', { date: dtf.format(new Date(u.createdAt)) })}
+                  {u.phone ? ` · ${u.phone}` : ''} · {u.roles.map((r) => enumLabel(tn, 'Role', r)).join(', ') || '—'} · {t('since', { date: dtf.format(new Date(u.createdAt)) })}
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 4, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                   <span>{t('bookings', { n: u.bookingCount })}</span>

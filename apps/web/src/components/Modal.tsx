@@ -29,21 +29,36 @@ export function Modal({
 }) {
   const c = useTranslations('Common');
   const dialogRef = useRef<HTMLDivElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
 
+  // Callers pass an inline `onClose`, so it is a new function on every parent
+  // render. Keeping it in a ref keeps the effect below tied to `open` alone —
+  // otherwise every keystroke inside the dialog re-ran the effect and pulled
+  // focus back to the dialog container, truncating what the user typed.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
+  // Runs once per open/close transition: Esc to close, scroll lock, focus in
+  // on open and back to the trigger on close.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onCloseRef.current();
     };
     document.addEventListener('keydown', onKey);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    restoreFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     dialogRef.current?.focus();
     return () => {
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prevOverflow;
+      restoreFocusRef.current?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

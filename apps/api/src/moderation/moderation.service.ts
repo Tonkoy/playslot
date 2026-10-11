@@ -14,7 +14,7 @@ import { AppException } from '../common/app-exception';
 import { PrismaService } from '../prisma/prisma.service';
 
 /** Reservation states that still hold a court (and can be cancelled). */
-const ACTIVE_STATES = ['HOLD', 'PENDING_PAYMENT', 'CONFIRMED'] as const;
+const ACTIVE_STATES = ['HOLD', 'PENDING_PAYMENT', 'PENDING_APPROVAL', 'CONFIRMED'] as const;
 
 /**
  * Platform-admin moderation: suspend a player (no-show, non-payment…) until a

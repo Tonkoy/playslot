@@ -5,15 +5,20 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Link, useRouter } from '@/i18n/navigation';
 import { googleLoginUrl, login } from '@/lib/api';
+import { errorMessage, fieldErrorsOf } from '@/lib/errors';
+import { FieldError } from '../FieldError';
 import { authInput, authLabel, authPrimaryBtn, googleBtn } from './styles';
 
 export function LoginForm({ locale, returnTo }: { locale: string; returnTo: string }) {
   const t = useTranslations('Login');
+  const te = useTranslations('Errors');
+  const tt = useTranslations('Toasts');
   const router = useRouter();
   const qc = useQueryClient();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [fields, setFields] = useState<Record<string, string[]>>({});
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
@@ -25,7 +30,9 @@ export function LoginForm({ locale, returnTo }: { locale: string; returnTo: stri
       await qc.invalidateQueries({ queryKey: ['me'] });
       router.push(returnTo.startsWith('/') ? returnTo : '/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const perField = fieldErrorsOf(err);
+      setFields(perField);
+      setError(Object.keys(perField).length > 0 ? null : errorMessage(err, te, tt('error')));
     } finally {
       setBusy(false);
     }
@@ -43,7 +50,9 @@ export function LoginForm({ locale, returnTo }: { locale: string; returnTo: stri
             onChange={(e) => setEmail(e.target.value)}
             style={authInput}
             autoComplete="email"
+            aria-invalid={Boolean(fields.email)}
           />
+          <FieldError codes={fields.email} />
         </label>
         <label style={authLabel}>
           {t('password')}
@@ -54,7 +63,9 @@ export function LoginForm({ locale, returnTo }: { locale: string; returnTo: stri
             onChange={(e) => setPassword(e.target.value)}
             style={authInput}
             autoComplete="current-password"
+            aria-invalid={Boolean(fields.password)}
           />
+          <FieldError codes={fields.password} />
         </label>
 
         {error && (

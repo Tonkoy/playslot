@@ -20,7 +20,7 @@ export default async function MyBookingsPage({ params }: { params: Promise<{ loc
     <>
       <SiteHeader />
       <main style={{ maxWidth: 760, margin: '0 auto', padding: '32px 20px 64px' }}>
-        <PageHeader eyebrow={t('eyebrow')} title={t('title')} />
+        <PageHeader title={t('title')} />
         <AccountStandingBanner />
         <MyBookings />
         <SessionFeedbackPanel />

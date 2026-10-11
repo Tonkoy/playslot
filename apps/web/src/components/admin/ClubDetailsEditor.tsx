@@ -1,3 +1,6 @@
+/* eslint-disable @next/next/no-img-element -- club and coach photos are arbitrary
+   remote URLs (each club's own host); next/image would need every one of those
+   domains allow-listed, so a plain <img> is the honest choice here. */
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';

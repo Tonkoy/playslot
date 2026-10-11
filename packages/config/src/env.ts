@@ -70,6 +70,10 @@ export const serverEnvSchema = coreEnvSchema.extend({
   MAIL_FROM: optionalString.pipe(
     z.string().default('PlaySlot <no-reply@playslot.bg>'),
   ),
+  // Every new booking is also copied to this address (the platform inbox,
+  // info@playslot.bg). Unset = no copy is sent.
+  PLATFORM_NOTIFY_EMAIL: optionalString.pipe(z.string().email().optional()),
+
   // SendGrid dynamic templates (apps/api/src/mail/templates, uploaded with
   // `pnpm --filter @playslot/api mail:sync`). When an id is missing, that email
   // falls back to the inline HTML in MailService — nothing silently stops.

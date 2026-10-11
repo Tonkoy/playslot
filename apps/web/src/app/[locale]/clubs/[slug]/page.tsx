@@ -1,3 +1,6 @@
+/* eslint-disable @next/next/no-img-element -- club and coach photos are arbitrary
+   remote URLs (each club's own host); next/image would need every one of those
+   domains allow-listed, so a plain <img> is the honest choice here. */
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { isAppLocale } from '@/i18n/routing';
@@ -135,7 +138,22 @@ export default async function ClubProfilePage({
 
         <header style={{ display: 'flex', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap', margin: '12px 0 20px' }}>
           {club.photoUrl ? (
-            <img src={club.photoUrl} alt={club.name} style={{ width: 96, height: 96, borderRadius: 'var(--radius)', objectFit: 'cover', border: '1px solid var(--line)', flexShrink: 0 }} />
+            /* `contain` + padding: most clubs upload a wordmark logo, and `cover`
+               cropped its sides off. A photo letterboxes instead of being cut. */
+            <img
+              src={club.photoUrl}
+              alt={club.name}
+              style={{
+                width: 96,
+                height: 96,
+                borderRadius: 'var(--radius)',
+                objectFit: 'contain',
+                background: 'var(--surface)',
+                padding: 8,
+                border: '1px solid var(--line)',
+                flexShrink: 0,
+              }}
+            />
           ) : (
             <span style={{ width: 96, height: 96, borderRadius: 'var(--radius)', border: '1px solid var(--line-2)', background: 'var(--surface-2)', display: 'grid', placeItems: 'center', color: 'var(--ink-3)', fontWeight: 800, fontSize: 34, flexShrink: 0 }}>
               {club.name.trim().charAt(0).toUpperCase()}

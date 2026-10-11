@@ -271,6 +271,60 @@ export class MailService {
   }
 
   /** Notify club admins/staff that a booking landed on their calendar (spec §19). */
+  /**
+   * Copy of every new booking to the platform inbox (PLATFORM_NOTIFY_EMAIL).
+   * Distinct from the club's own notice: it names the club first and says
+   * whether the slot still needs the club's confirmation, so whoever watches
+   * info@ can see at a glance what happened and where.
+   */
+  async sendPlatformBookingNotice(
+    to: string,
+    info: BookingInfo & {
+      customerName: string;
+      customerEmail?: string | null;
+      awaitingApproval: boolean;
+      reservationType: string;
+    },
+    locale: ApiLocale = DEFAULT_LOCALE,
+  ): Promise<void> {
+    const price = `${(info.priceCents / 100).toFixed(2)} ${info.currency}`;
+    const en = locale === 'en';
+    const state = info.awaitingApproval
+      ? en
+        ? 'awaiting the club’s confirmation'
+        : 'очаква потвърждение от клуба'
+      : en
+        ? 'confirmed'
+        : 'потвърдена';
+    const subject = en
+      ? `New booking — ${info.clubName} (${state})`
+      : `Нова резервация — ${info.clubName} (${state})`;
+
+    const rows: [string, string][] = [
+      [en ? 'Club' : 'Клуб', info.clubName],
+      [en ? 'When' : 'Кога', info.when],
+      [en ? 'Court' : 'Корт', info.what ?? '—'],
+      [en ? 'Customer' : 'Клиент', info.customerName],
+      ...(info.customerEmail ? ([[en ? 'Email' : 'Имейл', info.customerEmail]] as [string, string][]) : []),
+      ...(info.coachName ? ([[en ? 'Coach' : 'Треньор', info.coachName]] as [string, string][]) : []),
+      [en ? 'Type' : 'Вид', info.reservationType],
+      [en ? 'Price' : 'Цена', price],
+      [en ? 'Status' : 'Статус', state],
+      ...(info.bookingRef ? ([[en ? 'Reference' : 'Номер', `#${info.bookingRef}`]] as [string, string][]) : []),
+    ];
+
+    const text = rows.map(([k, v]) => `${k}: ${v}`).join('\n');
+    const html = emailShell(
+      `<p>${subject}</p><table cellpadding="4" style="border-collapse:collapse">${rows
+        .map(
+          ([k, v]) =>
+            `<tr><td style="color:#7c877f">${k}</td><td style="font-weight:600">${v}</td></tr>`,
+        )
+        .join('')}</table>`,
+    );
+    await this.send({ to, subject, text, html });
+  }
+
   async sendStaffBookingNotice(
     to: string,
     info: {

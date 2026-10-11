@@ -1,3 +1,6 @@
+/* eslint-disable @next/next/no-img-element -- club and coach photos are arbitrary
+   remote URLs (each club's own host); next/image would need every one of those
+   domains allow-listed, so a plain <img> is the honest choice here. */
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { isAppLocale } from '@/i18n/routing';
@@ -70,11 +73,35 @@ export default async function ClubsPage({ params }: { params: Promise<{ locale: 
                   boxShadow: 'var(--shadow-sm)',
                 }}
               >
-                <div style={{ fontFamily: 'var(--font-bricolage)', fontWeight: 700, fontSize: 19 }}>
-                  {club.name}
-                </div>
-                <div style={{ color: 'var(--ink-3)', fontSize: 14, marginTop: 4 }}>
-                  {club.city.name} · {club.address}
+                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  {/* The club's own logo when it has one. `contain` keeps a
+                      wordmark whole; a photo fits the square instead of being
+                      cropped. Clubs without one keep the plain text card. */}
+                  {club.photoUrl && (
+                    <img
+                      src={club.photoUrl}
+                      alt=""
+                      loading="lazy"
+                      style={{
+                        width: 56,
+                        height: 56,
+                        flexShrink: 0,
+                        objectFit: 'contain',
+                        background: 'var(--surface-2)',
+                        border: '1px solid var(--line)',
+                        borderRadius: 'var(--radius-sm)',
+                        padding: 6,
+                      }}
+                    />
+                  )}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontFamily: 'var(--font-bricolage)', fontWeight: 700, fontSize: 19 }}>
+                      {club.name}
+                    </div>
+                    <div style={{ color: 'var(--ink-3)', fontSize: 14, marginTop: 4 }}>
+                      {club.city.name} · {club.address}
+                    </div>
+                  </div>
                 </div>
                 <span
                   style={{

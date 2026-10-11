@@ -1,3 +1,6 @@
+/* eslint-disable @next/next/no-img-element -- club and coach photos are arbitrary
+   remote URLs (each club's own host); next/image would need every one of those
+   domains allow-listed, so a plain <img> is the honest choice here. */
 /**
  * Circular avatar: shows a photo when provided, otherwise up to two initials on
  * a deterministic tint derived from the name. Server- and client-safe.

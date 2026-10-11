@@ -715,6 +715,41 @@ export class ReservationsService {
         )
         .catch(() => undefined);
     }
+    await this.notifyPlatform(reservationId, true);
+  }
+
+  /**
+   * Copy every new booking to the platform inbox (PLATFORM_NOTIFY_EMAIL), so
+   * someone outside the club sees the traffic. Best-effort: a failure here
+   * must never affect the booking or the customer's own email.
+   */
+  private async notifyPlatform(reservationId: number, awaitingApproval: boolean): Promise<void> {
+    const to = this.env.PLATFORM_NOTIFY_EMAIL;
+    if (!to) return;
+    const p = await this.loadReservationParties(reservationId);
+    if (!p) return;
+    // Don't send twice when the platform inbox is also a club member.
+    if (p.staff.some((s) => s.email.toLowerCase() === to.toLowerCase())) return;
+
+    const reservation = await this.prisma.reservation.findUnique({
+      where: { id: reservationId },
+      select: { type: true },
+    });
+    await this.mail
+      .sendPlatformBookingNotice(to, {
+        clubName: p.clubName,
+        when: p.when,
+        priceCents: p.priceCents,
+        currency: p.currency,
+        what: p.what,
+        coachName: p.coachUser?.name ?? null,
+        bookingRef: reservationId,
+        customerName: p.customerName,
+        customerEmail: p.customer?.email ?? null,
+        awaitingApproval,
+        reservationType: reservation?.type ?? 'COURT',
+      })
+      .catch(() => undefined);
   }
 
   private async sendConfirmationEmail(reservationId: number): Promise<void> {
@@ -757,6 +792,8 @@ export class ReservationsService {
         )
         .catch(() => undefined);
     }
+    // 4. the platform inbox
+    await this.notifyPlatform(reservationId, false);
   }
 
   /**
@@ -889,7 +926,7 @@ export class ReservationsService {
               select: {
                 type: true,
                 name: true,
-                coachProfile: { select: { user: { select: { email: true, locale: true } } } },
+                coachProfile: { select: { user: { select: { email: true, locale: true, name: true } } } },
               },
             },
           },

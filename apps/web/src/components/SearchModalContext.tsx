@@ -1,6 +1,7 @@
 'use client';
 
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { usePathname } from '@/i18n/navigation';
 
 type SearchModalContextValue = {
   open: boolean;
@@ -17,6 +18,15 @@ const SearchModalContext = createContext<SearchModalContextValue | null>(null);
  */
 export function SearchModalProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Opening a club from the results navigates away; the overlay must not stay
+  // on top of the page the player just asked for. Closing on the route change
+  // covers every link in the modal, including ones added later.
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
   const value = useMemo(
     () => ({ open, openModal: () => setOpen(true), closeModal: () => setOpen(false) }),
     [open],

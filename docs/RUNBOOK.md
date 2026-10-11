@@ -107,6 +107,15 @@ hand-edited in the SendGrid UI.
   inline HTML in `MailService`. A missing id degrades the design, never the
   delivery.
 
+### Copy of every booking to the platform inbox
+
+`PLATFORM_NOTIFY_EMAIL` (set to `info@playslot.bg`) gets one email per new
+booking: club, time, court, customer, coach, price, reference, and whether the
+slot is confirmed or still waiting for the club. It is sent for player
+bookings, staff walk-ins and online-paid bookings alike, and again when a club
+confirms a pending one. Leave the variable empty to switch it off; if that
+address is also a club member, the copy is skipped so nobody gets it twice.
+
 ### Two-step booking
 
 A club can require confirmation (club admin → Управление → "Потвърждение на

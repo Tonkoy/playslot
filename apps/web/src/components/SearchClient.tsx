@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { SPORTS } from '@playslot/contracts';
 import { enumLabel } from '@/lib/enums';
+import { useSearchModal } from './SearchModalContext';
 import { Link } from '@/i18n/navigation';
 import { getCities, searchAvailability } from '@/lib/api';
 import { DatePicker } from './DatePicker';
@@ -34,6 +35,9 @@ export function SearchClient() {
   const t = useTranslations('Search');
   const locale = useLocale();
   const te = useTranslations('Enums');
+  // The results live inside the search modal; picking one closes it right away
+  // instead of waiting for the next route to paint.
+  const { closeModal } = useSearchModal();
 
   const cities = useQuery({ queryKey: ['cities'], queryFn: () => getCities() });
 
@@ -195,6 +199,7 @@ export function SearchClient() {
             <Link
               key={r.club.id}
               href={`/clubs/${r.club.slug}`}
+              onClick={closeModal}
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -215,7 +220,9 @@ export function SearchClient() {
                 <div style={{ fontWeight: 700, fontSize: 18 }}>{r.club.name}</div>
                 <div className="mono" style={{ color: 'var(--ink-3)', fontSize: 12, marginTop: 4 }}>
                   {r.club.cityName}
-                  {r.club.surfaces.length ? ` · ${r.club.surfaces.join(', ')}` : ''}
+                  {r.club.surfaces.length
+                    ? ` · ${r.club.surfaces.map((sf) => enumLabel(te, 'Surface', sf)).join(', ')}`
+                    : ''}
                 </div>
                 {r.sampleTimes.length > 0 && (
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>

@@ -7,7 +7,7 @@
  *   pnpm --filter @playslot/db seed:360
  *
  * What it creates (all copied from the club's Click&Play admin, 7 Oct 2026):
- *  - the club (address, phone, hours 07:00–23:00, 60-min slots, Multisport)
+ *  - the club (address, phone, logo, hours 07:00–23:00, 60-min slots, Multisport)
  *  - six clay courts: Централен, Корт 2 … Корт 6 (all lit, open-air; courts 4–6
  *    are under the winter dome and priced higher from 1 Nov to 3 May)
  *  - the price matrix: 3 club-wide base rules (14 / 16 / 16 EUR, all year) plus
@@ -18,7 +18,7 @@
  *    a shareable COACH resource and availability.
  *
  * NOT created, because the data isn't known yet: trainer services/lesson prices,
- * bios, photos, real e-mail addresses. The trainer accounts have no password —
+ * bios, trainer photos, real e-mail addresses. The trainer accounts have no password —
  * use "forgot password" (or set a real e-mail below) to let them in.
  */
 import { Prisma, PrismaClient, Role, Sport, Surface } from '@prisma/client';
@@ -61,9 +61,11 @@ function weekWindows(startMin: number, endMin: number) {
 }
 
 async function main() {
+  // Also renames a city left as "Sofia" by the old free-text entry — the city
+  // is identified by its slug, and the display name is the Bulgarian one.
   const sofia = await prisma.city.upsert({
     where: { slug: 'sofia' },
-    update: {},
+    update: { name: 'София' },
     create: { name: 'София', slug: 'sofia' },
   });
 
@@ -78,6 +80,8 @@ async function main() {
       '„360" Тенис клуб е наследник на основоположника на тениса в България — Софийски Тенис Клуб, създаден на същото място през 1896 г. Към момента клубът разполага с шест червени (клей) корта с чисто нова настилка, съблекални с възможност за наемане на шкафчета за членове.',
     rules:
       'Клубът работи с карти Мултиспорт, но без детски Мултиспорт. Уважаеми тенисисти, бихме искали да Ви уведомим, че НЕ гарантираме запазен от Вас номер на корт, а само запазен час!',
+    // The club's own logo, served from their WordPress site.
+    photoUrl: 'https://360tennis.bg/wp-content/uploads/2019/05/logo_360tennisclub_.png',
     slotIntervalMin: 60,
     bookingDurationsMin: [60, 90, 120],
     acceptsMultisport: true,

@@ -14,6 +14,7 @@ export class FakeMail {
   welcomes: { to: string; name: string }[] = [];
   confirmations: { to: string }[] = [];
   bookingRequests: { to: string }[] = [];
+  platformNotices: { to: string; awaitingApproval: boolean }[] = [];
   cancellations: { to: string; refundCents: number }[] = [];
   staffNotices: { to: string; customerName: string; what: string }[] = [];
   coachNotices: { to: string; customerName: string }[] = [];
@@ -50,6 +51,15 @@ export class FakeMail {
   async sendConfirmation(to: string, _info: unknown, _locale?: ApiLocale) {
     this.confirmations.push({ to });
   }
+  /** Copy of a new booking to the platform inbox. */
+  async sendPlatformBookingNotice(
+    to: string,
+    info: { awaitingApproval: boolean },
+    _locale?: ApiLocale,
+  ) {
+    this.platformNotices.push({ to, awaitingApproval: info.awaitingApproval });
+  }
+
   /** "We got your request" — sent while the club still has to confirm. */
   async sendBookingReceived(to: string, _info: unknown, _locale?: ApiLocale) {
     this.bookingRequests.push({ to });

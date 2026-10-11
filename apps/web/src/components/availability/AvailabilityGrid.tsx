@@ -57,6 +57,8 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
   const [confirmedRef, setConfirmedRef] = useState<number | null>(null);
   const [coachId, setCoachId] = useState<number | null>(null);
   const [serviceId, setServiceId] = useState<number | null>(null);
+  // Online payments are not live yet: clicking «pay online» only explains that.
+  const [onlinePayNotice, setOnlinePayNotice] = useState(false);
 
   const coaches = useQuery({
     queryKey: ['clubCoaches', clubId],
@@ -84,6 +86,11 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
     setSelected(null);
     setDuration(shortest);
   }, [query.data?.bookingDurationsMin, duration]);
+
+  // Drop the online-payment notice whenever another slot is picked.
+  useEffect(() => {
+    setOnlinePayNotice(false);
+  }, [selected]);
 
   // Live updates (spec §20): refetch when another viewer books/cancels here.
   useEffect(() => {
@@ -459,23 +466,43 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
                 <button
                   type="button"
                   disabled={book.isPending}
-                  onClick={() => book.mutate('ONLINE')}
+                  onClick={() => book.mutate('ON_SITE')}
                   style={{ ...pillBtn, background: 'var(--lime)', color: 'var(--on-lime)', fontWeight: 700 }}
                 >
-                  {book.isPending ? '…' : bk('payOnline')}
+                  {book.isPending ? '…' : bk('confirmOnSite')}
                 </button>
                 <button
                   type="button"
-                  disabled={book.isPending}
-                  onClick={() => book.mutate('ON_SITE')}
-                  style={pillBtn}
+                  aria-disabled
+                  title={bk('payOnlineSoon')}
+                  onClick={() => {
+                    setOnlinePayNotice(true);
+                    toast(bk('payOnlineSoon'), 'info');
+                  }}
+                  style={{ ...pillBtn, color: 'var(--ink-3)', cursor: 'not-allowed' }}
                 >
-                  {bk('confirmOnSite')}
+                  {bk('payOnline')}
                 </button>
                 <button type="button" onClick={() => setSelected(null)} style={pillBtn}>
                   {bk('cancel')}
                 </button>
               </div>
+              {onlinePayNotice && (
+                <p
+                  role="status"
+                  style={{
+                    marginTop: 10,
+                    padding: '8px 12px',
+                    border: '1px solid var(--line-2)',
+                    borderRadius: 12,
+                    background: 'var(--surface-2)',
+                    color: 'var(--ink)',
+                    fontSize: 13,
+                  }}
+                >
+                  {bk('payOnlineSoon')}
+                </p>
+              )}
               <p style={{ color: 'var(--ink-3)', fontSize: 12, marginTop: 10 }}>{bk('payOnSiteNote')}</p>
             </div>
           )}

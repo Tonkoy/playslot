@@ -115,6 +115,8 @@ export interface ReservationSummary {
   id: number;
   clubId: number;
   clubName?: string;
+  /** The club's own logo/photo, when it has one. */
+  clubPhotoUrl?: string | null;
   type: string;
   status: string;
   startsAt: string;

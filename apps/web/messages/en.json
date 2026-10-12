@@ -5,7 +5,8 @@
     "close": "Close",
     "loading": "Loading…",
     "showPassword": "Show password",
-    "hidePassword": "Hide password"
+    "hidePassword": "Hide password",
+    "viewPhoto": "View {name}’s photo"
   },
   "Nav": {
     "clubs": "Clubs",

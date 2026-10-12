@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from '@/i18n/navigation';
+import { SuccessMark } from '../SuccessMark';
 import { verifyEmail } from '@/lib/api';
 import { authPrimaryBtn } from './styles';
 
@@ -24,7 +25,8 @@ export function VerifyEmail({ token }: { token: string }) {
       {state === 'pending' && <p style={{ color: 'var(--ink-3)' }}>{t('verifying')}</p>}
       {state === 'ok' && (
         <>
-          <p style={{ fontSize: 17, fontWeight: 700, marginBottom: 16 }}>{t('ok')}</p>
+          <SuccessMark />
+          <p style={{ fontSize: 20, fontWeight: 800, margin: '18px 0 20px' }}>{t('ok')}</p>
           <Link href="/login" style={{ ...authPrimaryBtn, display: 'inline-block', lineHeight: '46px', textDecoration: 'none' }}>
             {t('toLogin')}
           </Link>

@@ -7,6 +7,8 @@ import { Link, useRouter } from '@/i18n/navigation';
 import { googleLoginUrl, register } from '@/lib/api';
 import { errorMessage, fieldErrorsOf } from '@/lib/errors';
 import { FieldError } from '../FieldError';
+import { PageHeader } from '../PageHeader';
+import { SuccessMark } from '../SuccessMark';
 import { PasswordInput } from './PasswordInput';
 import { authInput, authLabel, authPrimaryBtn, googleBtn } from './styles';
 
@@ -54,8 +56,13 @@ export function RegisterForm() {
 
   if (done) {
     return (
-      <div style={{ maxWidth: 420, margin: '0 auto', textAlign: 'center' }}>
-        <p style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>{t('successTitle')}</p>
+      // With the page header gone, this panel is the page: the confirmation
+      // carries the heading weight itself.
+      <div style={{ maxWidth: 440, margin: '24px auto 0', textAlign: 'center' }}>
+        <SuccessMark />
+        <h1 style={{ fontSize: 'clamp(22px, 3.2vw, 30px)', fontWeight: 800, margin: '18px 0 10px' }}>
+          {t('successTitle')}
+        </h1>
         <p style={{ color: 'var(--ink-2)', marginBottom: 20 }}>{t('successBody')}</p>
         <button type="button" onClick={() => router.push('/clubs')} style={authPrimaryBtn}>
           {t('browseClubs')}
@@ -65,7 +72,9 @@ export function RegisterForm() {
   }
 
   return (
-    <div style={{ maxWidth: 420, margin: '0 auto' }}>
+    <>
+      <PageHeader title={t('title')} subtitle={t('subtitle')} align="center" />
+      <div style={{ maxWidth: 420, margin: '0 auto' }}>
       <form onSubmit={onSubmit} style={{ display: 'grid', gap: 12 }}>
         <label style={authLabel}>
           {t('name')}
@@ -149,6 +158,7 @@ export function RegisterForm() {
       <p style={{ textAlign: 'center', marginTop: 16, fontSize: 14, color: 'var(--ink-2)' }}>
         {t('haveAccount')} <Link href="/login" style={{ color: 'var(--teal)' }}>{t('logIn')}</Link>
       </p>
-    </div>
+      </div>
+    </>
   );
 }

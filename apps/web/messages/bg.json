@@ -5,7 +5,8 @@
     "close": "Затвори",
     "loading": "Зарежда…",
     "showPassword": "Покажи паролата",
-    "hidePassword": "Скрий паролата"
+    "hidePassword": "Скрий паролата",
+    "viewPhoto": "Виж снимката на {name}"
   },
   "Nav": {
     "clubs": "Клубове",

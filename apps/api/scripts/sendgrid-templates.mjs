@@ -36,7 +36,7 @@ loadEnv();
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.APP_BASE_URL ?? 'http://localhost:3000';
 
-// ── the four templates ───────────────────────────────────────────────────────
+// ── the templates ───────────────────────────────────────────────────────
 /**
  * `key` is what the API refers to the template by; `env` is the variable that
  * holds its id; `sample` drives both the local preview and the test send.
@@ -125,6 +125,57 @@ export const TEMPLATES = [
       cta_label: 'Виж резервацията',
       cta_url: `${SITE_URL}/bg/me/bookings`,
       cancellation_note: 'Безплатна отмяна до 24 часа преди началото.',
+      site_url: SITE_URL,
+    },
+  },
+  {
+    key: 'booking_cancelled',
+    env: 'SENDGRID_TEMPLATE_BOOKING_CANCELLED',
+    name: 'PLAYSLOT_TEMPLATE_BOOKING_CANCELLED',
+    body: 'booking-cancelled.html',
+    sample: {
+      subject: 'Отменена резервация — 360 Тенис клуб',
+      preheader: 'Възстановена сума: 14,00 EUR.',
+      status_label: 'Отменена',
+      heading: 'Резервацията ви е отменена',
+      intro: 'Часът в 360 Тенис клуб на понеделник, 12 октомври, 09:00 – 10:00 вече не е запазен за вас.',
+      details: [
+        { label: 'Клуб', value: '360 Тенис клуб' },
+        { label: 'Кога', value: 'понеделник, 12 октомври, 09:00 – 10:00' },
+        { label: 'Корт', value: 'Централен · клей, на открито' },
+        { label: 'Цена', value: '14,00 EUR' },
+        { label: 'Номер', value: '#1' },
+      ],
+      refund_note: 'Възстановена сума: 14,00 EUR — връща се по начина на плащане до няколко работни дни.',
+      cta_label: 'Намери друг час',
+      cta_url: `${SITE_URL}/bg/clubs`,
+      note: 'Отменили сте по погрешка? Часът вече е свободен за всички — запазете го отново.',
+      site_url: SITE_URL,
+    },
+  },
+  {
+    key: 'notice',
+    env: 'SENDGRID_TEMPLATE_NOTICE',
+    name: 'PLAYSLOT_TEMPLATE_NOTICE',
+    body: 'notice.html',
+    sample: {
+      subject: 'Преместена резервация — 360 Тенис клуб',
+      preheader: 'Новият час е в понеделник от 10:00.',
+      status_label: 'Преместена',
+      status_bg: '#f1f3f1',
+      status_fg: '#4b564f',
+      heading: 'Часът ви е преместен',
+      intro: 'Клубът премести резервацията ви в 360 Тенис клуб. Новият час е по-долу.',
+      details: [
+        { label: 'Клуб', value: '360 Тенис клуб' },
+        { label: 'Нов час', value: 'понеделник, 12 октомври, 10:00 – 11:00' },
+        { label: 'Беше', value: 'понеделник, 12 октомври, 09:00 – 10:00' },
+      ],
+      highlight: null,
+      cta_label: 'Виж резервацията',
+      cta_url: `${SITE_URL}/bg/me/bookings`,
+      fallback_url: null,
+      note: 'Новият час не ви устройва? Можете да го откажете от профила си.',
       site_url: SITE_URL,
     },
   },

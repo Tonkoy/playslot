@@ -8,6 +8,8 @@ const TEMPLATE_ENV: Record<MailTemplateKey, keyof ServerEnv> = {
   verify_email: 'SENDGRID_TEMPLATE_VERIFY_EMAIL',
   booking_received: 'SENDGRID_TEMPLATE_BOOKING_RECEIVED',
   booking_confirmed: 'SENDGRID_TEMPLATE_BOOKING_CONFIRMED',
+  booking_cancelled: 'SENDGRID_TEMPLATE_BOOKING_CANCELLED',
+  notice: 'SENDGRID_TEMPLATE_NOTICE',
 };
 
 /**

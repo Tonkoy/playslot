@@ -4,7 +4,7 @@ import { isAppLocale } from '@/i18n/routing';
 import { NOINDEX, localeUrl, pageMetadata } from '@/lib/seo';
 import { JsonLd } from '@/components/JsonLd';
 import { Link } from '@/i18n/navigation';
-import { Avatar } from '@/components/Avatar';
+import { AvatarZoom } from '@/components/AvatarZoom';
 import { enumLabel } from '@/lib/enums';
 import { GroupSessionsList } from '@/components/GroupSessionsList';
 import { SiteHeader } from '@/components/SiteHeader';
@@ -132,7 +132,7 @@ export default async function CoachProfilePage({
             boxShadow: 'var(--shadow-sm)',
           }}
         >
-          <Avatar name={coach.name} photoUrl={coach.photoUrl} size={88} />
+          <AvatarZoom name={coach.name} photoUrl={coach.photoUrl} size={88} />
           <div style={{ minWidth: 0, flex: 1 }}>
             <h1 style={{ fontSize: 'clamp(24px, 4vw, 34px)', fontWeight: 800 }}>{coach.name}</h1>
             <div style={{ fontSize: 14, color: 'var(--ink-2)', marginTop: 4 }}>

@@ -14,7 +14,7 @@ import { EventsSection } from '@/components/EventsSection';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { MembershipPlansSection } from '@/components/MembershipPlansSection';
 import { ReviewsSection } from '@/components/ReviewsSection';
-import { Avatar } from '@/components/Avatar';
+import { AvatarZoom } from '@/components/AvatarZoom';
 import { getClub, getClubCourts, getCoaches } from '@/lib/api';
 import { minToHHMM } from '@/lib/tz';
 
@@ -226,7 +226,7 @@ export default async function ClubProfilePage({
             <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
               {coaches.map((c) => (
                 <Link key={c.coachProfileId} href={`/coaches/${c.coachProfileId}`} style={{ display: 'flex', gap: 12, alignItems: 'center', textDecoration: 'none', color: 'var(--ink)', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: 14, boxShadow: 'var(--shadow-sm)' }}>
-                  <Avatar name={c.name} photoUrl={c.photoUrl} size={48} />
+                  <AvatarZoom name={c.name} photoUrl={c.photoUrl} size={48} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 700 }}>{c.name}</div>
                     {c.hourlyRateCents != null && (

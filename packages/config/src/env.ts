@@ -81,6 +81,8 @@ export const serverEnvSchema = coreEnvSchema.extend({
   SENDGRID_TEMPLATE_VERIFY_EMAIL: optionalString,
   SENDGRID_TEMPLATE_BOOKING_RECEIVED: optionalString,
   SENDGRID_TEMPLATE_BOOKING_CONFIRMED: optionalString,
+  SENDGRID_TEMPLATE_BOOKING_CANCELLED: optionalString,
+  SENDGRID_TEMPLATE_NOTICE: optionalString,
   // web push (VAPID). Absent => PushService logs instead of sending, the same
   // fallback the mail provider uses.
   VAPID_PUBLIC_KEY: optionalString,

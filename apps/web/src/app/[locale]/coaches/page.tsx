@@ -4,7 +4,7 @@ import { enumLabel } from '@/lib/enums';
 import { isAppLocale } from '@/i18n/routing';
 import { pageMetadata } from '@/lib/seo';
 import { Link } from '@/i18n/navigation';
-import { Avatar } from '@/components/Avatar';
+import { AvatarZoom } from '@/components/AvatarZoom';
 import { SiteHeader } from '@/components/SiteHeader';
 import { getCoaches } from '@/lib/api';
 
@@ -55,7 +55,7 @@ export default async function CoachesPage({ params }: { params: Promise<{ locale
                 style={{ display: 'block', textDecoration: 'none', color: 'var(--ink)', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: 18, boxShadow: 'var(--shadow-sm)' }}
               >
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <Avatar name={coach.name} photoUrl={coach.photoUrl} size={52} />
+                  <AvatarZoom name={coach.name} photoUrl={coach.photoUrl} size={52} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontFamily: 'var(--font-bricolage)', fontWeight: 700, fontSize: 19 }}>{coach.name}</div>
                     {coach.ratingAvg != null && (

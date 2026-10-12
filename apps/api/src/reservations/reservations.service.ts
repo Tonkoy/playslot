@@ -810,7 +810,15 @@ export class ReservationsService {
       await this.mail
         .sendCancellation(
           p.customer.email,
-          { clubName: p.clubName, when: p.when, refundCents, currency: p.currency },
+          {
+            clubName: p.clubName,
+            when: p.when,
+            refundCents,
+            currency: p.currency,
+            priceCents: p.priceCents,
+            what: p.what,
+            bookingRef: reservationId,
+          },
           normalizeLocale(p.customer.locale),
         )
         .catch(() => undefined);
@@ -972,7 +980,7 @@ export class ReservationsService {
     const rows = await this.prisma.reservation.findMany({
       where: { userId },
       orderBy: { startsAt: 'desc' },
-      include: { resources: { select: { resourceId: true } }, club: { select: { name: true } } },
+      include: { resources: { select: { resourceId: true } }, club: { select: { name: true, photoUrl: true } } },
       take: 100,
     });
     return rows.map((r) => this.toSummary(r));
@@ -981,7 +989,7 @@ export class ReservationsService {
   async getOne(id: number, userId: number, roles: string[]): Promise<ReservationSummary> {
     const r = await this.prisma.reservation.findUnique({
       where: { id },
-      include: { resources: { select: { resourceId: true } }, club: { select: { name: true } } },
+      include: { resources: { select: { resourceId: true } }, club: { select: { name: true, photoUrl: true } } },
     });
     if (!r) throw new AppException('not_found');
     const isStaff = await this.isClubStaff(r.clubId, userId, roles);
@@ -1238,12 +1246,13 @@ export class ReservationsService {
     currency: string;
     paymentMethod: string;
     resources: { resourceId: number }[];
-    club?: { name: string };
+    club?: { name: string; photoUrl?: string | null };
   }): ReservationSummary {
     return {
       id: r.id,
       clubId: r.clubId,
       clubName: r.club?.name,
+      clubPhotoUrl: r.club?.photoUrl ?? null,
       type: r.type,
       status: r.status,
       startsAt: r.startsAt.toISOString(),

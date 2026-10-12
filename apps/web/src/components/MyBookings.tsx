@@ -7,6 +7,7 @@ import type { ReservationSummary } from '@playslot/contracts';
 import { useRouter } from '@/i18n/navigation';
 import { cancelMyReservation, getMe, getMyReservations } from '@/lib/api';
 import { enumLabel } from '@/lib/enums';
+import { ClubThumb } from './ClubThumb';
 import { Modal } from './Modal';
 import { useToast } from './Toast';
 
@@ -81,7 +82,8 @@ export function MyBookings() {
         padding: 16,
       }}
     >
-      <div>
+      <ClubThumb src={r.clubPhotoUrl ?? null} />
+      <div style={{ minWidth: 0 }}>
         <div style={{ fontWeight: 700 }}>{r.clubName ?? `#${r.clubId}`}</div>
         <div className="mono" style={{ color: 'var(--ink-3)', fontSize: 12 }}>
           {dtf.format(new Date(r.startsAt))} · {enumLabel(te, 'ReservationType', r.type)} ·{' '}

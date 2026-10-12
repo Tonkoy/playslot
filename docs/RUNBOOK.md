@@ -90,7 +90,7 @@ constraint (spec §8). If a customer reports one:
 
 ## Transactional email (SendGrid)
 
-Four designed emails go out as SendGrid **dynamic templates**. The HTML lives in
+Designed emails go out as SendGrid **dynamic templates**. The HTML lives in
 `apps/api/src/mail/templates/` (one shell + one body per email) and is uploaded
 from the repo, so every environment has the same templates and nothing is
 hand-edited in the SendGrid UI.
@@ -101,6 +101,13 @@ hand-edited in the SendGrid UI.
 | Потвърждение на имейл | `verify-email.html` | registration, and "resend verification" |
 | Заявка за резервация | `booking-received.html` | a player books at a club that confirms bookings |
 | Потвърдена резервация | `booking-confirmed.html` | club staff press "Потвърди" (or a booking is auto-confirmed) |
+| Отменена резервация | `booking-cancelled.html` | a booking is cancelled — carries the refund when there is one |
+| Всичко останало | `notice.html` | one shared layout: password reset / changed, account invite, reschedule, payment receipt, no-show, the club's and the coach's notices, the coach's daily schedule, group-session invite and cancellation |
+
+`notice.html` is deliberately generic: the heading, the intro, the rows of the
+details table, the pill colour and the button all arrive as
+`dynamic_template_data` from `MailService.notice()`. New transactional emails
+reuse it instead of adding another template to create and keep in sync.
 
 ### One-time setup
 
@@ -122,7 +129,7 @@ hand-edited in the SendGrid UI.
 
 ### Day-to-day
 
-- `pnpm --filter @playslot/api mail:preview` renders the four templates to
+- `pnpm --filter @playslot/api mail:preview` renders the templates to
   `apps/api/.mail-preview/*.html` with sample data — no network, no sending.
 - `pnpm --filter @playslot/api mail:test -- --to you@example.com` sends one of
   each to a real inbox. Add `--only booking_confirmed` for a single email.

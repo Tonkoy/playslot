@@ -17,7 +17,14 @@ import { SendGridMailProvider } from './sendgrid.provider';
  * (SENDGRID_TEMPLATE_*) and the HTML in src/mail/templates; a provider without
  * templates (Resend, console) just sends `html` instead.
  */
-export type MailTemplateKey = 'welcome' | 'verify_email' | 'booking_received' | 'booking_confirmed';
+export type MailTemplateKey =
+  | 'welcome'
+  | 'verify_email'
+  | 'booking_received'
+  | 'booking_confirmed'
+  | 'booking_cancelled'
+  /** Shared layout for every other transactional email. */
+  | 'notice';
 
 export interface SendEmailInput {
   to: string;

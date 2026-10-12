@@ -147,12 +147,74 @@ export class MailService {
             body: `Добавени сте като ${roleLabel} в ${info.clubName}. Задайте паролата си, за да започнете:`,
             cta: 'Задай парола',
           };
+    const l = (bg: string, en: string) => (locale === 'en' ? en : bg);
     await this.send({
       to,
       subject: copy.subject,
       text: `${copy.body}\n${link}`,
       html: emailShell(`<p>${copy.body}</p>${button(link, copy.cta)}<p>${link}</p>`),
+      template: this.notice({
+        tone: 'good',
+        status: roleLabel,
+        heading: l(`Добре дошли в ${info.clubName}`, `Welcome to ${info.clubName}`),
+        intro: copy.body,
+        ctaLabel: copy.cta,
+        ctaUrl: link,
+        fallbackUrl: link,
+        note: l(
+          'Ако не очаквате тази покана, просто изтрийте писмото.',
+          "If you weren't expecting this invitation, you can delete this email.",
+        ),
+      }),
     });
+  }
+
+  /** Pill colours for the shared notice layout. */
+  private static readonly TONES = {
+    good: { bg: '#dfeae5', fg: '#1a6b45' },
+    warn: { bg: '#f6e6de', fg: '#a24b22' },
+    plain: { bg: '#f1f3f1', fg: '#4b564f' },
+  } as const;
+
+  /**
+   * Payload for the shared `notice` template — one designed layout that every
+   * email outside the booking flow fills with its own copy (spec §19). Keeps
+   * the number of SendGrid templates to maintain small: the wording lives
+   * here, in both locales, not in the SendGrid UI.
+   */
+  private notice(opts: {
+    heading: string;
+    intro: string;
+    tone?: keyof typeof MailService.TONES;
+    status?: string | null;
+    details?: { label: string; value: string }[] | null;
+    highlight?: string | null;
+    ctaLabel?: string | null;
+    ctaUrl?: string | null;
+    /** Printed under the button, for clients that strip links. */
+    fallbackUrl?: string | null;
+    note?: string | null;
+    preheader?: string | null;
+  }): { key: 'notice'; data: Record<string, unknown> } {
+    const tone = MailService.TONES[opts.tone ?? 'plain'];
+    return {
+      key: 'notice',
+      data: {
+        preheader: opts.preheader ?? opts.intro,
+        status_label: opts.status ?? null,
+        status_bg: tone.bg,
+        status_fg: tone.fg,
+        heading: opts.heading,
+        intro: opts.intro,
+        details: opts.details?.length ? opts.details : null,
+        highlight: opts.highlight ?? null,
+        cta_label: opts.ctaLabel ?? null,
+        cta_url: opts.ctaUrl ?? null,
+        fallback_url: opts.fallbackUrl ?? null,
+        note: opts.note ?? null,
+        site_url: this.siteUrl(),
+      },
+    };
   }
 
   /** What a booking email shows in its details table. */
@@ -322,7 +384,23 @@ export class MailService {
         )
         .join('')}</table>`,
     );
-    await this.send({ to, subject, text, html });
+    await this.send({
+      to,
+      subject,
+      text,
+      html,
+      template: this.notice({
+        tone: info.awaitingApproval ? 'plain' : 'good',
+        status: state,
+        heading: en ? 'New booking' : 'Нова резервация',
+        intro: en
+          ? `${info.customerName} booked at ${info.clubName} — ${state}.`
+          : `${info.customerName} резервира в ${info.clubName} — ${state}.`,
+        details: rows.map(([label, value]) => ({ label, value })),
+        ctaLabel: en ? 'Open the club calendar' : 'Виж календара на клуба',
+        ctaUrl: this.webLink(locale, 'admin'),
+      }),
+    });
   }
 
   async sendStaffBookingNotice(
@@ -348,7 +426,28 @@ export class MailService {
             subject: `Нова резервация — ${info.clubName}`,
             body: `${info.customerName} резервира ${info.what} на ${info.when}. Общо: ${price}.`,
           };
-    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+    const l = (bg: string, en: string) => (locale === 'en' ? en : bg);
+    await this.send({
+      to,
+      subject: copy.subject,
+      text: copy.body,
+      html: emailShell(`<p>${copy.body}</p>`),
+      template: this.notice({
+        tone: 'good',
+        status: l('Нова резервация', 'New booking'),
+        heading: l('Запълнен час', 'A slot just filled'),
+        intro: copy.body,
+        details: [
+          { label: l('Клуб', 'Club'), value: info.clubName },
+          { label: l('Кога', 'When'), value: info.when },
+          { label: l('Корт', 'Court'), value: info.what },
+          { label: l('Клиент', 'Customer'), value: info.customerName },
+          { label: l('Цена', 'Price'), value: price },
+        ],
+        ctaLabel: l('Виж календара', 'Open the calendar'),
+        ctaUrl: this.webLink(locale, 'admin'),
+      }),
+    });
   }
 
   /** Notify the selected coach of a new lesson booking (spec §19). */
@@ -368,7 +467,27 @@ export class MailService {
             subject: `Нов урок — ${info.when}`,
             body: `${info.customerName} резервира урок${service} при вас в ${info.clubName} на ${info.when}.`,
           };
-    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+    const l = (bg: string, en: string) => (locale === 'en' ? en : bg);
+    await this.send({
+      to,
+      subject: copy.subject,
+      text: copy.body,
+      html: emailShell(`<p>${copy.body}</p>`),
+      template: this.notice({
+        tone: 'good',
+        status: l('Нов урок', 'New lesson'),
+        heading: l('Имате нов урок', 'You have a new lesson'),
+        intro: copy.body,
+        details: [
+          { label: l('Кога', 'When'), value: info.when },
+          { label: l('Клуб', 'Club'), value: info.clubName },
+          { label: l('Играч', 'Player'), value: info.customerName },
+          ...(info.serviceName ? [{ label: l('Услуга', 'Service'), value: info.serviceName }] : []),
+        ],
+        ctaLabel: l('Виж програмата си', 'Open your schedule'),
+        ctaUrl: this.webLink(locale, 'me/coach'),
+      }),
+    });
   }
 
   /**
@@ -405,11 +524,23 @@ export class MailService {
       `${l.time} — ${l.customerName}${l.serviceName ? ` (${l.serviceName})` : ''} @ ${l.clubName}`;
     const textLines = info.lessons.map(line).join('\n');
     const htmlLines = info.lessons.map((l) => `<li>${line(l)}</li>`).join('');
+    const l = (bg: string, en: string) => (locale === 'en' ? en : bg);
     await this.send({
       to,
       subject: copy.subject,
       text: `${copy.greeting}\n${copy.intro}\n${textLines}`,
       html: emailShell(`<p>${copy.greeting}</p><p>${copy.intro}</p><ul>${htmlLines}</ul>`),
+      template: this.notice({
+        status: info.date,
+        heading: copy.greeting,
+        intro: copy.intro,
+        details: info.lessons.map((lsn) => ({
+          label: lsn.time,
+          value: `${lsn.customerName}${lsn.serviceName ? ` · ${lsn.serviceName}` : ''} · ${lsn.clubName}`,
+        })),
+        ctaLabel: l('Виж цялата програма', 'Open the full schedule'),
+        ctaUrl: this.webLink(locale, 'me/coach'),
+      }),
     });
   }
 
@@ -429,7 +560,27 @@ export class MailService {
             subject: `Отменена резервация — ${info.clubName}`,
             body: `Резервацията на ${info.customerName} за ${info.what} на ${info.when} беше отменена. Часът е свободен отново.`,
           };
-    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+    const l = (bg: string, en: string) => (locale === 'en' ? en : bg);
+    await this.send({
+      to,
+      subject: copy.subject,
+      text: copy.body,
+      html: emailShell(`<p>${copy.body}</p>`),
+      template: this.notice({
+        tone: 'warn',
+        status: l('Отменена', 'Cancelled'),
+        heading: l('Освободен час', 'A slot reopened'),
+        intro: copy.body,
+        details: [
+          { label: l('Клуб', 'Club'), value: info.clubName },
+          { label: l('Кога', 'When'), value: info.when },
+          { label: l('Корт', 'Court'), value: info.what },
+          { label: l('Клиент', 'Customer'), value: info.customerName },
+        ],
+        ctaLabel: l('Виж календара', 'Open the calendar'),
+        ctaUrl: this.webLink(locale, 'admin'),
+      }),
+    });
   }
 
   /** Notify the coach that a lesson booked with them was cancelled (spec §19). */
@@ -448,7 +599,26 @@ export class MailService {
             subject: `Отменен урок — ${info.when}`,
             body: `Урокът с ${info.customerName} в ${info.clubName} на ${info.when} беше отменен.`,
           };
-    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+    const l = (bg: string, en: string) => (locale === 'en' ? en : bg);
+    await this.send({
+      to,
+      subject: copy.subject,
+      text: copy.body,
+      html: emailShell(`<p>${copy.body}</p>`),
+      template: this.notice({
+        tone: 'warn',
+        status: l('Отменен урок', 'Lesson cancelled'),
+        heading: l('Урокът отпада', 'The lesson is off'),
+        intro: copy.body,
+        details: [
+          { label: l('Кога', 'When'), value: info.when },
+          { label: l('Клуб', 'Club'), value: info.clubName },
+          { label: l('Играч', 'Player'), value: info.customerName },
+        ],
+        ctaLabel: l('Виж програмата си', 'Open your schedule'),
+        ctaUrl: this.webLink(locale, 'me/coach'),
+      }),
+    });
   }
 
   /** Notify the customer their booking was moved to a new time/court (spec §19). */
@@ -467,7 +637,32 @@ export class MailService {
             subject: `Преместена резервация — ${info.clubName}`,
             body: `Резервацията ви в ${info.clubName} е преместена за ${info.when}${info.previousWhen ? ` (беше ${info.previousWhen})` : ''}.`,
           };
-    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+    const l = (bg: string, en: string) => (locale === 'en' ? en : bg);
+    await this.send({
+      to,
+      subject: copy.subject,
+      text: copy.body,
+      html: emailShell(`<p>${copy.body}</p>`),
+      template: this.notice({
+        status: l('Преместена', 'Moved'),
+        heading: l('Часът ви е преместен', 'Your booking moved'),
+        intro: l(
+          `Клубът премести резервацията ви в ${info.clubName}. Новият час е по-долу.`,
+          `The club moved your booking at ${info.clubName}. The new time is below.`,
+        ),
+        details: [
+          { label: l('Клуб', 'Club'), value: info.clubName },
+          { label: l('Нов час', 'New time'), value: info.when },
+          ...(info.previousWhen ? [{ label: l('Беше', 'Was'), value: info.previousWhen }] : []),
+        ],
+        ctaLabel: l('Виж резервацията', 'View booking'),
+        ctaUrl: this.webLink(locale, 'me/bookings'),
+        note: l(
+          'Новият час не ви устройва? Можете да го откажете от профила си.',
+          "Doesn't the new time work? You can cancel it from your account.",
+        ),
+      }),
+    });
   }
 
   /** Notify club admins/staff that a booking was moved (spec §19). */
@@ -488,7 +683,27 @@ export class MailService {
             subject: `Преместена резервация — ${info.clubName}`,
             body: `Резервацията на ${info.customerName} за ${info.what} е преместена за ${info.when}${prevBg}.`,
           };
-    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+    const l = (bg: string, en: string) => (locale === 'en' ? en : bg);
+    await this.send({
+      to,
+      subject: copy.subject,
+      text: copy.body,
+      html: emailShell(`<p>${copy.body}</p>`),
+      template: this.notice({
+        status: l('Преместена', 'Moved'),
+        heading: l('Преместена резервация', 'A booking moved'),
+        intro: copy.body,
+        details: [
+          { label: l('Клуб', 'Club'), value: info.clubName },
+          { label: l('Нов час', 'New time'), value: info.when },
+          ...(info.previousWhen ? [{ label: l('Беше', 'Was'), value: info.previousWhen }] : []),
+          { label: l('Корт', 'Court'), value: info.what },
+          { label: l('Клиент', 'Customer'), value: info.customerName },
+        ],
+        ctaLabel: l('Виж календара', 'Open the calendar'),
+        ctaUrl: this.webLink(locale, 'admin'),
+      }),
+    });
   }
 
   /** Notify the coach that a lesson booked with them was moved (spec §19). */
@@ -509,7 +724,26 @@ export class MailService {
             subject: `Преместен урок — ${info.when}`,
             body: `Урокът ви с ${info.customerName} в ${info.clubName} е преместен за ${info.when}${prevBg}.`,
           };
-    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+    const l = (bg: string, en: string) => (locale === 'en' ? en : bg);
+    await this.send({
+      to,
+      subject: copy.subject,
+      text: copy.body,
+      html: emailShell(`<p>${copy.body}</p>`),
+      template: this.notice({
+        status: l('Преместен урок', 'Lesson moved'),
+        heading: l('Урокът ви е преместен', 'Your lesson moved'),
+        intro: copy.body,
+        details: [
+          { label: l('Нов час', 'New time'), value: info.when },
+          ...(info.previousWhen ? [{ label: l('Беше', 'Was'), value: info.previousWhen }] : []),
+          { label: l('Клуб', 'Club'), value: info.clubName },
+          { label: l('Играч', 'Player'), value: info.customerName },
+        ],
+        ctaLabel: l('Виж програмата си', 'Open your schedule'),
+        ctaUrl: this.webLink(locale, 'me/coach'),
+      }),
+    });
   }
 
   /** Payment receipt to the customer once a booking is marked paid (spec §19). */
@@ -529,7 +763,26 @@ export class MailService {
             subject: `Получено плащане — ${info.clubName}`,
             body: `Получихме плащането ви от ${price} за резервацията в ${info.clubName} на ${info.when}. Благодарим!`,
           };
-    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+    const l = (bg: string, en: string) => (locale === 'en' ? en : bg);
+    await this.send({
+      to,
+      subject: copy.subject,
+      text: copy.body,
+      html: emailShell(`<p>${copy.body}</p>`),
+      template: this.notice({
+        tone: 'good',
+        status: l('Платено', 'Paid'),
+        heading: l('Получихме плащането', 'Payment received'),
+        intro: l('Благодарим! Ето разписката за резервацията ви.', 'Thank you! Here is the receipt for your booking.'),
+        details: [
+          { label: l('Клуб', 'Club'), value: info.clubName },
+          { label: l('Кога', 'When'), value: info.when },
+        ],
+        highlight: l(`Платена сума: ${price}`, `Amount paid: ${price}`),
+        ctaLabel: l('Виж резервацията', 'View booking'),
+        ctaUrl: this.webLink(locale, 'me/bookings'),
+      }),
+    });
   }
 
   /** Notify the customer they were marked as a no-show (spec §19). */
@@ -548,7 +801,27 @@ export class MailService {
             subject: `Пропусната резервация — ${info.clubName}`,
             body: `Отбелязани сте като неявили се за резервацията в ${info.clubName} на ${info.when}.`,
           };
-    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+    const l = (bg: string, en: string) => (locale === 'en' ? en : bg);
+    await this.send({
+      to,
+      subject: copy.subject,
+      text: copy.body,
+      html: emailShell(`<p>${copy.body}</p>`),
+      template: this.notice({
+        tone: 'warn',
+        status: l('Неявяване', 'No-show'),
+        heading: l('Пропуснат час', 'A missed booking'),
+        intro: copy.body,
+        details: [
+          { label: l('Клуб', 'Club'), value: info.clubName },
+          { label: l('Кога', 'When'), value: info.when },
+        ],
+        note: l(
+          'Смятате, че е грешка? Пишете на клуба — те могат да го поправят.',
+          'Think this is a mistake? Contact the club — they can correct it.',
+        ),
+      }),
+    });
   }
 
   /** Invite a player to a coach's new group session (spec §22). */
@@ -579,11 +852,28 @@ export class MailService {
             body: `${info.coachName} организира „${info.title}“ в ${info.clubName} на ${info.when}. Оставащи места: ${info.spotsLeft}${price ? `, ${price} на играч` : ' (безплатно)'}.`,
             cta: 'Виж и се запиши',
           };
+    const l = (bg: string, en: string) => (locale === 'en' ? en : bg);
     await this.send({
       to,
       subject: copy.subject,
       text: `${copy.body}\n${link}`,
       html: emailShell(`<p>${copy.body}</p>${button(link, copy.cta)}`),
+      template: this.notice({
+        tone: 'good',
+        status: l('Групова тренировка', 'Group session'),
+        heading: info.title,
+        intro: copy.body,
+        details: [
+          { label: l('Треньор', 'Coach'), value: info.coachName },
+          { label: l('Клуб', 'Club'), value: info.clubName },
+          { label: l('Кога', 'When'), value: info.when },
+          { label: l('Свободни места', 'Spots left'), value: String(info.spotsLeft) },
+          { label: l('Цена', 'Price'), value: price ?? l('безплатно', 'free') },
+        ],
+        ctaLabel: copy.cta,
+        ctaUrl: link,
+        fallbackUrl: link,
+      }),
     });
   }
 
@@ -603,12 +893,35 @@ export class MailService {
             subject: `Отменена групова сесия — ${info.title}`,
             body: `„${info.title}“ в ${info.clubName} на ${info.when} беше отменена от треньора.`,
           };
-    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+    const l = (bg: string, en: string) => (locale === 'en' ? en : bg);
+    await this.send({
+      to,
+      subject: copy.subject,
+      text: copy.body,
+      html: emailShell(`<p>${copy.body}</p>`),
+      template: this.notice({
+        tone: 'warn',
+        status: l('Отменена', 'Cancelled'),
+        heading: l('Груповата тренировка отпада', 'The group session is off'),
+        intro: copy.body,
+        details: [
+          { label: l('Тренировка', 'Session'), value: info.title },
+          { label: l('Клуб', 'Club'), value: info.clubName },
+          { label: l('Кога', 'When'), value: info.when },
+        ],
+        ctaLabel: l('Виж други тренировки', 'See other sessions'),
+        ctaUrl: this.webLink(locale, 'sessions'),
+      }),
+    });
   }
 
+  /**
+   * The booking is off. Carries the refund when there is one — the first thing
+   * a player looks for — and a way back to booking another slot.
+   */
   async sendCancellation(
     to: string,
-    info: { clubName: string; when: string; refundCents: number; currency: string },
+    info: BookingInfo & { refundCents: number },
     locale: ApiLocale = DEFAULT_LOCALE,
   ): Promise<void> {
     const refund = `${(info.refundCents / 100).toFixed(2)} ${info.currency}`;
@@ -617,12 +930,44 @@ export class MailService {
         ? {
             subject: `Booking cancelled — ${info.clubName}`,
             body: `Your booking at ${info.clubName} on ${info.when} was cancelled.${info.refundCents > 0 ? ` Refund: ${refund}.` : ''}`,
+            heading: 'Your booking was cancelled',
+            intro: `The slot at ${info.clubName} on ${info.when} is no longer held for you.`,
+            status: 'Cancelled',
+            refundNote: info.refundCents > 0 ? `Refund: ${refund} — back on your payment method within a few working days.` : null,
+            cta: 'Find another slot',
+            note: 'Cancelled by mistake? Book the slot again — it is free for everyone now.',
           }
         : {
             subject: `Отменена резервация — ${info.clubName}`,
             body: `Резервацията ви в ${info.clubName} на ${info.when} беше отменена.${info.refundCents > 0 ? ` Възстановена сума: ${refund}.` : ''}`,
+            heading: 'Резервацията ви е отменена',
+            intro: `Часът в ${info.clubName} на ${info.when} вече не е запазен за вас.`,
+            status: 'Отменена',
+            refundNote: info.refundCents > 0 ? `Възстановена сума: ${refund} — връща се по начина на плащане до няколко работни дни.` : null,
+            cta: 'Намери друг час',
+            note: 'Отменили сте по погрешка? Часът вече е свободен за всички — запазете го отново.',
           };
-    await this.send({ to, subject: copy.subject, text: copy.body, html: emailShell(`<p>${copy.body}</p>`) });
+    await this.send({
+      to,
+      subject: copy.subject,
+      text: copy.body,
+      html: emailShell(`<p>${copy.body}</p>`),
+      template: {
+        key: 'booking_cancelled',
+        data: {
+          preheader: copy.refundNote ?? copy.intro,
+          status_label: copy.status,
+          heading: copy.heading,
+          intro: copy.intro,
+          details: this.bookingDetails(info, locale),
+          refund_note: copy.refundNote,
+          cta_label: copy.cta,
+          cta_url: this.webLink(locale, 'clubs'),
+          note: copy.note,
+          site_url: this.siteUrl(),
+        },
+      },
+    });
   }
 
   async sendPasswordReset(
@@ -642,11 +987,23 @@ export class MailService {
             body: 'Получихме заявка за смяна на паролата. Връзката е валидна 1 час:',
             cta: 'Смени паролата',
           };
+    const l = (bg: string, en: string) => (locale === 'en' ? en : bg);
     await this.send({
       to,
       subject: copy.subject,
       text: `${copy.body}\n${link}`,
       html: emailShell(`<p>${copy.body}</p>${button(link, copy.cta)}<p>${link}</p>`),
+      template: this.notice({
+        heading: l('Смяна на паролата', 'Reset your password'),
+        intro: copy.body,
+        ctaLabel: copy.cta,
+        ctaUrl: link,
+        fallbackUrl: link,
+        note: l(
+          'Ако не сте заявявали смяна, просто изтрийте писмото — паролата ви остава същата.',
+          "If you didn't ask for this, delete this email — your password stays as it is.",
+        ),
+      }),
     });
   }
 
@@ -668,11 +1025,24 @@ export class MailService {
             body: 'Паролата ви току-що беше сменена. Ако не сте вие, сменете я веднага и се свържете с поддръжка.',
             cta: 'Смени паролата',
           };
+    const l = (bg: string, en: string) => (locale === 'en' ? en : bg);
     await this.send({
       to,
       subject: copy.subject,
       text: `${copy.body}\n${link}`,
       html: emailShell(`<p>${copy.body}</p>${button(link, copy.cta)}`),
+      template: this.notice({
+        tone: 'good',
+        status: l('Сигурност', 'Security'),
+        heading: l('Паролата ви е сменена', 'Your password was changed'),
+        intro: copy.body,
+        ctaLabel: copy.cta,
+        ctaUrl: link,
+        note: l(
+          'Това писмо е само за ваша информация — не е нужно да правите нищо, ако промяната е ваша.',
+          'This email is for your records — nothing to do if the change was yours.',
+        ),
+      }),
     });
   }
 

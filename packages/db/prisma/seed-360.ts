@@ -14,13 +14,15 @@
  *    9 winter-dome overrides for courts 4–6 (23 / 26 / 26 EUR, 1 Nov – 3 May).
  *    Click&Play needs 9 rows for the same thing. Skipped if the club already has
  *    price rules, unless you set RESET_PRICES=1 (then the club's rules are rebuilt)
- *  - three trainers: Явор, Тихомир and Ивайло Коев, linked to the club with a
- *    shareable COACH resource, availability, and (for the last two) the club's
- *    own photo and a short bio.
+ *  - four trainers: Явор, Димитър, Тихомир and Ивайло, each linked to the club
+ *    with a shareable COACH resource and availability; Тихомир and Ивайло also
+ *    carry the club's own photo and a short bio.
+ *  - the club's admin(s), with the CLUB_ADMIN role and membership.
  *
  * NOT created, because the data isn't known yet: trainer services/lesson prices,
- * Явор's photo, real e-mail addresses. The trainer accounts have no password —
- * use "forgot password" (or set a real e-mail below) to let them in.
+ * Явор's photo. The accounts carry no password — give one with
+ *   EMAIL=… PASSWORD=… pnpm --filter @playslot/db set:password
+ * or let the coach use "forgot password".
  */
 import { Prisma, PrismaClient, Role, Sport, Surface } from '@prisma/client';
 
@@ -30,21 +32,40 @@ const prisma = new PrismaClient();
 // Photos are the club's own (360tennis.bg); the paths carry Cyrillic, so they
 // are stored percent-encoded — a raw Cyrillic URL breaks in some clients.
 const PHOTO = 'https://360tennis.bg/wp-content/uploads/2023/08';
-const TRAINERS: { email: string; name: string; photoUrl?: string; bio?: string }[] = [
-  { email: 'yavor.dimitrov@360tennis.test', name: 'Явор Димитров' },
+// `previousEmail` is the placeholder an account may have been created under
+// before the real address was known: the seed moves that account over instead
+// of leaving a duplicate behind.
+const TRAINERS: {
+  email: string;
+  name: string;
+  previousEmail?: string;
+  photoUrl?: string;
+  bio?: string;
+}[] = [
   {
-    email: 'tihomir.dimitrov@360tennis.test',
+    email: 'qwor18@gmail.com',
+    previousEmail: 'yavor.dimitrov@360tennis.test',
+    name: 'Явор Димитров',
+  },
+  {
+    email: 'tisho8888@gmail.com',
+    previousEmail: 'tihomir.dimitrov@360tennis.test',
     name: 'Тихомир Димитров',
     photoUrl: `${PHOTO}/4-%D0%A2%D1%80%D0%B5%D0%BD%D0%B5%D1%80-%D0%A2%D0%B8%D1%85%D0%BE%D0%BC%D0%B8%D1%80.jpg`,
     bio: 'Започва да играе тенис на 6 години. Треньор в 360 Тенис клуб от близо две години. Работи предимно с деца — освен техника, държи на дисциплината и спортната култура.',
   },
+  { email: 'dimitar.penchev.dr@gmail.com', name: 'Димитър Пенчев' },
   {
-    email: 'ivaylo.koev@360tennis.test',
+    email: 'ivayloik@gmail.com',
+    previousEmail: 'ivaylo.koev@360tennis.test',
     name: 'Ивайло Коев',
     photoUrl: `${PHOTO}/1-%D0%A2%D1%80%D0%B5%D0%BD%D0%B5%D1%80-%D0%98%D0%B2%D0%BE.jpg`,
     bio: 'Започва да играе тенис на 5 години. В 360 Тенис клуб е от самото му начало преди около 5 години. Работи както с начинаещи, така и със състезатели — за него тенисът е спорт, който се учи цял живот.',
   },
 ];
+
+// Club admins: full access to this club's console (calendar, prices, team).
+const CLUB_ADMINS = [{ email: 'furnadzhievay@gmail.com', name: 'Дани Фурнаджиева' }];
 
 const OPEN_MIN = 7 * 60; // 07:00
 const CLOSE_MIN = 23 * 60; // 23:00
@@ -165,8 +186,35 @@ async function main() {
     console.log(`Prices: created ${rows.length} rules.`);
   }
 
+  // ── club admins ──
+  for (const a of CLUB_ADMINS) {
+    const user = await prisma.user.upsert({
+      where: { email: a.email },
+      update: { name: a.name },
+      create: { email: a.email, name: a.name, locale: 'bg' },
+    });
+    await prisma.userRole.createMany({
+      data: [{ userId: user.id, role: Role.CLUB_ADMIN }],
+      skipDuplicates: true,
+    });
+    await prisma.clubMember.createMany({
+      data: [{ clubId: club.id, userId: user.id, role: Role.CLUB_ADMIN }],
+      skipDuplicates: true,
+    });
+  }
+
   // ── trainers ──
   for (const t of TRAINERS) {
+    // Move an account created under the old placeholder address, so the coach
+    // keeps their id — and with it their lessons, feedback and availability.
+    if (t.previousEmail) {
+      const previous = await prisma.user.findUnique({ where: { email: t.previousEmail } });
+      const current = await prisma.user.findUnique({ where: { email: t.email } });
+      if (previous && !current) {
+        await prisma.user.update({ where: { id: previous.id }, data: { email: t.email } });
+        console.log(`Trainer ${t.name}: ${t.previousEmail} → ${t.email}`);
+      }
+    }
     const user = await prisma.user.upsert({
       where: { email: t.email },
       update: { name: t.name },
@@ -203,7 +251,9 @@ async function main() {
     }
   }
 
-  console.log(`360 Tennis Club ready (club #${club.id}): ${COURTS.length} courts, ${TRAINERS.length} trainers.`);
+  console.log(
+    `360 Tennis Club ready (club #${club.id}): ${COURTS.length} courts, ${TRAINERS.length} trainers, ${CLUB_ADMINS.length} admin(s).`,
+  );
 }
 
 main()

@@ -19,6 +19,39 @@ DATABASE_URL=postgres://…/playslot_restore pnpm --filter @playslot/db db:resto
 - **Managed DB (Neon/Supabase):** enable point-in-time recovery in addition to logical dumps.
 - **Before every migration in prod:** take a fresh dump first.
 
+## Platform owner account
+
+`admin@playslot.bg` is the platform's own account: PLATFORM_ADMIN plus
+CLUB_ADMIN of every active club. Create or refresh it with
+
+```bash
+ADMIN_PASSWORD='<at least 12 characters>' pnpm --filter @playslot/db seed:admin
+```
+
+- Safe to re-run; run it again after adding a club, to give the account that
+  club's console too.
+- The password is never stored in the repo — it comes from `ADMIN_PASSWORD` and
+  is kept only as an argon2 hash. Without that variable an existing account
+  keeps its password and a new one is created without one (sign in via "forgot
+  password").
+- `ADMIN_EMAIL` overrides the address for a second owner account.
+
+## Giving an account a password
+
+Seeded accounts (the 360 trainers) and admin-invited staff start without one.
+Until transactional email is fully live, set one directly:
+
+```bash
+EMAIL=coach@example.com PASSWORD='<at least 12 characters>' \
+  pnpm --filter @playslot/db set:password
+```
+
+It refuses to create an account — a typo fails instead of leaving a stray user —
+and marks the address verified, since an address typed in by hand has no
+verification link to follow (`VERIFY=0` skips that). Send the password to the
+person over a channel that isn't email, and ask them to change it in
+Профил → Настройки.
+
 ## Deploys & migrations
 
 Pushing to `main` does **not** touch the database by itself: the API image's

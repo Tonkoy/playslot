@@ -14,11 +14,12 @@
  *    9 winter-dome overrides for courts 4–6 (23 / 26 / 26 EUR, 1 Nov – 3 May).
  *    Click&Play needs 9 rows for the same thing. Skipped if the club already has
  *    price rules, unless you set RESET_PRICES=1 (then the club's rules are rebuilt)
- *  - two trainers: Явор Димитров and Тихомир Димитров, linked to the club with
- *    a shareable COACH resource and availability.
+ *  - three trainers: Явор, Тихомир and Ивайло Коев, linked to the club with a
+ *    shareable COACH resource, availability, and (for the last two) the club's
+ *    own photo and a short bio.
  *
  * NOT created, because the data isn't known yet: trainer services/lesson prices,
- * bios, trainer photos, real e-mail addresses. The trainer accounts have no password —
+ * Явор's photo, real e-mail addresses. The trainer accounts have no password —
  * use "forgot password" (or set a real e-mail below) to let them in.
  */
 import { Prisma, PrismaClient, Role, Sport, Surface } from '@prisma/client';
@@ -26,9 +27,23 @@ import { Prisma, PrismaClient, Role, Sport, Surface } from '@prisma/client';
 const prisma = new PrismaClient();
 
 // ── edit these when the real trainer e-mails are known ──
-const TRAINERS = [
+// Photos are the club's own (360tennis.bg); the paths carry Cyrillic, so they
+// are stored percent-encoded — a raw Cyrillic URL breaks in some clients.
+const PHOTO = 'https://360tennis.bg/wp-content/uploads/2023/08';
+const TRAINERS: { email: string; name: string; photoUrl?: string; bio?: string }[] = [
   { email: 'yavor.dimitrov@360tennis.test', name: 'Явор Димитров' },
-  { email: 'tihomir.dimitrov@360tennis.test', name: 'Тихомир Димитров' },
+  {
+    email: 'tihomir.dimitrov@360tennis.test',
+    name: 'Тихомир Димитров',
+    photoUrl: `${PHOTO}/4-%D0%A2%D1%80%D0%B5%D0%BD%D0%B5%D1%80-%D0%A2%D0%B8%D1%85%D0%BE%D0%BC%D0%B8%D1%80.jpg`,
+    bio: 'Започва да играе тенис на 6 години. Треньор в 360 Тенис клуб от близо две години. Работи предимно с деца — освен техника, държи на дисциплината и спортната култура.',
+  },
+  {
+    email: 'ivaylo.koev@360tennis.test',
+    name: 'Ивайло Коев',
+    photoUrl: `${PHOTO}/1-%D0%A2%D1%80%D0%B5%D0%BD%D0%B5%D1%80-%D0%98%D0%B2%D0%BE.jpg`,
+    bio: 'Започва да играе тенис на 5 години. В 360 Тенис клуб е от самото му начало преди около 5 години. Работи както с начинаещи, така и със състезатели — за него тенисът е спорт, който се учи цял живот.',
+  },
 ];
 
 const OPEN_MIN = 7 * 60; // 07:00
@@ -162,10 +177,16 @@ async function main() {
       data: [{ clubId: club.id, userId: user.id, role: Role.COACH }],
       skipDuplicates: true,
     });
+    // Photo and bio are refreshed on every run, but only when this file has
+    // them — a coach who has since edited their own profile keeps it.
+    const details = {
+      ...(t.photoUrl ? { photoUrl: t.photoUrl } : {}),
+      ...(t.bio ? { bio: t.bio } : {}),
+    };
     const profile = await prisma.coachProfile.upsert({
       where: { userId: user.id },
-      update: {},
-      create: { userId: user.id, languages: ['bg'], levels: [], worksWith: [] },
+      update: details,
+      create: { userId: user.id, languages: ['bg'], levels: [], worksWith: [], ...details },
     });
     await prisma.coachClub.createMany({
       data: [{ coachProfileId: profile.id, clubId: club.id }],

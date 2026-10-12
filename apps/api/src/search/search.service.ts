@@ -31,7 +31,7 @@ export class SearchService {
           },
         },
       },
-      select: { id: true, slug: true, name: true, city: { select: { name: true } } },
+      select: { id: true, slug: true, name: true, photoUrl: true, city: { select: { name: true } } },
       take: MAX_CLUBS,
       orderBy: { name: 'asc' },
     });
@@ -63,6 +63,7 @@ export class SearchService {
           slug: club.slug,
           name: club.name,
           cityName: club.city.name,
+          photoUrl: club.photoUrl,
           surfaces: [...new Set(avail.courts.map((c) => c.surface).filter((x): x is string => !!x))],
         },
         freeCount: free.length,

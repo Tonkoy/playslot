@@ -19,6 +19,31 @@ DATABASE_URL=postgres://…/playslot_restore pnpm --filter @playslot/db db:resto
 - **Managed DB (Neon/Supabase):** enable point-in-time recovery in addition to logical dumps.
 - **Before every migration in prod:** take a fresh dump first.
 
+## Deploys & migrations
+
+Pushing to `main` does **not** touch the database by itself: the API image's
+`CMD` only starts the server, and the `migrate:deploy` step in CI runs against
+CI's throwaway Postgres. Schema changes reach production through Railway's
+**Pre-deploy Command** on the API service:
+
+```
+packages/db/node_modules/.bin/prisma migrate deploy --schema packages/db/prisma/schema.prisma
+```
+
+- Runs inside the freshly built image (WORKDIR `/repo`) with the service's env,
+  so it uses the production `DATABASE_URL`. A failure cancels the deploy and the
+  old container keeps serving — the DB is never half-migrated behind new code.
+- It is a no-op when nothing is pending, so it is safe on every deploy.
+- Check the pre-deploy logs for `N migrations applied` (or `No pending
+  migrations`). `pnpm --filter @playslot/db migrate:status` against the prod URL
+  gives the same answer out of band.
+- `P3005 (database schema is not empty)` means the prod DB was created outside
+  Prisma: baseline it with `prisma migrate resolve --applied <migration>` for
+  everything already present, then redeploy.
+- Take a dump before a deploy that carries a destructive migration (see Backups).
+- **Seeds are not migrations.** `seed:360` (club logo, city rename) and friends
+  are run by hand against prod; never put them in the pre-deploy command.
+
 ## Health & readiness
 
 - `GET /api/health` — liveness (no I/O).

@@ -3,7 +3,9 @@
     "appName": "PlaySlot",
     "tagline": "Book a court and a coach — in one place.",
     "close": "Close",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "Nav": {
     "clubs": "Clubs",

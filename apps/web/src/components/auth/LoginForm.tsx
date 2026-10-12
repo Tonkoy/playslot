@@ -7,6 +7,7 @@ import { Link, useRouter } from '@/i18n/navigation';
 import { googleLoginUrl, login } from '@/lib/api';
 import { errorMessage, fieldErrorsOf } from '@/lib/errors';
 import { FieldError } from '../FieldError';
+import { PasswordInput } from './PasswordInput';
 import { authInput, authLabel, authPrimaryBtn, googleBtn } from './styles';
 
 export function LoginForm({ locale, returnTo }: { locale: string; returnTo: string }) {
@@ -56,12 +57,10 @@ export function LoginForm({ locale, returnTo }: { locale: string; returnTo: stri
         </label>
         <label style={authLabel}>
           {t('password')}
-          <input
-            type="password"
+          <PasswordInput
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={authInput}
             autoComplete="current-password"
             aria-invalid={Boolean(fields.password)}
           />

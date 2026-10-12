@@ -19,6 +19,8 @@ export interface SearchResultItem {
     name: string;
     cityName: string;
     surfaces: string[];
+    /** The club's own logo/photo, when it has one. */
+    photoUrl: string | null;
   };
   freeCount: number;
   fromPriceCents: number | null;

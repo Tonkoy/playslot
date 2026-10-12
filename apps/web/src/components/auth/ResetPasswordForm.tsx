@@ -6,7 +6,8 @@ import { Link, useRouter } from '@/i18n/navigation';
 import { resetPassword } from '@/lib/api';
 import { errorMessage, fieldErrorsOf } from '@/lib/errors';
 import { FieldError } from '../FieldError';
-import { authInput, authLabel, authPrimaryBtn } from './styles';
+import { PasswordInput } from './PasswordInput';
+import { authLabel, authPrimaryBtn } from './styles';
 
 export function ResetPasswordForm({ token }: { token: string }) {
   const t = useTranslations('ResetPassword');
@@ -60,13 +61,11 @@ export function ResetPasswordForm({ token }: { token: string }) {
       <form onSubmit={onSubmit} style={{ display: 'grid', gap: 12 }}>
         <label style={authLabel}>
           {t('newPassword')}
-          <input
-            type="password"
+          <PasswordInput
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={8}
-            style={authInput}
             autoComplete="new-password"
             aria-invalid={Boolean(fields.password)}
           />
@@ -75,12 +74,10 @@ export function ResetPasswordForm({ token }: { token: string }) {
         </label>
         <label style={authLabel}>
           {t('confirm')}
-          <input
-            type="password"
+          <PasswordInput
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             required
-            style={authInput}
             autoComplete="new-password"
             aria-invalid={Boolean(fields.confirm)}
           />

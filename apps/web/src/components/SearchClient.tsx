@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { SPORTS } from '@playslot/contracts';
 import { enumLabel } from '@/lib/enums';
+import { ClubThumb } from './ClubThumb';
 import { useSearchModal } from './SearchModalContext';
 import { Link } from '@/i18n/navigation';
 import { getCities, searchAvailability } from '@/lib/api';
@@ -216,7 +217,9 @@ export function SearchClient() {
                 opacity: r.freeCount === 0 ? 0.6 : 1,
               }}
             >
-              <div>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', minWidth: 0 }}>
+                <ClubThumb src={r.club.photoUrl} />
+                <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 18 }}>{r.club.name}</div>
                 <div className="mono" style={{ color: 'var(--ink-3)', fontSize: 12, marginTop: 4 }}>
                   {r.club.cityName}
@@ -233,6 +236,7 @@ export function SearchClient() {
                     ))}
                   </div>
                 )}
+                </div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontWeight: 700, color: r.freeCount ? 'var(--free)' : 'var(--ink-3)' }}>

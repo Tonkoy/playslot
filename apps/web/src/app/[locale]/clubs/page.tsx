@@ -1,6 +1,3 @@
-/* eslint-disable @next/next/no-img-element -- club and coach photos are arbitrary
-   remote URLs (each club's own host); next/image would need every one of those
-   domains allow-listed, so a plain <img> is the honest choice here. */
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { isAppLocale } from '@/i18n/routing';
@@ -8,6 +5,7 @@ import { pageMetadata } from '@/lib/seo';
 import { Link } from '@/i18n/navigation';
 import { SiteHeader } from '@/components/SiteHeader';
 import { PageHeader } from '@/components/PageHeader';
+import { CourtMark } from '@/components/ClubThumb';
 import { getClubs } from '@/lib/api';
 
 export async function generateMetadata({
@@ -63,60 +61,87 @@ export default async function ClubsPage({ params }: { params: Promise<{ locale: 
                 key={club.id}
                 href={`/clubs/${club.slug}`}
                 style={{
-                  display: 'block',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%',
                   textDecoration: 'none',
                   color: 'var(--ink)',
                   background: 'var(--surface)',
                   border: '1px solid var(--line)',
                   borderRadius: 'var(--radius)',
-                  padding: 18,
+                  overflow: 'hidden',
                   boxShadow: 'var(--shadow-sm)',
                 }}
               >
-                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  {/* The club's own logo when it has one. `contain` keeps a
-                      wordmark whole; a photo fits the square instead of being
-                      cropped. Clubs without one keep the plain text card. */}
-                  {club.photoUrl && (
+                {/* Product-card layout: picture on top, then the name, then the
+                    CTA. `contain` keeps a wordmark whole instead of cropping
+                    it; clubs without a picture get the court mark so the grid
+                    stays even. */}
+                <div
+                  style={{
+                    // A fixed height (not an aspect ratio) keeps every card's
+                    // picture band identical — a portrait photo would other-
+                    // wise stretch its card taller than the rest of the row.
+                    height: 180,
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    background: 'var(--surface-2)',
+                    borderBottom: '1px solid var(--line)',
+                  }}
+                >
+                  {club.photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- remote club hosts; see ClubThumb
                     <img
                       src={club.photoUrl}
                       alt=""
                       loading="lazy"
                       style={{
-                        width: 56,
-                        height: 56,
-                        flexShrink: 0,
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        width: 'auto',
+                        height: 'auto',
                         objectFit: 'contain',
-                        background: 'var(--surface-2)',
-                        border: '1px solid var(--line)',
-                        borderRadius: 'var(--radius-sm)',
-                        padding: 6,
+                        padding: 14,
+                        boxSizing: 'border-box',
                       }}
                     />
+                  ) : (
+                    <CourtMark />
                   )}
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontFamily: 'var(--font-bricolage)', fontWeight: 700, fontSize: 19 }}>
-                      {club.name}
-                    </div>
-                    <div style={{ color: 'var(--ink-3)', fontSize: 14, marginTop: 4 }}>
-                      {club.city.name} · {club.address}
-                    </div>
-                  </div>
                 </div>
-                <span
-                  style={{
-                    display: 'inline-block',
-                    marginTop: 14,
-                    color: 'var(--on-lime)',
-                    background: 'var(--lime)',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '8px 14px',
-                    fontSize: 13,
-                    fontWeight: 800,
-                  }}
-                >
-                  {t('viewClub')} →
-                </span>
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: 18 }}>
+                  <div style={{ fontFamily: 'var(--font-bricolage)', fontWeight: 700, fontSize: 19 }}>
+                    {club.name}
+                  </div>
+                  <div style={{ color: 'var(--ink-3)', fontSize: 14, marginTop: 4 }}>
+                    {club.city.name} · {club.address}
+                  </div>
+                  <span
+                    style={{
+                      display: 'block',
+                      textAlign: 'center',
+                      marginTop: 'auto',
+                      paddingTop: 14,
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: 'block',
+                        color: 'var(--on-lime)',
+                        background: 'var(--lime)',
+                        borderRadius: 'var(--pill)',
+                        padding: '11px 14px',
+                        fontSize: 13.5,
+                        fontWeight: 800,
+                      }}
+                    >
+                      {t('viewClub')} →
+                    </span>
+                  </span>
+                </div>
               </Link>
             ))}
           </div>

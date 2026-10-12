@@ -3,7 +3,9 @@
     "appName": "PlaySlot",
     "tagline": "Резервирай корт и треньор — на едно място.",
     "close": "Затвори",
-    "loading": "Зарежда…"
+    "loading": "Зарежда…",
+    "showPassword": "Покажи паролата",
+    "hidePassword": "Скрий паролата"
   },
   "Nav": {
     "clubs": "Клубове",

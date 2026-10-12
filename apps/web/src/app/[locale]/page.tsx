@@ -247,7 +247,10 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                 </div>
               </Link>
             ) : (
-              <div
+              // No featured club: the card still leads somewhere (the club
+              // list) rather than sitting there as dead decoration.
+              <Link
+                href="/clubs"
                 className="card"
                 style={{
                   position: 'absolute',
@@ -259,6 +262,9 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                   border: '1px solid var(--line)',
                   borderRadius: 'var(--radius)',
                   boxShadow: 'var(--shadow-sm)',
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  display: 'block',
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -280,7 +286,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                   <span>18:00–19:00</span>
                   <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>16.00 €</span>
                 </div>
-              </div>
+              </Link>
             )}
             <div
               style={{

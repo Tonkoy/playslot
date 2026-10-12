@@ -7,6 +7,7 @@ import { Link, useRouter } from '@/i18n/navigation';
 import { googleLoginUrl, register } from '@/lib/api';
 import { errorMessage, fieldErrorsOf } from '@/lib/errors';
 import { FieldError } from '../FieldError';
+import { PasswordInput } from './PasswordInput';
 import { authInput, authLabel, authPrimaryBtn, googleBtn } from './styles';
 
 export function RegisterForm() {
@@ -93,13 +94,11 @@ export function RegisterForm() {
         </label>
         <label style={authLabel}>
           {t('password')}
-          <input
-            type="password"
+          <PasswordInput
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={8}
-            style={authInput}
             autoComplete="new-password"
             aria-invalid={Boolean(fields.password)}
             aria-describedby="password-rules"
@@ -112,12 +111,10 @@ export function RegisterForm() {
         </label>
         <label style={authLabel}>
           {t('confirm')}
-          <input
-            type="password"
+          <PasswordInput
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             required
-            style={authInput}
             autoComplete="new-password"
             aria-invalid={Boolean(fields.confirm)}
           />

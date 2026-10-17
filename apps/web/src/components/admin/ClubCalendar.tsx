@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState } from 'react';
 import type { CalendarEntry } from '@playslot/contracts';
 import { Modal } from '@/components/Modal';
+import { Combobox, Select } from '@/components/Picker';
 import { CustomerPicker } from './CustomerPicker';
 import {
   CLIENT_BASE,
@@ -20,6 +21,7 @@ import {
 } from '@/lib/api';
 import { errorMessage } from '@/lib/errors';
 import { hhmmToMin, localHHMM, minToHHMM, zonedIso } from '@/lib/tz';
+import { SkeletonRows } from '@/components/Skeleton';
 
 const DAY_START = 7 * 60;
 const DAY_END = 22 * 60;
@@ -85,6 +87,7 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
   const [bookingStatus, setBookingStatus] = useState<'CONFIRMED' | 'PENDING_APPROVAL'>('CONFIRMED');
   const [customer, setCustomer] = useState<{ userId: number | null; name: string }>({ userId: null, name: '' });
   const [coachId, setCoachId] = useState<number | null>(null);
+  const [coachText, setCoachText] = useState('');
   const [blockReason, setBlockReason] = useState('');
   const [durationMin, setDurationMin] = useState(60);
 
@@ -328,7 +331,7 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
         </div>
       )}
 
-      {cal.isLoading && <p style={{ color: 'var(--ink-3)' }}>…</p>}
+      {cal.isLoading && <SkeletonRows />}
       {cal.isError && <div role="alert" style={{ ...banner, background: 'var(--clay-soft)', border: '1px solid var(--clay)' }}>{t('error')}</div>}
 
       {cal.isSuccess && (
@@ -492,18 +495,20 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
       >
         {selection?.kind === 'free' && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'end' }}>
-            <label style={fieldLabel}>
-              {t('entryKind')}
-              <select
+            <div style={fieldLabel}>
+              <span>{t('entryKind')}</span>
+              <Select
+                id="new-kind"
+                ariaLabel={t('entryKind')}
                 value={newKind}
-                onChange={(e) => setNewKind(e.target.value as typeof newKind)}
-                style={ctrl}
-              >
-                <option value="COURT">{t('kindCourt')}</option>
-                <option value="LESSON">{t('kindLesson')}</option>
-                <option value="BLOCK">{t('kindBlock')}</option>
-              </select>
-            </label>
+                onChange={(v) => setNewKind(v as typeof newKind)}
+                options={[
+                  { value: 'COURT', label: t('kindCourt') },
+                  { value: 'LESSON', label: t('kindLesson') },
+                  { value: 'BLOCK', label: t('kindBlock') },
+                ]}
+              />
+            </div>
             {newKind === 'BLOCK' ? (
               <label style={fieldLabel}>
                 {t('blockReason')}
@@ -516,50 +521,65 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
               </label>
             ) : (
               <>
-                <label style={fieldLabel}>
-                  {t('customer')}
+                <div style={{ ...fieldLabel, minWidth: 240, flex: '1 1 240px' }}>
+                  <span>{t('customer')}</span>
                   <CustomerPicker clubId={clubId} value={customer} onChange={setCustomer} />
-                </label>
+                </div>
                 {newKind === 'LESSON' && (
-                  <label style={fieldLabel}>
-                    {t('coach')}
-                    <select
-                      value={coachId ?? ''}
-                      onChange={(e) => setCoachId(e.target.value ? Number(e.target.value) : null)}
-                      style={ctrl}
-                    >
-                      <option value="">{t('coachAny')}</option>
-                      {(coaches.data ?? []).map((c) => (
-                        <option key={c.coachProfileId} value={c.coachProfileId}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <div style={{ ...fieldLabel, minWidth: 200 }}>
+                    <span>{t('coach')}</span>
+                    <Combobox
+                      id="new-coach"
+                      placeholder={t('coachSearch')}
+                      emptyHint={t('noCoaches')}
+                      loading={coaches.isLoading}
+                      value={coachId ? String(coachId) : null}
+                      text={coachText}
+                      // Typed text filters the club's coaches; the list is
+                      // short, so it is matched here rather than on the server.
+                      options={(coaches.data ?? [])
+                        .filter((c) => c.name.toLowerCase().includes(coachText.trim().toLowerCase()))
+                        .map((c) => ({
+                          value: String(c.coachProfileId),
+                          label: c.name,
+                          hint: c.clubs.map((cl) => cl.name).join(' · ') || null,
+                        }))}
+                      onText={(v) => {
+                        setCoachText(v);
+                        setCoachId(null);
+                      }}
+                      onPick={(o) => {
+                        setCoachId(Number(o.value));
+                        setCoachText(o.label);
+                      }}
+                    />
+                  </div>
                 )}
-                <label style={fieldLabel}>
-                  {t('status')}
-                  <select
+                <div style={fieldLabel}>
+                  <span>{t('status')}</span>
+                  <Select
+                    id="new-status"
+                    ariaLabel={t('status')}
                     value={bookingStatus}
-                    onChange={(e) => setBookingStatus(e.target.value as typeof bookingStatus)}
-                    style={ctrl}
-                  >
-                    <option value="CONFIRMED">{st('CONFIRMED')}</option>
-                    <option value="PENDING_APPROVAL">{st('PENDING_APPROVAL')}</option>
-                  </select>
-                </label>
+                    onChange={(v) => setBookingStatus(v as typeof bookingStatus)}
+                    options={[
+                      { value: 'CONFIRMED', label: st('CONFIRMED') },
+                      { value: 'PENDING_APPROVAL', label: st('PENDING_APPROVAL') },
+                    ]}
+                  />
+                </div>
               </>
             )}
-            <label style={fieldLabel}>
-              {t('duration')}
-              <select value={durationMin} onChange={(e) => setDurationMin(Number(e.target.value))} style={ctrl}>
-                {durations.map((d) => (
-                  <option key={d} value={d}>
-                    {d} {t('minutes')}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div style={fieldLabel}>
+              <span>{t('duration')}</span>
+              <Select
+                id="new-duration"
+                ariaLabel={t('duration')}
+                value={String(durationMin)}
+                onChange={(v) => setDurationMin(Number(v))}
+                options={durations.map((d) => ({ value: String(d), label: `${d} ${t('minutes')}` }))}
+              />
+            </div>
             <button
               type="button"
               disabled={bookMut.isPending}
@@ -679,4 +699,12 @@ const banner: React.CSSProperties = {
   padding: '10px 14px',
   marginBottom: 12,
 };
-const fieldLabel: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--ink-2)' };
+const fieldLabel: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 5,
+  fontSize: 12,
+  fontWeight: 600,
+  color: 'var(--ink-2)',
+  minWidth: 150,
+};

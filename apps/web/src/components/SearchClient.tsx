@@ -10,6 +10,7 @@ import { useSearchModal } from './SearchModalContext';
 import { Link } from '@/i18n/navigation';
 import { getCities, searchAvailability } from '@/lib/api';
 import { DatePicker } from './DatePicker';
+import { SkeletonRows } from '@/components/Skeleton';
 
 function todayIso(): string {
   const n = new Date();
@@ -192,7 +193,7 @@ export function SearchClient() {
 
       {/* ── results ── */}
       <div style={{ marginTop: 20 }}>
-        {query.isLoading && <p style={{ color: 'var(--ink-3)' }}>…</p>}
+        {query.isLoading && <SkeletonRows />}
         {query.isSuccess && results.length === 0 && <p style={{ color: 'var(--ink-2)' }}>{t('empty')}</p>}
 
         <div style={{ display: 'grid', gap: 12 }}>

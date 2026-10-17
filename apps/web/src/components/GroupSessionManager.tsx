@@ -12,6 +12,7 @@ import {
 } from '@/lib/api';
 import { formatInstant, localHHMM } from '@/lib/tz';
 import { useToast } from './Toast';
+import { SkeletonRows } from '@/components/Skeleton';
 
 function tomorrow(): string {
   const d = new Date();
@@ -135,7 +136,7 @@ export function GroupSessionManager({ coachProfileId }: { coachProfileId: number
       {/* free start times */}
       <div style={{ marginTop: 12 }}>
         <div style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6 }}>{t('pickSlot')}</div>
-        {avail.isLoading && <p style={{ color: 'var(--ink-3)' }}>…</p>}
+        {avail.isLoading && <SkeletonRows />}
         {avail.isSuccess && freeSlots.length === 0 && (
           <p style={{ color: 'var(--ink-3)', fontSize: 14 }}>{t('noSlots')}</p>
         )}

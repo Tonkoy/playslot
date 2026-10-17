@@ -13,6 +13,7 @@ import { platformDeleteUser, platformListUsers, platformReinstateUser, platformS
 import { enumLabel } from '@/lib/enums';
 import { Modal } from '../Modal';
 import { useToast } from '../Toast';
+import { SkeletonRows } from '@/components/Skeleton';
 
 type Dialog =
   | { kind: 'suspend'; user: PlatformUserDto }
@@ -120,7 +121,7 @@ export function UsersModeration() {
         </label>
       </div>
 
-      {users.isLoading && <p style={{ color: 'var(--ink-3)' }}>…</p>}
+      {users.isLoading && <SkeletonRows />}
       {users.isSuccess && users.data.length === 0 && <p style={{ color: 'var(--ink-3)' }}>{t('empty')}</p>}
 
       <div style={{ display: 'grid', gap: 8 }}>

@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { adminGetClubFeedback } from '@/lib/api';
 import { Stars } from '../Stars';
+import { SkeletonRows } from '@/components/Skeleton';
 
 type Filter = 'all' | 'low' | 'coach';
 
@@ -59,7 +60,7 @@ export function ClubFeedback({ clubId }: { clubId: number }) {
         </div>
       )}
 
-      {q.isLoading && <p style={{ color: 'var(--ink-3)' }}>…</p>}
+      {q.isLoading && <SkeletonRows />}
       {q.isSuccess && q.data.count === 0 && <p style={{ color: 'var(--ink-3)', fontSize: 14 }}>{t('clubEmpty')}</p>}
 
       <div style={{ display: 'grid', gap: 8 }}>

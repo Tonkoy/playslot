@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import type { AdminStatsDto, CoachStatDto, DailyStatDto } from '@playslot/contracts';
 import { getAdminStats, platformListClubs } from '@/lib/api';
+import { SkeletonRows } from '@/components/Skeleton';
 
 type Preset = 'today' | 'week' | 'month' | 'last30' | 'lastMonth' | 'custom';
 
@@ -128,7 +129,7 @@ export function AdminStats({ scope, clubId }: { scope: 'platform' | 'club'; club
       </div>
 
       {stats.isError && <p style={{ color: 'var(--clay)' }}>{(stats.error as Error).message}</p>}
-      {!s && stats.isLoading && <p style={{ color: 'var(--ink-3)' }}>…</p>}
+      {!s && stats.isLoading && <SkeletonRows />}
 
       {s && (
         <div style={{ opacity: stats.isFetching ? 0.6 : 1, transition: 'opacity .15s' }}>

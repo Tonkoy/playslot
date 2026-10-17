@@ -246,11 +246,38 @@ select {
   animation: success-check-draw 420ms ease-out 180ms forwards;
 }
 
+/*
+ * Loading placeholders (components/Skeleton.tsx): a soft sweep across a tinted
+ * block. Under reduced motion the block stays, the sweep doesn't.
+ */
+@keyframes skeleton-sweep {
+  from {
+    background-position: 180% 0;
+  }
+  to {
+    background-position: -80% 0;
+  }
+}
+
+.skeleton {
+  background-color: var(--surface-2);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.65) 50%,
+    transparent 100%
+  );
+  background-size: 180% 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-sweep 1.4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .loader-bar,
   .loader-spinner,
   .success-mark-ring,
-  .success-mark-check {
+  .success-mark-check,
+  .skeleton {
     animation: none;
   }
   .loader-bar {

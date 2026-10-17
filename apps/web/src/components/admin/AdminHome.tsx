@@ -9,6 +9,7 @@ import { enumLabel } from '@/lib/enums';
 import { AdminStats } from './AdminStats';
 import { PlatformConsole } from './PlatformConsole';
 import { UsersModeration } from './UsersModeration';
+import { SkeletonRows } from '@/components/Skeleton';
 
 export function AdminHome() {
   const t = useTranslations('Admin');
@@ -37,7 +38,7 @@ export function AdminHome() {
 
       <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>{t('yourClubs')}</h2>
 
-      {clubs.isLoading && <p style={{ color: 'var(--ink-3)' }}>…</p>}
+      {clubs.isLoading && <SkeletonRows />}
       {clubs.isSuccess && clubs.data.length === 0 && (
         <p style={{ color: 'var(--ink-2)' }}>{t('noClubs')}</p>
       )}

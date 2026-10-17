@@ -13,6 +13,7 @@ import {
   adminUpdatePriceRule,
 } from '@/lib/api';
 import { useToast } from '../Toast';
+import { SkeletonRows } from '@/components/Skeleton';
 
 const EVERY_DAY = null;
 const MON_FRI = 0b0111110; // bits 1–5
@@ -179,7 +180,7 @@ export function PriceRulesManager({ clubId }: { clubId: number }) {
       <p style={{ color: 'var(--ink-2)', fontSize: 14, margin: '4px 0 14px' }}>{t('help')}</p>
 
       {/* ── existing rules ── */}
-      {rules.isLoading && <p style={{ color: 'var(--ink-3)' }}>…</p>}
+      {rules.isLoading && <SkeletonRows />}
       {rules.isSuccess && rules.data.length === 0 && (
         <p style={{ color: 'var(--ink-2)', fontSize: 14 }}>{t('empty')}</p>
       )}

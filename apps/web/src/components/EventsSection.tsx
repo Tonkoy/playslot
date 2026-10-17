@@ -7,6 +7,7 @@ import { useRouter } from '@/i18n/navigation';
 import { getMe, listEvents, registerEvent, unregisterEvent } from '@/lib/api';
 import { formatInstant } from '@/lib/tz';
 import { useToast } from './Toast';
+import { SkeletonRows } from '@/components/Skeleton';
 
 /** Public events/tournaments for a club, with one-tap registration (spec §22 M9). */
 export function EventsSection({
@@ -49,7 +50,7 @@ export function EventsSection({
   return (
     <section style={{ marginTop: 32 }}>
       <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 12 }}>{t('title')}</h2>
-      {events.isLoading && <p style={{ color: 'var(--ink-3)' }}>…</p>}
+      {events.isLoading && <SkeletonRows />}
       <div style={{ display: 'grid', gap: 12 }}>
         {events.data?.map((e) => (
           <EventCard

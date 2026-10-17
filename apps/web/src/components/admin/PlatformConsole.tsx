@@ -16,6 +16,7 @@ import {
 } from '@/lib/api';
 import { enumLabel } from '@/lib/enums';
 import { AddMemberForm } from './AddMemberForm';
+import { SkeletonRows } from '@/components/Skeleton';
 
 /** Super-admin console: all clubs, create a club, assign club admins. */
 export function PlatformConsole() {
@@ -144,7 +145,7 @@ export function PlatformConsole() {
 
       {/* all clubs */}
       <h3 style={{ fontSize: 15, fontWeight: 700, margin: '18px 0 10px' }}>{t('allClubs')}</h3>
-      {clubs.isLoading && <p style={{ color: 'var(--ink-3)' }}>…</p>}
+      {clubs.isLoading && <SkeletonRows />}
       <div style={{ display: 'grid', gap: 10 }}>
         {clubs.data?.map((c) => (
           <ClubRow

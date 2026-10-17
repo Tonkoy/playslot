@@ -6,6 +6,7 @@ import { useState } from 'react';
 import type { UpsertEventInput } from '@playslot/contracts';
 import { adminCreateEvent, listEvents } from '@/lib/api';
 import { formatInstant, zonedIso } from '@/lib/tz';
+import { SkeletonRows } from '@/components/Skeleton';
 
 type EventDraft = {
   type: 'EVENT' | 'TOURNAMENT';
@@ -78,7 +79,7 @@ export function EventManager({
       <h2 style={h2}>{t('eventsTitle')}</h2>
       <p style={{ color: 'var(--ink-2)', fontSize: 14, margin: '4px 0 14px' }}>{t('eventsHelp')}</p>
 
-      {events.isLoading && <p style={{ color: 'var(--ink-3)' }}>…</p>}
+      {events.isLoading && <SkeletonRows />}
       {events.isSuccess && (
         <div style={{ display: 'grid', gap: 10 }}>
           {events.data.length === 0 && (

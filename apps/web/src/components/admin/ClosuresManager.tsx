@@ -8,6 +8,7 @@ import { ApiRequestError, errorMessage } from '@/lib/errors';
 import { formatDateRange, formatInstant, hhmmToMin, minToHHMM } from '@/lib/tz';
 import { DatePicker } from '../DatePicker';
 import { useToast } from '../Toast';
+import { SkeletonRows } from '@/components/Skeleton';
 
 function todayIso(): string {
   const d = new Date();
@@ -84,7 +85,7 @@ export function ClosuresManager({ clubId, timezone }: { clubId: number; timezone
       <p style={{ color: 'var(--ink-2)', fontSize: 14, margin: '4px 0 14px' }}>{t('help')}</p>
 
       {/* existing */}
-      {closures.isLoading && <p style={{ color: 'var(--ink-3)' }}>…</p>}
+      {closures.isLoading && <SkeletonRows />}
       {closures.isSuccess && closures.data.length === 0 && (
         <p style={{ color: 'var(--ink-3)', fontSize: 14 }}>{t('none')}</p>
       )}

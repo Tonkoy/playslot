@@ -7,6 +7,12 @@ import { useEffect, useState } from 'react';
 /** Don't flash for requests that finish quickly. */
 const BAR_DELAY_MS = 250;
 const OVERLAY_DELAY_MS = 400;
+/**
+ * Reads get the overlay almost at once: a page that is fetching should say so
+ * while it fetches, not after. The short wait only skips cache hits, which
+ * resolve in a frame or two.
+ */
+const READ_OVERLAY_DELAY_MS = 120;
 
 /** True once `active` has been on continuously for `delay` ms. */
 function useDelayed(active: boolean, delay: number): boolean {
@@ -26,19 +32,32 @@ function useDelayed(active: boolean, delay: number): boolean {
  * App-wide request feedback, driven by React Query so every screen gets it
  * without wiring anything per page:
  *
- * - **reads** (fetching) → a thin progress bar at the top; the page stays usable
- * - **writes** (mutations) → a dimmed overlay that blocks input, because the
+ * - **reads** (fetching) → a thin progress bar and a blurred overlay over the
+ *   content: the page is visibly mid-update rather than settled, which is what
+ *   made the header appear to jump after sign-in
+ * - **writes** (mutations) → the same overlay, but it blocks input, because the
  *   result changes what's on screen and a second click would double-submit
  *
- * Both wait a moment before appearing, so a fast request doesn't flash.
+ * All of it waits a moment before appearing, so a fast request doesn't flash.
  */
 export function GlobalLoader() {
   const t = useTranslations('Common');
   const fetching = useIsFetching() > 0;
   const mutating = useIsMutating() > 0;
+  // Where the content starts: the overlay leaves the header alone so the menu
+  // stays legible and usable while the page below it loads.
+  const [contentTop, setContentTop] = useState(0);
 
   const showBar = useDelayed(fetching || mutating, BAR_DELAY_MS);
-  const showOverlay = useDelayed(mutating, OVERLAY_DELAY_MS);
+  const blocking = useDelayed(mutating, OVERLAY_DELAY_MS);
+  const soft = useDelayed(fetching && !mutating, READ_OVERLAY_DELAY_MS);
+  const showOverlay = blocking || soft;
+
+  useEffect(() => {
+    if (!showOverlay) return;
+    const header = document.querySelector('[data-site-header]');
+    setContentTop(header ? Math.max(0, header.getBoundingClientRect().bottom) : 0);
+  }, [showOverlay]);
 
   return (
     <>
@@ -49,7 +68,19 @@ export function GlobalLoader() {
       )}
 
       {showOverlay && (
-        <div role="status" aria-live="polite" aria-label={t('loading')} style={overlay}>
+        <div
+          role="status"
+          aria-live="polite"
+          aria-label={t('loading')}
+          style={{
+            ...overlay,
+            top: contentTop,
+            // A read is still readable underneath and clicking through is
+            // harmless; a write must not be clicked twice.
+            background: blocking ? 'rgba(18, 24, 27, 0.26)' : 'rgba(247, 250, 248, 0.45)',
+            pointerEvents: blocking ? 'auto' : 'none',
+          }}
+        >
           <div style={panel}>
             <span className="loader-spinner" aria-hidden="true" style={spinner} />
             <span style={{ fontWeight: 600 }}>{t('loading')}</span>
@@ -85,11 +116,13 @@ const barFill: React.CSSProperties = {
 const overlay: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
-  background: 'rgba(18, 24, 27, 0.28)',
-  backdropFilter: 'blur(1px)',
+  backdropFilter: 'blur(3px)',
+  WebkitBackdropFilter: 'blur(3px)',
   display: 'grid',
   placeItems: 'center',
-  zIndex: 90,
+  // Above the site header (30) and any open modal (50): a request in flight
+  // covers the whole page, not the part of it that happens to be loading.
+  zIndex: 200,
 };
 const panel: React.CSSProperties = {
   display: 'inline-flex',

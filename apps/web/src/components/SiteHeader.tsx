@@ -8,6 +8,9 @@ export function SiteHeader() {
 
   return (
     <header
+      // The global loader measures this to start its overlay below the header,
+      // so navigation stays readable and clickable while a page loads.
+      data-site-header
       style={{
         borderBottom: '1px solid var(--line)',
         background: 'var(--surface)',

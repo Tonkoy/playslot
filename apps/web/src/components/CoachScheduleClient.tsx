@@ -7,6 +7,7 @@ import type { CoachScheduleDay, CoachScheduleLesson } from '@playslot/contracts'
 import { Link, useRouter } from '@/i18n/navigation';
 import { getMe, getMyCoachSchedule } from '@/lib/api';
 import { CoachHoursEditor } from './CoachHoursEditor';
+import { SkeletonRows } from '@/components/Skeleton';
 
 function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -152,7 +153,7 @@ export function CoachScheduleClient() {
         </span>
       </div>
 
-      {schedule.isLoading && <p style={{ color: 'var(--ink-3)' }}>…</p>}
+      {schedule.isLoading && <SkeletonRows />}
 
       {schedule.isSuccess && (
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>

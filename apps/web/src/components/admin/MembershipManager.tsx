@@ -11,6 +11,7 @@ import {
   getClubMembershipPlans,
 } from '@/lib/api';
 import { useToast } from '../Toast';
+import { SkeletonRows } from '@/components/Skeleton';
 
 type PlanDraft = { name: string; priceCents: number; durationDays: number; discountPercent: number };
 const EMPTY_PLAN: PlanDraft = { name: '', priceCents: 0, durationDays: 30, discountPercent: 10 };
@@ -53,7 +54,7 @@ export function MembershipManager({ clubId, currency }: { clubId: number; curren
       <h2 style={h2}>{t('membershipsTitle')}</h2>
       <p style={{ color: 'var(--ink-2)', fontSize: 14, margin: '4px 0 14px' }}>{t('membershipsHelp')}</p>
 
-      {plans.isLoading && <p style={{ color: 'var(--ink-3)' }}>…</p>}
+      {plans.isLoading && <SkeletonRows />}
       {plans.isSuccess && (
         <div style={{ display: 'grid', gap: 10 }}>
           {plans.data.length === 0 && (

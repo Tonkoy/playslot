@@ -16,6 +16,7 @@ import { ClubFeedback } from './ClubFeedback';
 import { EventManager } from './EventManager';
 import { MembershipManager } from './MembershipManager';
 import { TeamManager } from './TeamManager';
+import { SkeletonRows } from '@/components/Skeleton';
 import {
   type AdminCourt,
   type CourtInput,
@@ -276,7 +277,7 @@ export function ClubManager({ clubId }: { clubId: number }) {
         <h2 style={h2}>{t('courtsTitle')}</h2>
         <p style={{ color: 'var(--ink-2)', fontSize: 14, margin: '4px 0 14px' }}>{t('courtsHelp')}</p>
 
-        {courts.isLoading && <p style={{ color: 'var(--ink-3)' }}>…</p>}
+        {courts.isLoading && <SkeletonRows />}
         {courts.isSuccess && (
           <div style={{ display: 'grid', gap: 10 }}>
             {courts.data.map((c) =>

@@ -10,6 +10,7 @@ import { enumLabel } from '@/lib/enums';
 import { ClubThumb } from './ClubThumb';
 import { Modal } from './Modal';
 import { useToast } from './Toast';
+import { SkeletonRows } from '@/components/Skeleton';
 
 const CANCELLABLE = ['HOLD', 'PENDING_PAYMENT', 'PENDING_APPROVAL', 'CONFIRMED'];
 
@@ -128,7 +129,7 @@ export function MyBookings() {
 
   return (
     <div>
-      {list.isLoading && <p style={{ color: 'var(--ink-3)' }}>…</p>}
+      {list.isLoading && <SkeletonRows />}
       {list.isSuccess && all.length === 0 && <p style={{ color: 'var(--ink-2)' }}>{t('empty')}</p>}
 
       {upcoming.length > 0 && (

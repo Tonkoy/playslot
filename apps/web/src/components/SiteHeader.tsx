@@ -8,15 +8,16 @@ export function SiteHeader() {
 
   return (
     <header
-      // The global loader measures this to start its overlay below the header,
-      // so navigation stays readable and clickable while a page loads.
       data-site-header
       style={{
         borderBottom: '1px solid var(--line)',
         background: 'var(--surface)',
         position: 'sticky',
         top: 0,
-        zIndex: 30,
+        // Above the loading overlay (200): navigation stays sharp and usable
+        // while the page under it loads. backdrop-filter only blurs what is
+        // painted behind the overlay, so the header is left alone.
+        zIndex: 300,
       }}
     >
       <div

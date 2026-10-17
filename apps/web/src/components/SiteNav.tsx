@@ -28,12 +28,20 @@ export function SiteNav() {
   const menuRef = useRef<HTMLDivElement>(null);
   const { openModal } = useSearchModal();
 
-  const me = useQuery({ queryKey: ['me'], queryFn: getMe, retry: false });
+  const me = useQuery({
+    queryKey: ['me'],
+    queryFn: getMe,
+    retry: false,
+    // The session rarely changes, and re-asking makes the menu flicker:
+    // keep the answer fresh for minutes and in cache far longer.
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+  });
   const signedIn = me.isSuccess;
-  // Until the session answers, we don't know which links this person has.
-  // Rendering the signed-out menu and swapping it a moment later is the jump
-  // Anton saw; a placeholder of the same shape holds the space instead.
-  const authPending = me.isPending;
+
+  // The three public links are the same for everyone, so they render at once —
+  // no placeholder, nothing covering the menu while the session loads. The
+  // role-dependent items simply join them once the session answers.
   const isStaff = me.data?.user.roles.some((r) => r === 'CLUB_ADMIN' || r === 'CLUB_STAFF') ?? false;
   const isCoach = me.data?.user.roles.includes('COACH') ?? false;
 
@@ -115,23 +123,7 @@ export function SiteNav() {
             flexWrap: 'wrap',
           }}
         >
-          {authPending &&
-            [96, 104, 120].map((w) => (
-              <span
-                key={w}
-                aria-hidden
-                style={{
-                  width: w,
-                  height: 32,
-                  margin: '0 2px',
-                  borderRadius: 'var(--pill)',
-                  background: 'var(--green-soft-2)',
-                  opacity: 0.7,
-                }}
-              />
-            ))}
-          {!authPending &&
-            navItems.map((item) => {
+          {navItems.map((item) => {
             const active = isActive(item.href);
             return (
               <Link

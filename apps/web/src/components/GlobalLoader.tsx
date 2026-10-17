@@ -8,11 +8,10 @@ import { useEffect, useState } from 'react';
 const BAR_DELAY_MS = 250;
 const OVERLAY_DELAY_MS = 400;
 /**
- * Reads get the overlay almost at once: a page that is fetching should say so
- * while it fetches, not after. The short wait only skips cache hits, which
- * resolve in a frame or two.
+ * A first load gets the overlay quickly — the page has nothing to show yet.
+ * A refetch over content that is already on screen never gets it.
  */
-const READ_OVERLAY_DELAY_MS = 120;
+const READ_OVERLAY_DELAY_MS = 150;
 
 /** True once `active` has been on continuously for `delay` ms. */
 function useDelayed(active: boolean, delay: number): boolean {
@@ -32,9 +31,11 @@ function useDelayed(active: boolean, delay: number): boolean {
  * App-wide request feedback, driven by React Query so every screen gets it
  * without wiring anything per page:
  *
- * - **reads** (fetching) → a thin progress bar and a blurred overlay over the
- *   content: the page is visibly mid-update rather than settled, which is what
- *   made the header appear to jump after sign-in
+ * - **first load** (a query fetching with nothing cached) → the blurred overlay
+ *   over the content, because the page has nothing to show yet
+ * - **refetch** (a query fetching over data already on screen) → the thin bar
+ *   only. Blurring a page someone is reading or typing into is worse than the
+ *   uncertainty it was meant to cure
  * - **writes** (mutations) → the same overlay, but it blocks input, because the
  *   result changes what's on screen and a second click would double-submit
  *
@@ -43,21 +44,15 @@ function useDelayed(active: boolean, delay: number): boolean {
 export function GlobalLoader() {
   const t = useTranslations('Common');
   const fetching = useIsFetching() > 0;
+  // Only queries that have nothing to show yet: the blur is for an empty
+  // screen, not for a background refresh of one that is already filled.
+  const coldFetching = useIsFetching({ predicate: (q) => q.state.data === undefined }) > 0;
   const mutating = useIsMutating() > 0;
-  // Where the content starts: the overlay leaves the header alone so the menu
-  // stays legible and usable while the page below it loads.
-  const [contentTop, setContentTop] = useState(0);
 
   const showBar = useDelayed(fetching || mutating, BAR_DELAY_MS);
   const blocking = useDelayed(mutating, OVERLAY_DELAY_MS);
-  const soft = useDelayed(fetching && !mutating, READ_OVERLAY_DELAY_MS);
+  const soft = useDelayed(coldFetching && !mutating, READ_OVERLAY_DELAY_MS);
   const showOverlay = blocking || soft;
-
-  useEffect(() => {
-    if (!showOverlay) return;
-    const header = document.querySelector('[data-site-header]');
-    setContentTop(header ? Math.max(0, header.getBoundingClientRect().bottom) : 0);
-  }, [showOverlay]);
 
   return (
     <>
@@ -74,7 +69,6 @@ export function GlobalLoader() {
           aria-label={t('loading')}
           style={{
             ...overlay,
-            top: contentTop,
             // A read is still readable underneath and clicking through is
             // harmless; a write must not be clicked twice.
             background: blocking ? 'rgba(18, 24, 27, 0.26)' : 'rgba(247, 250, 248, 0.45)',

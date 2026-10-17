@@ -14,9 +14,9 @@
  *    9 winter-dome overrides for courts 4–6 (23 / 26 / 26 EUR, 1 Nov – 3 May).
  *    Click&Play needs 9 rows for the same thing. Skipped if the club already has
  *    price rules, unless you set RESET_PRICES=1 (then the club's rules are rebuilt)
- *  - four trainers: Явор, Димитър, Тихомир and Ивайло, each linked to the club
- *    with a shareable COACH resource and availability; Тихомир and Ивайло also
- *    carry the club's own photo and a short bio.
+ *  - five trainers: Явор, Димитър, Дани, Тихомир and Ивайло, each linked to the
+ *    club with a shareable COACH resource and availability; Тихомир and Ивайло
+ *    also carry the club's own photo and a short bio.
  *  - the club's admin(s), with the CLUB_ADMIN role and membership.
  *
  * NOT created, because the data isn't known yet: trainer services/lesson prices,
@@ -55,6 +55,9 @@ const TRAINERS: {
     bio: 'Започва да играе тенис на 6 години. Треньор в 360 Тенис клуб от близо две години. Работи предимно с деца — освен техника, държи на дисциплината и спортната култура.',
   },
   { email: 'dimitar.penchev.dr@gmail.com', name: 'Димитър Пенчев' },
+  // Also the club's admin (see CLUB_ADMINS): one identity, both roles — the
+  // golden rule of §2.8. The two loops below each add their own role.
+  { email: 'furnadzhievay@gmail.com', name: 'Дани Фурнаджиева' },
   {
     email: 'ivayloik@gmail.com',
     previousEmail: 'ivaylo.koev@360tennis.test',

@@ -42,15 +42,24 @@ Seeded accounts (the 360 trainers) and admin-invited staff start without one.
 Until transactional email is fully live, set one directly:
 
 ```bash
-EMAIL=coach@example.com PASSWORD='<at least 12 characters>' \
+# one shared password for several accounts (a temporary one to hand out)
+EMAILS=a@example.com,b@example.com PASSWORD='…' \
   pnpm --filter @playslot/db set:password
+
+# or leave PASSWORD out: one generated password per account, printed on screen
+EMAILS=a@example.com,b@example.com pnpm --filter @playslot/db set:password
 ```
 
-It refuses to create an account — a typo fails instead of leaving a stray user —
-and marks the address verified, since an address typed in by hand has no
-verification link to follow (`VERIFY=0` skips that). Send the password to the
-person over a channel that isn't email, and ask them to change it in
-Профил → Настройки.
+A password given here must pass the same rule the app enforces on registration
+(8+ characters with a lower-case letter, an upper-case letter and a digit),
+otherwise the person could sign in but not change it later.
+
+Every address is resolved before anything is written, so one typo stops the run
+instead of changing half the team, and the script never creates an account.
+It marks each address verified, since an address typed in by hand has no
+verification link to follow (`VERIFY=0` skips that). Generated passwords are
+printed once and stored only as argon2 hashes — send them over a channel that
+isn't email, and ask each person to change theirs in Профил → Настройки.
 
 ## Deploys & migrations
 

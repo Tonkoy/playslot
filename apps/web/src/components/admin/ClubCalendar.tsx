@@ -5,11 +5,13 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState } from 'react';
 import type { CalendarEntry } from '@playslot/contracts';
 import { Modal } from '@/components/Modal';
+import { CustomerPicker } from './CustomerPicker';
 import {
   CLIENT_BASE,
   cancelReservationAsStaff,
   createBlock,
   createManualBooking,
+  coachesForClub,
   getCalendar,
   markReservationNoShow,
   confirmReservation,
@@ -77,7 +79,13 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
   const [selection, setSelection] = useState<Selection>(null);
   const [blockMode, setBlockMode] = useState(false);
   const [moveEntry, setMoveEntry] = useState<CalendarEntry | null>(null);
-  const [custName, setCustName] = useState('');
+  // What the chosen slot becomes. COURT/LESSON are bookings for a player;
+  // BLOCK takes the slot out of sale (maintenance, a club event, anything).
+  const [newKind, setNewKind] = useState<'COURT' | 'LESSON' | 'BLOCK'>('COURT');
+  const [bookingStatus, setBookingStatus] = useState<'CONFIRMED' | 'PENDING_APPROVAL'>('CONFIRMED');
+  const [customer, setCustomer] = useState<{ userId: number | null; name: string }>({ userId: null, name: '' });
+  const [coachId, setCoachId] = useState<number | null>(null);
+  const [blockReason, setBlockReason] = useState('');
   const [durationMin, setDurationMin] = useState(60);
 
   const cal = useQuery({ queryKey: ['calendar', clubId, date], queryFn: () => getCalendar(clubId, date) });
@@ -97,18 +105,42 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
   // server's generic line (QA-09).
   const onErr = (e: unknown) => window.alert(errorMessage(e, te, tt('error')));
 
+  const coaches = useQuery({
+    queryKey: ['club-coaches', clubId],
+    queryFn: () => coachesForClub(clubId),
+    staleTime: 5 * 60_000,
+  });
+
   const bookMut = useMutation({
-    mutationFn: (v: { startMin: number; courtId: number }) =>
-      createManualBooking(clubId, {
-        startsAt: zonedIso(date, v.startMin, tz),
+    mutationFn: (v: { startMin: number; courtId: number }) => {
+      const startsAt = zonedIso(date, v.startMin, tz);
+      if (newKind === 'BLOCK') {
+        return createBlock(clubId, {
+          startsAt,
+          durationMin,
+          resourceIds: [v.courtId],
+          ...(blockReason.trim() ? { reason: blockReason.trim() } : {}),
+        });
+      }
+      return createManualBooking(clubId, {
+        startsAt,
         durationMin,
         resourceIds: [v.courtId],
-        customer: { name: custName.trim() || 'Walk-in' },
-      }),
+        type: newKind,
+        status: bookingStatus,
+        // A chosen account links the booking to that player; otherwise the
+        // typed name stands for a walk-in with no account.
+        ...(customer.userId
+          ? { customerUserId: customer.userId }
+          : { customer: { name: customer.name.trim() || 'Walk-in' } }),
+        ...(newKind === 'LESSON' && coachId ? { coachProfileId: coachId } : {}),
+      });
+    },
     onSuccess: () => {
       invalidate();
       setSelection(null);
-      setCustName('');
+      setCustomer({ userId: null, name: '' });
+      setBlockReason('');
     },
     onError: onErr,
   });
@@ -461,9 +493,63 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
         {selection?.kind === 'free' && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'end' }}>
             <label style={fieldLabel}>
-              {t('customer')}
-              <input value={custName} onChange={(e) => setCustName(e.target.value)} style={ctrl} placeholder="Walk-in" />
+              {t('entryKind')}
+              <select
+                value={newKind}
+                onChange={(e) => setNewKind(e.target.value as typeof newKind)}
+                style={ctrl}
+              >
+                <option value="COURT">{t('kindCourt')}</option>
+                <option value="LESSON">{t('kindLesson')}</option>
+                <option value="BLOCK">{t('kindBlock')}</option>
+              </select>
             </label>
+            {newKind === 'BLOCK' ? (
+              <label style={fieldLabel}>
+                {t('blockReason')}
+                <input
+                  value={blockReason}
+                  onChange={(e) => setBlockReason(e.target.value)}
+                  style={ctrl}
+                  placeholder={t('blockReasonPlaceholder')}
+                />
+              </label>
+            ) : (
+              <>
+                <label style={fieldLabel}>
+                  {t('customer')}
+                  <CustomerPicker clubId={clubId} value={customer} onChange={setCustomer} />
+                </label>
+                {newKind === 'LESSON' && (
+                  <label style={fieldLabel}>
+                    {t('coach')}
+                    <select
+                      value={coachId ?? ''}
+                      onChange={(e) => setCoachId(e.target.value ? Number(e.target.value) : null)}
+                      style={ctrl}
+                    >
+                      <option value="">{t('coachAny')}</option>
+                      {(coaches.data ?? []).map((c) => (
+                        <option key={c.coachProfileId} value={c.coachProfileId}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <label style={fieldLabel}>
+                  {t('status')}
+                  <select
+                    value={bookingStatus}
+                    onChange={(e) => setBookingStatus(e.target.value as typeof bookingStatus)}
+                    style={ctrl}
+                  >
+                    <option value="CONFIRMED">{st('CONFIRMED')}</option>
+                    <option value="PENDING_APPROVAL">{st('PENDING_APPROVAL')}</option>
+                  </select>
+                </label>
+              </>
+            )}
             <label style={fieldLabel}>
               {t('duration')}
               <select value={durationMin} onChange={(e) => setDurationMin(Number(e.target.value))} style={ctrl}>

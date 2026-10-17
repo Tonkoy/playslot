@@ -30,6 +30,14 @@ export const manualBookingSchema = z
     resourceIds: z.array(z.number().int().positive()).min(1).max(4),
     type: z.enum(['COURT', 'LESSON']).default('COURT'),
     paymentMethod: z.enum(PAYMENT_METHODS).default('ON_SITE'),
+    /** Booking a lesson: the coach is reserved alongside the court. */
+    coachProfileId: z.number().int().positive().optional(),
+    serviceId: z.number().int().positive().optional(),
+    /**
+     * Staff bookings are confirmed by default. PENDING_APPROVAL is for a slot
+     * someone asked for over the phone that the club has yet to agree to.
+     */
+    status: z.enum(['CONFIRMED', 'PENDING_APPROVAL']).default('CONFIRMED'),
     customerUserId: z.number().int().positive().optional(),
     customer: z
       .object({

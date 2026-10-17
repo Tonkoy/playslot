@@ -172,22 +172,38 @@ export class ReservationsService {
       enforceHours: true,
     });
     const customerUserId = await this.resolveCustomer(clubId, input);
-    const priceCents = this.priceFor(await this.loadPriceRules(clubId), slot);
+
+    // A lesson booked by staff reserves the coach alongside the court, exactly
+    // as the public path does — same single shared COACH resource, so §8 still
+    // prevents booking the coach twice.
+    let type = input.type;
+    let priceCents: number;
+    if (input.coachProfileId) {
+      type = 'LESSON';
+      const coachResourceId = await this.resolveCoachResource(input.coachProfileId, slot);
+      slot.resourceIds = [...slot.resourceIds, coachResourceId];
+      priceCents = await this.lessonPrice(input.coachProfileId, input.serviceId, slot);
+    } else {
+      priceCents = this.priceFor(await this.loadPriceRules(clubId), slot);
+    }
 
     const reservation = await this.runBookingTransaction({
       slot,
       userId: customerUserId,
       actorUserId: staffUserId,
-      type: input.type,
+      type,
       source: 'CLUB_STAFF',
       priceCents,
       paymentMethod: input.paymentMethod,
       participants: input.customer ? { name: input.customer.name } : null,
       holdExpiresAt: null,
-      finalStatus: 'CONFIRMED',
+      finalStatus: input.status,
     });
     this.events.emitAvailabilityChanged(slot.clubId);
-    await this.sendConfirmationEmail(reservation.id);
+    // Confirmed: tell the customer it is booked. Awaiting the club's word:
+    // tell them it is held, the same two-step flow the public booking uses.
+    if (reservation.status === 'PENDING_APPROVAL') await this.sendBookingReceivedEmail(reservation.id);
+    else await this.sendConfirmationEmail(reservation.id);
     return { reservationId: reservation.id, status: reservation.status, priceCents, currency: slot.currency };
   }
 
@@ -541,12 +557,39 @@ export class ReservationsService {
     return { filename: `${club.slug}_${from}_${to}.csv`, csv };
   }
 
-  async listCustomers(clubId: number) {
+  /**
+   * Who the club can book a court for (spec §16). With no search term: the
+   * club's own customers, most recent first — the short list staff reach for
+   * every day. With one (2+ characters): any registered player by name, e-mail
+   * or phone, because a club that has just joined has no history yet and still
+   * needs to book for the players in front of them.
+   */
+  async listCustomers(clubId: number, q?: string) {
+    const term = (q ?? '').trim();
+    const select = { id: true, name: true, email: true, phone: true };
+
+    if (term.length >= 2) {
+      return this.prisma.user.findMany({
+        where: {
+          deletedAt: null,
+          OR: [
+            { name: { contains: term, mode: 'insensitive' } },
+            { email: { contains: term, mode: 'insensitive' } },
+            { phone: { contains: term } },
+          ],
+        },
+        select,
+        orderBy: { name: 'asc' },
+        take: 10,
+      });
+    }
+
     const rows = await this.prisma.reservation.findMany({
       where: { clubId, type: { in: ['COURT', 'LESSON'] } },
       distinct: ['userId'],
       select: { user: { select: { id: true, name: true, email: true, phone: true } } },
-      orderBy: { userId: 'asc' },
+      orderBy: { startsAt: 'desc' },
+      take: 25,
     });
     return rows.map((r) => r.user);
   }

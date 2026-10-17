@@ -34,8 +34,8 @@ export class ClubOpsController {
   }
 
   @Get('customers')
-  customers(@Param('clubId') clubId: string) {
-    return this.reservations.listCustomers(Number(clubId));
+  customers(@Param('clubId') clubId: string, @Query('q') q?: string) {
+    return this.reservations.listCustomers(Number(clubId), q);
   }
 
   /** CSV export of the club's reservations in a date range (opens in Excel). */

@@ -392,9 +392,35 @@ export function getCalendar(clubId: number, date: string): Promise<CalendarRespo
   return apiFetch(`/clubs/${clubId}/calendar?date=${date}`);
 }
 
+export interface ClubCustomer {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+}
+
+/**
+ * Who staff can book for. No `q`: the club's own recent customers. With one
+ * (2+ characters): any registered player, matched on name, e-mail or phone.
+ */
+export function listClubCustomers(clubId: number, q?: string): Promise<ClubCustomer[]> {
+  const query = q && q.trim() ? `?q=${encodeURIComponent(q.trim())}` : '';
+  return apiFetch(`/clubs/${clubId}/customers${query}`);
+}
+
 export function createManualBooking(
   clubId: number,
-  input: { startsAt: string; durationMin: number; resourceIds: number[]; customer: { name: string }; paymentMethod?: string },
+  input: {
+    startsAt: string;
+    durationMin: number;
+    resourceIds: number[];
+    customer?: { name: string };
+    customerUserId?: number;
+    type?: 'COURT' | 'LESSON';
+    coachProfileId?: number;
+    status?: 'CONFIRMED' | 'PENDING_APPROVAL';
+    paymentMethod?: string;
+  },
 ): Promise<{ reservationId: number; status: string }> {
   return apiFetch(`/clubs/${clubId}/reservations`, { method: 'POST', body: JSON.stringify(input) });
 }

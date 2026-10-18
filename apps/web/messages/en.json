@@ -443,6 +443,8 @@
   },
   "CoachHours": {
     "title": "Working hours",
+    "edit": "Edit",
+    "collapse": "Hide",
     "dayOff": "Day off",
     "noHours": "No working hours set.",
     "save": "Save hours",

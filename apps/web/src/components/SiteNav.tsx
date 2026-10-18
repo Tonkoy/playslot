@@ -16,7 +16,7 @@ const linkStyle: React.CSSProperties = {
   padding: '8px 0',
 };
 
-type NavItem = { href: string; label: string; show: boolean };
+type NavItem = { href: string; label: string; show: boolean; late?: boolean };
 
 export function SiteNav() {
   const t = useTranslations('Nav');
@@ -42,6 +42,11 @@ export function SiteNav() {
   // The three public links are the same for everyone, so they render at once —
   // no placeholder, nothing covering the menu while the session loads. The
   // role-dependent items simply join them once the session answers.
+  // Known on the first render = the server resolved it (lib/session.server.ts)
+  // and the menu was already complete in the HTML. Otherwise the personal
+  // links arrive a moment later and are faded in, not popped in.
+  const sessionAtFirstRender = useRef(me.isSuccess);
+  const lateItem = (show: boolean) => show && !sessionAtFirstRender.current;
   const isStaff = me.data?.user.roles.some((r) => r === 'CLUB_ADMIN' || r === 'CLUB_STAFF') ?? false;
   const isCoach = me.data?.user.roles.includes('COACH') ?? false;
 
@@ -78,11 +83,11 @@ export function SiteNav() {
     { href: '/clubs', label: t('clubs'), show: true },
     { href: '/coaches', label: t('coaches'), show: true },
     { href: '/sessions', label: t('sessions'), show: true },
-    { href: '/admin', label: t('admin'), show: isStaff },
-    { href: '/me/coach', label: t('coachHub'), show: isCoach },
-    { href: '/me/schedule', label: t('schedule'), show: isCoach },
-    { href: '/me/bookings', label: t('bookings'), show: signedIn },
-    { href: '/me/favorites', label: t('favorites'), show: signedIn },
+    { href: '/admin', label: t('admin'), show: isStaff, late: lateItem(isStaff) },
+    { href: '/me/coach', label: t('coachHub'), show: isCoach, late: lateItem(isCoach) },
+    { href: '/me/schedule', label: t('schedule'), show: isCoach, late: lateItem(isCoach) },
+    { href: '/me/bookings', label: t('bookings'), show: signedIn, late: lateItem(signedIn) },
+    { href: '/me/favorites', label: t('favorites'), show: signedIn, late: lateItem(signedIn) },
   ].filter((i) => i.show);
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
@@ -129,6 +134,7 @@ export function SiteNav() {
               <Link
                 key={item.href}
                 href={item.href}
+                className={item.late ? 'nav-link-enter' : undefined}
                 style={{
                   padding: '8px 16px',
                   borderRadius: 'var(--pill)',
@@ -152,6 +158,10 @@ export function SiteNav() {
           aria-label={t('searchAria')}
           title={t('searchAria')}
           style={{
+            // Links sit next to the logo and grow to the right; search and the
+            // menu stay pinned to the far edge. Links that appear once the
+            // session is known fill the gap — nothing already on screen moves.
+            marginLeft: 'auto',
             width: 40,
             height: 40,
             display: 'inline-flex',

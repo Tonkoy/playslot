@@ -56,34 +56,67 @@ export function CoachHoursEditor() {
 
   return (
     <section style={card}>
+      {/* The whole header is the toggle — title, current hours and a clear
+          "Промени / Скрий" control — not a lone arrow in the corner. */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
+        aria-controls="coach-hours-panel"
+        className="expand-header"
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 8,
-          width: '100%',
+          gap: 16,
+          // Bleed into the card's padding so the hover tint has room to breathe.
+          width: 'calc(100% + 20px)',
+          margin: -10,
+          padding: 10,
+          boxSizing: 'border-box',
           background: 'transparent',
           border: 'none',
           cursor: 'pointer',
           color: 'var(--ink)',
           textAlign: 'left',
-          padding: 0,
         }}
       >
-        <span style={{ fontSize: 18, fontWeight: 700 }}>{t('title')}</span>
-        <span style={{ marginLeft: 'auto', color: 'var(--ink-3)' }}>{open ? '▴' : '▾'}</span>
+        <span style={{ minWidth: 0, flex: 1 }}>
+          <span style={{ display: 'block', fontSize: 18, fontWeight: 700 }}>{t('title')}</span>
+          {!open && (
+            <span style={{ display: 'block', color: 'var(--ink-2)', fontSize: 14, marginTop: 6 }}>
+              {summarize(hours.data?.days ?? [], weekdayName, t)}
+            </span>
+          )}
+        </span>
+        <span
+          aria-hidden
+          style={{
+            flexShrink: 0,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px 14px 8px 16px',
+            borderRadius: 'var(--pill)',
+            background: open ? 'var(--surface-2)' : 'var(--green-soft)',
+            color: 'var(--green-deep)',
+            fontSize: 14,
+            fontWeight: 700,
+          }}
+        >
+          {open ? t('collapse') : t('edit')}
+          <svg
+            viewBox="0 0 20 20"
+            width="18"
+            height="18"
+            style={{ transform: `rotate(${open ? 180 : 0}deg)`, transition: 'transform 160ms ease' }}
+          >
+            <path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
       </button>
-      {!open && (
-        <p style={{ color: 'var(--ink-2)', fontSize: 14, marginTop: 6 }}>
-          {summarize(hours.data?.days ?? [], weekdayName, t)}
-        </p>
-      )}
 
       {open && (
-        <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
+        <div id="coach-hours-panel" style={{ marginTop: 16, display: 'grid', gap: 8 }}>
           {WEEK.map((w) => {
             const d = state[w];
             if (!d) return null;

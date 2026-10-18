@@ -115,6 +115,18 @@ packages/db/node_modules/.bin/prisma migrate deploy --schema packages/db/prisma/
 - **Seeds are not migrations.** `seed:360` (club logo, city rename) and friends
   are run by hand against prod; never put them in the pre-deploy command.
 
+### Railway build is pinned in `railway.json`
+
+The API service's build is defined in code (`railway.json` at the repo root):
+Dockerfile builder with `apps/api/Dockerfile`, plus the `prisma migrate deploy`
+pre-deploy command. This overrides the dashboard. Without it Railway may fall back
+to its auto builder (Railpack), which runs `pnpm --filter @playslot/api build`
+**without** the `...` — the shared packages (`@playslot/config`, `contracts`,
+`db`, `domain`) and the Prisma client are never built, and `nest build` fails with
+hundreds of "Cannot find module '@playslot/…'" errors. A correct build log starts
+with Dockerfile steps (`FROM node:20-slim`, `WORKDIR /repo`), not `/app`.
+
+
 ## Health & readiness
 
 - `GET /api/health` — liveness (no I/O).

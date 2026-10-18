@@ -61,6 +61,35 @@ verification link to follow (`VERIFY=0` skips that). Generated passwords are
 printed once and stored only as argon2 hashes — send them over a channel that
 isn't email, and ask each person to change theirs in Профил → Настройки.
 
+## Site → API proxy and the session cookie
+
+The browser never calls the API host directly (except the public live
+availability stream). `apps/web/next.config.ts` rewrites `/api/*` on the site
+to the API, so:
+
+- the session cookie is set on — and read from — the site's own host, with no
+  `Domain` attribute, so it never reaches other subdomains (staging included);
+- the site's server reads that cookie on every request (`lib/session.server.ts`)
+  and renders the signed-in menu and page in the first HTML.
+
+**Production settings**
+
+| Where | Variable | Value |
+|---|---|---|
+| Vercel (web) | `API_BASE_URL` | the API's origin, e.g. `https://api.playslot.bg` — target of the proxy and of server-side calls |
+| Vercel (web) | `NEXT_PUBLIC_API_BASE_URL` | the same origin — used only for the live availability stream |
+| Railway (api) | `OAUTH_REDIRECT_BASE_URL` | `https://playslot.bg` |
+| Railway (api) | `TRUST_PROXY_HOPS` | `2` (Vercel + Railway in front of the API) |
+| Google Cloud console | Authorized redirect URI | add `https://playslot.bg/api/auth/google/callback` |
+
+`TRUST_PROXY_HOPS` decides which address the rate limiter treats as the
+client. Wrong by one and every visitor shares one limit (too low) or a client
+can spoof its address (too high). After the first deploy, check the API log
+for a few requests and confirm `req.ip` is the visitor's address, not Vercel's.
+
+**On the first deploy** everyone is signed out once: the old cookie lives on
+the API host and the site no longer looks there.
+
 ## Deploys & migrations
 
 Pushing to `main` does **not** touch the database by itself: the API image's

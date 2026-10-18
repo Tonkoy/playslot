@@ -3,6 +3,7 @@
 import { useIsFetching, useIsMutating } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
+import { useToast } from './Toast';
 
 /** Activity this short never shows the loader at all (cache hits, instant replies). */
 const SHOW_AFTER_MS = 150;
@@ -16,16 +17,28 @@ const SHOW_AFTER_MS = 150;
 const HIDE_AFTER_IDLE_MS = 350;
 /** Once shown, stay at least this long — a blink is worse than a beat. */
 const MIN_VISIBLE_MS = 450;
+/**
+ * A load that runs past this is not a load any more, it is a problem: lift
+ * the veil so the page can be used, and say so. (Requests themselves time out
+ * at 20 s in lib/api.ts.)
+ */
+const MAX_VISIBLE_MS = 10_000;
 
 /**
  * One global loader for the whole app, driven by React Query's own counters
  * of in-flight requests (useIsFetching + useIsMutating), so no screen wires
  * anything up.
  *
- * It answers one question — "is the app still working?" — rather than "is
- * this particular request still running?". It appears once when work starts,
- * stays through every follow-up request, and leaves only when all of them have
- * finished and nothing new has started for a moment.
+ * It answers one question — "is the app still working on something you are
+ * waiting for?" It appears once when work starts, stays through every
+ * follow-up request, and leaves only when all of them have finished and
+ * nothing new has started for a moment.
+ *
+ * What counts: first loads (a query with nothing to show yet) and writes.
+ * What doesn't: refreshes of data already on screen — for example the club
+ * grid updating because someone else just booked. Blurring a page someone is
+ * using, or an open dialog, for a refresh they didn't ask for is worse than
+ * the refresh being silent.
  *
  * Reads leave the page clickable underneath; writes block it, because a
  * second click would submit twice. The site header sits above the overlay
@@ -33,17 +46,29 @@ const MIN_VISIBLE_MS = 450;
  */
 export function GlobalLoader() {
   const t = useTranslations('Common');
-  const fetching = useIsFetching();
+  const toast = useToast();
+  // First loads only: status 'pending' is "no data and no error yet"; a query
+  // being retried after a failure is still pending, so the failure count rules
+  // those out — a failing request must not hold the veil up.
+  const loading = useIsFetching({
+    predicate: (q) =>
+      q.state.status === 'pending' &&
+      q.state.fetchStatus === 'fetching' &&
+      q.state.fetchFailureCount === 0,
+  });
   const mutating = useIsMutating();
-  const busy = fetching + mutating > 0;
+  const busy = loading + mutating > 0;
 
   const [visible, setVisible] = useState(false);
   const shownAt = useRef(0);
+  // Set when the safety valve below lifts the veil: the same stuck load must
+  // not bring it straight back. Cleared once the app is idle again.
+  const gaveUp = useRef(false);
 
   useEffect(() => {
     if (busy) {
       // Work started (or continues): show after a short beat, unless already up.
-      if (visible) return;
+      if (visible || gaveUp.current) return;
       const id = setTimeout(() => {
         shownAt.current = Date.now();
         setVisible(true);
@@ -52,12 +77,27 @@ export function GlobalLoader() {
     }
     // Everything finished: wait for real idleness, and keep a minimum on-screen
     // time, before hiding. Any new request in the meantime cancels this.
+    gaveUp.current = false;
     if (!visible) return;
     const shownFor = Date.now() - shownAt.current;
     const wait = Math.max(HIDE_AFTER_IDLE_MS, MIN_VISIBLE_MS - shownFor);
     const id = setTimeout(() => setVisible(false), wait);
     return () => clearTimeout(id);
   }, [busy, visible]);
+
+  // Safety valve: never hold the page hostage. The message goes through a ref
+  // so a re-render doesn't restart the countdown.
+  const slowMessage = useRef(() => toast(t('slowRequest'), 'error'));
+  slowMessage.current = () => toast(t('slowRequest'), 'error');
+  useEffect(() => {
+    if (!visible) return;
+    const id = setTimeout(() => {
+      gaveUp.current = true;
+      setVisible(false);
+      slowMessage.current();
+    }, MAX_VISIBLE_MS);
+    return () => clearTimeout(id);
+  }, [visible]);
 
   return (
     <>

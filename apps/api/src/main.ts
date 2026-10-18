@@ -34,7 +34,8 @@ async function bootstrap(): Promise<void> {
   // Behind a platform proxy (Railway, Fly, a load balancer) every request
   // arrives from the proxy's IP. Without this, `req.ip` is that one address
   // and the global rate limiter throttles all users as if they were one.
-  app.set('trust proxy', 1);
+  // With the site's /api proxy (Vercel) in front of Railway that is two hops.
+  app.set('trust proxy', env.TRUST_PROXY_HOPS);
 
   // Hosting platforms inject PORT and route to it; fall back to the port in
   // API_BASE_URL for local dev, where that URL carries an explicit port.

@@ -27,8 +27,20 @@ import { ApiRequestError } from './errors';
  * (API_BASE_URL, server-to-server); client components use the public base.
  */
 const SERVER_BASE = process.env.API_BASE_URL ?? 'http://localhost:3001';
-export const CLIENT_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001';
+/**
+ * The browser calls the API through the site's own /api proxy (next.config.ts
+ * rewrites), so requests are same-origin and the session cookie lives on the
+ * site's host.
+ */
+export const CLIENT_BASE = '';
+/**
+ * Live availability updates go straight to the API: the stream is public (no
+ * cookie needed) and long-lived, which is not something to push through the
+ * site's proxy.
+ */
+export const STREAM_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001';
+/** A request that hangs must end in an error, not in a loader that never leaves. */
+const CLIENT_TIMEOUT_MS = 20_000;
 
 export interface ClubPublic {
   id: number;
@@ -206,6 +218,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${CLIENT_BASE}/api${path}`, {
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS),
     ...init,
   });
   if (!res.ok) {
@@ -661,6 +674,7 @@ export async function fetchAvailability(params: {
   });
   const res = await fetch(`${CLIENT_BASE}/api/availability?${qs.toString()}`, {
     credentials: 'include',
+    signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS),
   });
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { message?: string } | null;

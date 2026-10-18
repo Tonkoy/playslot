@@ -8,7 +8,7 @@ import { Modal } from '@/components/Modal';
 import { Combobox, Select } from '@/components/Picker';
 import { CustomerPicker } from './CustomerPicker';
 import {
-  CLIENT_BASE,
+  STREAM_BASE,
   cancelReservationAsStaff,
   createBlock,
   createManualBooking,
@@ -95,7 +95,7 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
 
   // Live updates: refetch the calendar when bookings change for this club.
   useEffect(() => {
-    const es = new EventSource(`${CLIENT_BASE}/api/availability/stream?clubId=${clubId}`);
+    const es = new EventSource(`${STREAM_BASE}/api/availability/stream?clubId=${clubId}`);
     es.onmessage = () => qc.invalidateQueries({ queryKey: ['calendar', clubId] });
     return () => es.close();
   }, [clubId, qc]);

@@ -6,7 +6,8 @@
     "loading": "Loading…",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
-    "viewPhoto": "View {name}’s photo"
+    "viewPhoto": "View {name}’s photo",
+    "slowRequest": "This is taking too long. Please try again."
   },
   "Nav": {
     "clubs": "Clubs",

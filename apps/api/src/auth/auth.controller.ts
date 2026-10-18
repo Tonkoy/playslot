@@ -166,25 +166,20 @@ export class AuthController {
   }
 
   private setSession(res: Response, token: string): void {
-    const domain = this.env.SESSION_COOKIE_DOMAIN;
-    // Moving to a shared domain leaves the old host-only cookie behind, and
-    // the browser would then send two cookies of the same name. Clear it.
-    if (domain) res.clearCookie(SESSION_COOKIE, { path: '/' });
+    // Host-only on purpose: no Domain attribute, so the cookie never reaches
+    // sibling subdomains (staging included). The site reaches the API through
+    // its own /api proxy, which makes this host the site's host.
     res.cookie(SESSION_COOKIE, token, {
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
       path: '/',
       maxAge: SESSION_TTL_SECONDS * 1000,
-      ...(domain ? { domain } : {}),
     });
   }
 
-  /** Clear both forms the session cookie may exist in. */
   private clearSession(res: Response): void {
     res.clearCookie(SESSION_COOKIE, { path: '/' });
-    const domain = this.env.SESSION_COOKIE_DOMAIN;
-    if (domain) res.clearCookie(SESSION_COOKIE, { path: '/', domain });
   }
 }
 

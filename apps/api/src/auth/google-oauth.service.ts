@@ -32,7 +32,8 @@ export class GoogleOAuthService {
   private redirectUri(): string {
     // Global prefix is "api"; this must match the Authorized redirect URI in the
     // Google Cloud console.
-    return `${this.env.API_BASE_URL.replace(/\/$/, '')}/api/auth/google/callback`;
+    const base = this.env.OAUTH_REDIRECT_BASE_URL ?? this.env.API_BASE_URL;
+    return `${base.replace(/\/$/, '')}/api/auth/google/callback`;
   }
 
   getAuthorizationUrl(state: string): string {

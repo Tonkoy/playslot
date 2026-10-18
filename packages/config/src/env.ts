@@ -74,14 +74,19 @@ export const serverEnvSchema = coreEnvSchema.extend({
   // info@playslot.bg). Unset = no copy is sent.
   PLATFORM_NOTIFY_EMAIL: optionalString.pipe(z.string().email().optional()),
   /**
-   * Share the session cookie with the web app's host, e.g. ".playslot.bg" when
-   * the API is api.playslot.bg and the site is playslot.bg. The site's server
-   * can then read who is signed in and render the right menu in the first
-   * HTML, instead of the signed-out one swapped a moment later. Unset: the
-   * cookie stays on the API host only (local dev shares it anyway — cookies
-   * ignore ports).
+   * Public origin Google sends the user back to after sign-in. When the site
+   * proxies /api to this service (apps/web next.config.ts), set it to the
+   * site's origin (https://playslot.bg) so the OAuth cookies land on the
+   * site's host, and register <that>/api/auth/google/callback in the Google
+   * Cloud console. Unset: API_BASE_URL, as before.
    */
-  SESSION_COOKIE_DOMAIN: optionalString,
+  OAUTH_REDIRECT_BASE_URL: optionalString.pipe(z.string().url().optional()),
+  /**
+   * How many proxies sit in front of the API: 1 for Railway alone, 2 when the
+   * site's /api proxy (Vercel) is in front of Railway. Rate limiting keys on
+   * the client IP, so this must be right or every visitor shares one limit.
+   */
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(1),
 
   // SendGrid dynamic templates (apps/api/src/mail/templates, uploaded with
   // `pnpm --filter @playslot/api mail:sync`). When an id is missing, that email

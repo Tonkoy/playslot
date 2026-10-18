@@ -7,7 +7,7 @@ import type { AvailabilitySlot } from '@playslot/contracts';
 import { Link, usePathname } from '@/i18n/navigation';
 import { Modal } from '@/components/Modal';
 import { useToast } from '@/components/Toast';
-import { CLIENT_BASE, coachesForClub, createReservation, fetchAvailability, getMe } from '@/lib/api';
+import { STREAM_BASE, coachesForClub, createReservation, fetchAvailability, getMe } from '@/lib/api';
 import { enumLabel } from '@/lib/enums';
 import { errorMessage } from '@/lib/errors';
 import { SLOT_STYLE, stateTagStyle } from '@/lib/slotStates';
@@ -94,7 +94,7 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
 
   // Live updates (spec §20): refetch when another viewer books/cancels here.
   useEffect(() => {
-    const es = new EventSource(`${CLIENT_BASE}/api/availability/stream?clubId=${clubId}`);
+    const es = new EventSource(`${STREAM_BASE}/api/availability/stream?clubId=${clubId}`);
     es.onmessage = () => qc.invalidateQueries({ queryKey: ['availability', clubId] });
     return () => es.close();
   }, [clubId, qc]);

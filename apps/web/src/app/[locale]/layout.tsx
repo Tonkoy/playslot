@@ -89,7 +89,9 @@ export default async function LocaleLayout({
     notFound();
   }
   setRequestLocale(locale);
-  // Resolved alongside the messages, so it adds no extra wait of its own.
+  // Fetched in parallel with the messages, but a signed-in page still waits for
+  // it before any HTML is sent — up to the 1.5 s timeout in session.server.ts.
+  // Without a session cookie there is no request at all.
   const [messages, session] = await Promise.all([getMessages(), getServerSession()]);
 
   return (

@@ -2,77 +2,79 @@
 
 import { useIsFetching, useIsMutating } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-/** Don't flash for requests that finish quickly. */
-const BAR_DELAY_MS = 250;
-const OVERLAY_DELAY_MS = 400;
+/** Activity this short never shows the loader at all (cache hits, instant replies). */
+const SHOW_AFTER_MS = 150;
 /**
- * A first load gets the overlay quickly — the page has nothing to show yet.
- * A refetch over content that is already on screen never gets it.
+ * The loader hides only after the app has been completely idle this long.
+ * A page often loads in steps — session, then profile, then the coach's clubs,
+ * then availability — with a few milliseconds between one request ending and
+ * the next starting. Without this pause the loader hid and reappeared at every
+ * step; with it, the whole chain reads as one load.
  */
-const READ_OVERLAY_DELAY_MS = 150;
-
-/** True once `active` has been on continuously for `delay` ms. */
-function useDelayed(active: boolean, delay: number): boolean {
-  const [on, setOn] = useState(false);
-  useEffect(() => {
-    if (!active) {
-      setOn(false);
-      return;
-    }
-    const id = setTimeout(() => setOn(true), delay);
-    return () => clearTimeout(id);
-  }, [active, delay]);
-  return on;
-}
+const HIDE_AFTER_IDLE_MS = 350;
+/** Once shown, stay at least this long — a blink is worse than a beat. */
+const MIN_VISIBLE_MS = 450;
 
 /**
- * App-wide request feedback, driven by React Query so every screen gets it
- * without wiring anything per page:
+ * One global loader for the whole app, driven by React Query's own counters
+ * of in-flight requests (useIsFetching + useIsMutating), so no screen wires
+ * anything up.
  *
- * - **first load** (a query fetching with nothing cached) → the blurred overlay
- *   over the content, because the page has nothing to show yet
- * - **refetch** (a query fetching over data already on screen) → the thin bar
- *   only. Blurring a page someone is reading or typing into is worse than the
- *   uncertainty it was meant to cure
- * - **writes** (mutations) → the same overlay, but it blocks input, because the
- *   result changes what's on screen and a second click would double-submit
+ * It answers one question — "is the app still working?" — rather than "is
+ * this particular request still running?". It appears once when work starts,
+ * stays through every follow-up request, and leaves only when all of them have
+ * finished and nothing new has started for a moment.
  *
- * All of it waits a moment before appearing, so a fast request doesn't flash.
+ * Reads leave the page clickable underneath; writes block it, because a
+ * second click would submit twice. The site header sits above the overlay
+ * (SiteHeader, z-index 300), so navigation is never blurred.
  */
 export function GlobalLoader() {
   const t = useTranslations('Common');
-  const fetching = useIsFetching() > 0;
-  // Only queries that have nothing to show yet: the blur is for an empty
-  // screen, not for a background refresh of one that is already filled.
-  const coldFetching = useIsFetching({ predicate: (q) => q.state.data === undefined }) > 0;
-  const mutating = useIsMutating() > 0;
+  const fetching = useIsFetching();
+  const mutating = useIsMutating();
+  const busy = fetching + mutating > 0;
 
-  const showBar = useDelayed(fetching || mutating, BAR_DELAY_MS);
-  const blocking = useDelayed(mutating, OVERLAY_DELAY_MS);
-  const soft = useDelayed(coldFetching && !mutating, READ_OVERLAY_DELAY_MS);
-  const showOverlay = blocking || soft;
+  const [visible, setVisible] = useState(false);
+  const shownAt = useRef(0);
+
+  useEffect(() => {
+    if (busy) {
+      // Work started (or continues): show after a short beat, unless already up.
+      if (visible) return;
+      const id = setTimeout(() => {
+        shownAt.current = Date.now();
+        setVisible(true);
+      }, SHOW_AFTER_MS);
+      return () => clearTimeout(id);
+    }
+    // Everything finished: wait for real idleness, and keep a minimum on-screen
+    // time, before hiding. Any new request in the meantime cancels this.
+    if (!visible) return;
+    const shownFor = Date.now() - shownAt.current;
+    const wait = Math.max(HIDE_AFTER_IDLE_MS, MIN_VISIBLE_MS - shownFor);
+    const id = setTimeout(() => setVisible(false), wait);
+    return () => clearTimeout(id);
+  }, [busy, visible]);
 
   return (
     <>
-      {showBar && (
+      {visible && (
         <div aria-hidden="true" style={barTrack}>
           <span className="loader-bar" style={barFill} />
         </div>
       )}
 
-      {showOverlay && (
+      {visible && (
         <div
           role="status"
           aria-live="polite"
           aria-label={t('loading')}
           style={{
             ...overlay,
-            // A read is still readable underneath and clicking through is
-            // harmless; a write must not be clicked twice.
-            background: blocking ? 'rgba(18, 24, 27, 0.26)' : 'rgba(247, 250, 248, 0.45)',
-            pointerEvents: blocking ? 'auto' : 'none',
+            pointerEvents: mutating > 0 ? 'auto' : 'none',
           }}
         >
           <div style={panel}>
@@ -81,11 +83,6 @@ export function GlobalLoader() {
           </div>
         </div>
       )}
-
-      {/* Screen readers get the quiet case too, without any visual noise. */}
-      <span className="sr-only" role="status" aria-live="polite">
-        {showBar && !showOverlay ? t('loading') : ''}
-      </span>
     </>
   );
 }
@@ -110,12 +107,13 @@ const barFill: React.CSSProperties = {
 const overlay: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
-  backdropFilter: 'blur(3px)',
-  WebkitBackdropFilter: 'blur(3px)',
+  background: 'rgba(247, 250, 248, 0.5)',
+  backdropFilter: 'blur(4px)',
+  WebkitBackdropFilter: 'blur(4px)',
   display: 'grid',
   placeItems: 'center',
-  // Above the site header (30) and any open modal (50): a request in flight
-  // covers the whole page, not the part of it that happens to be loading.
+  // Over the whole page and any open modal (50) — one veil, not a per-component
+  // spinner. Only the site header (300) sits above it, so navigation stays sharp.
   zIndex: 200,
 };
 const panel: React.CSSProperties = {

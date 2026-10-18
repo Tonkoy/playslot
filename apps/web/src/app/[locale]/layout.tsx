@@ -6,6 +6,7 @@ import { Bricolage_Grotesque, Hanken_Grotesk, IBM_Plex_Mono } from 'next/font/go
 import { isAppLocale, routing } from '@/i18n/routing';
 import { ALLOW_INDEXING, SITE_NAME, SITE_URL, alternatesFor, socialFor } from '@/lib/seo';
 import { Providers } from '@/components/Providers';
+import { getServerSession } from '@/lib/session.server';
 import '../globals.css';
 
 const bricolage = Bricolage_Grotesque({
@@ -88,7 +89,8 @@ export default async function LocaleLayout({
     notFound();
   }
   setRequestLocale(locale);
-  const messages = await getMessages();
+  // Resolved alongside the messages, so it adds no extra wait of its own.
+  const [messages, session] = await Promise.all([getMessages(), getServerSession()]);
 
   return (
     <html
@@ -97,7 +99,7 @@ export default async function LocaleLayout({
     >
       <body>
         <NextIntlClientProvider messages={messages}>
-          <Providers>{children}</Providers>
+          <Providers initialSession={session}>{children}</Providers>
         </NextIntlClientProvider>
       </body>
     </html>

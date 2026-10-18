@@ -73,6 +73,15 @@ export const serverEnvSchema = coreEnvSchema.extend({
   // Every new booking is also copied to this address (the platform inbox,
   // info@playslot.bg). Unset = no copy is sent.
   PLATFORM_NOTIFY_EMAIL: optionalString.pipe(z.string().email().optional()),
+  /**
+   * Share the session cookie with the web app's host, e.g. ".playslot.bg" when
+   * the API is api.playslot.bg and the site is playslot.bg. The site's server
+   * can then read who is signed in and render the right menu in the first
+   * HTML, instead of the signed-out one swapped a moment later. Unset: the
+   * cookie stays on the API host only (local dev shares it anyway — cookies
+   * ignore ports).
+   */
+  SESSION_COOKIE_DOMAIN: optionalString,
 
   // SendGrid dynamic templates (apps/api/src/mail/templates, uploaded with
   // `pnpm --filter @playslot/api mail:sync`). When an id is missing, that email

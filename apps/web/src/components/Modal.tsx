@@ -73,7 +73,11 @@ export function Modal({
         alignItems: 'flex-end',
         justifyContent: 'center',
         padding: 0,
-        zIndex: 50,
+        // Above the sticky site header (300) so the dialog is centred in the
+        // whole viewport and its top is never tucked under the nav. The global
+        // loader (100/200) sits below the header on purpose, so it stays below
+        // dialogs too.
+        zIndex: 400,
       }}
       className="modal-backdrop"
     >

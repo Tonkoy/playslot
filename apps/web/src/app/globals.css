@@ -446,18 +446,20 @@ button[aria-busy='true'] {
 }
 .slot-mine {
   background: var(--mine);
+  border-color: color-mix(in srgb, var(--mine) 70%, #000);
   color: #fff;
   font-size: 12.5px;
 }
 .slot-event {
   background: var(--event-soft);
-  border-color: color-mix(in srgb, var(--event) 28%, transparent);
+  /* A full-strength edge: the cell must read as "not free" at a glance. */
+  border: 1.5px solid var(--event);
   color: var(--event);
   font-size: 12.5px;
 }
 .slot-tournament {
   background: var(--tournament-soft);
-  border-color: color-mix(in srgb, var(--tournament) 28%, transparent);
+  border: 1.5px solid var(--tournament);
   color: var(--tournament);
   font-size: 12.5px;
 }
@@ -541,6 +543,39 @@ button.avail-hour-top {
   color: #fff;
   font-size: 11.5px;
   font-weight: 700;
+}
+.avail-badge.badge-tournament {
+  background: var(--tournament);
+}
+.avail-badge.badge-event {
+  background: var(--event);
+}
+/* An hour with my booking, a tournament or an event: coloured border and a
+   thick bar down the left edge, in the same colour as its label. */
+.avail-hour.tone-mine {
+  --tone: var(--mine);
+  --tone-soft: var(--mine-soft);
+}
+.avail-hour.tone-tournament {
+  --tone: var(--tournament);
+  --tone-soft: var(--tournament-soft);
+}
+.avail-hour.tone-event {
+  --tone: var(--event);
+  --tone-soft: var(--event-soft);
+}
+.avail-hour[class*='tone-'] {
+  border: 1.5px solid var(--tone);
+  box-shadow: inset 5px 0 0 var(--tone);
+  background: linear-gradient(90deg, var(--tone-soft), var(--surface) 55%);
+}
+.avail-hour[class*='tone-'] .avail-hour-top {
+  padding-left: 18px;
+}
+.avail-hour[class*='tone-'].is-open {
+  box-shadow:
+    inset 5px 0 0 var(--tone),
+    var(--shadow-sm);
 }
 /*
  * An hour's courts slide open: the row animates its height from 0 to the

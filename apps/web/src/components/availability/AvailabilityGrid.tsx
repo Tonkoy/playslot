@@ -510,7 +510,12 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
               .filter((x): x is { c: AvailabilityCourt; slot: AvailabilitySlot } => !!x.slot);
             const free = cells.filter((x) => SLOT_STYLE[x.slot.state].bookable).length;
             const mine = cells.some((x) => x.slot.state === 'MINE');
-            const special = cells.some((x) => x.slot.state === 'EVENT' || x.slot.state === 'TOURNAMENT');
+            const tournament = cells.some((x) => x.slot.state === 'TOURNAMENT');
+            const event = cells.some((x) => x.slot.state === 'EVENT');
+            const special = tournament || event;
+            // The row's border takes the colour of what is special about the
+            // hour, so it stands out in the list, not just a small label.
+            const tone = mine ? ' tone-mine' : tournament ? ' tone-tournament' : event ? ' tone-event' : '';
             const past = cells.every((x) => x.slot.state === 'PAST');
             const cheapest = cheapestAt(time);
             const open = openTime === time;
@@ -520,6 +525,8 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
                 <span className="avail-hour-info">
                   {past ? st('PAST') : free > 0 ? t.rich('freeCourts', { count: free, b: (c) => <b>{c}</b> }) : t('noneFree')}
                   {mine && <span className="avail-badge">{t('mine')}</span>}
+                  {tournament && <span className="avail-badge badge-tournament">{st('TOURNAMENT')}</span>}
+                  {event && <span className="avail-badge badge-event">{st('EVENT')}</span>}
                 </span>
               </>
             );
@@ -531,7 +538,7 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
               );
             }
             return (
-              <div key={time} className={`avail-hour${open ? ' is-open' : ''}${free === 0 ? ' is-full' : ''}`}>
+              <div key={time} className={`avail-hour${open ? ' is-open' : ''}${free === 0 ? ' is-full' : ''}${tone}`}>
                 <button
                   type="button"
                   className="avail-hour-top"

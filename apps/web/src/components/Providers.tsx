@@ -1,12 +1,13 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Me } from '@/lib/api';
 import { GlobalLoader } from './GlobalLoader';
 import { SearchModalHost } from './SearchModalHost';
 import { SearchModalProvider } from './SearchModalContext';
 import { ToastProvider } from './Toast';
+import { startPwa } from '@/lib/pwa';
 
 /** App-wide client providers (TanStack Query for server-state caching, spec §3). */
 export function Providers({
@@ -29,6 +30,10 @@ export function Providers({
     if (initialSession) qc.setQueryData(['me'], initialSession);
     return qc;
   });
+  // Installable app: catch the browser's install prompt and register the
+  // service worker, once, wherever the visitor lands.
+  useEffect(() => startPwa(), []);
+
   return (
     <QueryClientProvider client={client}>
       <ToastProvider>

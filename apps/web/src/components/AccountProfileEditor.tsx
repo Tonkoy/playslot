@@ -7,6 +7,7 @@ import { PLAYER_LEVELS, type PlayerLevel } from '@playslot/contracts';
 import { getMyUserProfile, updateMyUserProfile } from '@/lib/api';
 import { Avatar } from './Avatar';
 import { Collapse } from './Collapse';
+import { InstallAppRow } from './InstallApp';
 import { PushNotificationToggle } from './PushNotificationToggle';
 import { useToast } from './Toast';
 import { BusyLabel } from '@/components/Spinner';
@@ -214,6 +215,10 @@ export function AccountProfileEditor() {
           {/* Browser push is per-device and saves itself, so it has its own
               button rather than pretending to be part of the form. */}
           <PushNotificationToggle plain />
+          {/* On an iPhone, browser notifications only work from the installed app. */}
+          <div style={{ padding: '14px 0' }}>
+            <InstallAppRow />
+          </div>
         </div>
       </section>
 

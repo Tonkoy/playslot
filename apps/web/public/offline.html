@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="bg">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Няма връзка — PlaySlot</title>
+    <style>
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #fff; color: #12181b;
+             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+      main { max-width: 360px; padding: 24px; text-align: center; }
+      .mark { width: 64px; height: 64px; margin: 0 auto 20px; border-radius: 17px; background: #123b2c; display: grid;
+              grid-template-columns: 1fr 1fr; gap: 6px; padding: 12px; box-sizing: border-box; }
+      .mark i { border-radius: 4px; background: rgba(255, 255, 255, 0.35); }
+      .mark i.on { background: #cfea6e; }
+      h1 { font-size: 22px; margin: 0 0 8px; }
+      p { margin: 0 0 20px; color: #4b564f; line-height: 1.5; }
+      button { min-height: 46px; padding: 0 26px; border: 0; border-radius: 100px; background: #cfea6e; color: #123b2c;
+               font: inherit; font-weight: 800; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="mark" aria-hidden="true"><i></i><i class="on"></i><i></i><i></i></div>
+      <h1>Няма връзка с интернет</h1>
+      <p>Свободните часове се показват на живо, затова PlaySlot има нужда от връзка. Провери я и опитай пак.</p>
+      <button type="button" onclick="location.reload()">Опитай пак</button>
+    </main>
+  </body>
+</html>

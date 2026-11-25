@@ -8,6 +8,7 @@ import { getMe, logout } from '@/lib/api';
 import { Avatar } from './Avatar';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useSearchModal } from './SearchModalContext';
+import { InstallHelpModal, InstallMenuItem } from './InstallApp';
 
 const linkStyle: React.CSSProperties = {
   color: 'var(--ink-2)',
@@ -22,6 +23,7 @@ export function SiteNav() {
   const t = useTranslations('Nav');
   const [open, setOpen] = useState(false); // mobile hamburger panel
   const [menuOpen, setMenuOpen] = useState(false); // desktop account/settings dropdown
+  const [installHelp, setInstallHelp] = useState(false); // "how to install" steps (iPhone)
   const pathname = usePathname();
   const router = useRouter();
   const qc = useQueryClient();
@@ -256,6 +258,12 @@ export function SiteNav() {
                 </Link>
               )}
 
+              <InstallMenuItem
+                style={{ ...menuItem, width: '100%' }}
+                onDone={() => setMenuOpen(false)}
+                onNeedHelp={() => setInstallHelp(true)}
+              />
+
               {settingsRows}
 
               {signedIn ? (
@@ -376,6 +384,11 @@ export function SiteNav() {
               {t('account')}
             </Link>
           )}
+          <InstallMenuItem
+            style={{ ...linkStyle, border: 'none', background: 'transparent', color: 'var(--green)', fontWeight: 700 }}
+            onDone={close}
+            onNeedHelp={() => setInstallHelp(true)}
+          />
           <div style={{ borderTop: '1px solid var(--line)', marginTop: 6, paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {settingsRows}
           </div>
@@ -420,6 +433,7 @@ export function SiteNav() {
           </div>
         </div>
       )}
+      <InstallHelpModal open={installHelp} onClose={() => setInstallHelp(false)} />
     </>
   );
 }

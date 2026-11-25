@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
@@ -52,8 +52,13 @@ export async function generateMetadata({
       },
     },
     formatDetection: { telephone: false },
+    // Installed to an iPhone's home screen: opens without Safari's bars.
+    appleWebApp: { capable: true, title: SITE_NAME, statusBarStyle: 'default' },
   };
 }
+
+/** The browser/OS bar takes the page's own white, in the tab and in the installed app. */
+export const viewport: Viewport = { themeColor: '#ffffff' };
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));

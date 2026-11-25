@@ -821,6 +821,19 @@
     "failed": "Could not subscribe to notifications.",
     "otherDevices": "On for {count} devices in total."
   },
+  "Pwa": {
+    "install": "Install the app",
+    "how": "How to install",
+    "howTitle": "Installing PlaySlot",
+    "cardTitle": "App on your phone",
+    "cardHelp": "Put PlaySlot on your home screen — it opens like an app, without the browser bars.",
+    "installed": "PlaySlot is installed on this device.",
+    "iosStep1": "Open PlaySlot in Safari.",
+    "iosStep2": "Tap the Share button (a square with an arrow pointing up).",
+    "iosStep3": "Choose “Add to Home Screen” and confirm with “Add”.",
+    "manualStep1": "Open the browser's menu.",
+    "manualStep2": "Choose “Install app” or “Add to Home screen”."
+  },
   "Pricing": {
     "title": "Prices",
     "help": "Set a price by time band, weekday, court and season. Where rules overlap, the higher priority wins, then the more specific one.",

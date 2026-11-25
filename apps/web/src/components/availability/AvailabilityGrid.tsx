@@ -21,6 +21,7 @@ import { errorMessage } from '@/lib/errors';
 import { SLOT_STYLE } from '@/lib/slotStates';
 import { AddToCalendar } from '@/components/AddToCalendar';
 import { BusyLabel } from '@/components/Spinner';
+import { CoachPicker } from './CoachPicker';
 
 /** Days shown in the strip above the grid. */
 const STRIP_DAYS = 7;
@@ -736,44 +737,19 @@ export function AvailabilityGrid({
           ) : (
             <div>
               {selectableCoaches.length > 0 && (
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <span style={labelText}>{bk('coach')}</span>
-                    <select
-                      value={coachId ?? ''}
-                      onChange={(e) => {
-                        const v = e.target.value ? Number(e.target.value) : null;
-                        setCoachId(v);
-                        const c = selectableCoaches.find((x) => x.coachProfileId === v);
-                        setServiceId(c?.services[0]?.id ?? null);
-                      }}
-                      style={{ ...dateInput, cursor: 'pointer' }}
-                    >
-                      <option value="">{bk('noCoach')}</option>
-                      {selectableCoaches.map((c) => (
-                        <option key={c.coachProfileId} value={c.coachProfileId}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {chosenCoach && chosenCoach.services.length > 0 && (
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <span style={labelText}>{bk('service')}</span>
-                      <select
-                        value={serviceId ?? ''}
-                        onChange={(e) => setServiceId(e.target.value ? Number(e.target.value) : null)}
-                        style={{ ...dateInput, cursor: 'pointer' }}
-                      >
-                        {chosenCoach.services.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name} · {money.format(s.priceCents / 100)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
-                </div>
+                <>
+                  <p style={{ ...labelText, marginBottom: 8 }}>{bk('withCoachQuestion')}</p>
+                  <CoachPicker
+                    coaches={selectableCoaches}
+                    coachId={coachId}
+                    serviceId={serviceId}
+                    onChange={(c, sv) => {
+                      setCoachId(c);
+                      setServiceId(sv);
+                    }}
+                    formatMoney={(cents) => money.format(cents / 100)}
+                  />
+                </>
               )}
               {chosenService && (
                 <p style={{ fontWeight: 700, marginBottom: 8 }}>
@@ -864,17 +840,6 @@ function GridSkeleton() {
 }
 
 const labelText: React.CSSProperties = { fontWeight: 700, fontSize: 13, color: 'var(--ink)' };
-const dateInput: React.CSSProperties = {
-  minHeight: 46,
-  width: '100%',
-  padding: '0 12px',
-  fontSize: 15,
-  border: '1px solid var(--line-2)',
-  background: 'var(--surface)',
-  color: 'var(--ink)',
-  borderRadius: 'var(--radius-sm)',
-  fontFamily: 'inherit',
-};
 const retryBtn: React.CSSProperties = {
   minHeight: 40,
   marginLeft: 8,

@@ -297,6 +297,9 @@
     "feedbackTitle": "Какво казват играчите"
   },
   "Booking": {
+    "noCoachHelp": "Само кортът",
+    "priceFrom": "от {price}",
+    "withCoachQuestion": "С треньор?",
     "title": "Резервация",
     "withCoach": "С треньор",
     "noCoach": "Без треньор",

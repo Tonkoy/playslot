@@ -297,6 +297,9 @@
     "feedbackTitle": "What players say"
   },
   "Booking": {
+    "noCoachHelp": "Court only",
+    "priceFrom": "from {price}",
+    "withCoachQuestion": "With a coach?",
     "title": "Book this slot",
     "withCoach": "With a coach",
     "noCoach": "No coach",

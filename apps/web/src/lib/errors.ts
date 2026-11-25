@@ -65,6 +65,10 @@ export const KNOWN_REASONS = [
   'not_attended',
   'not_finished',
   'ended',
+  'not_started',
+  'not_confirmed',
+  'not_awaiting_approval',
+  'not_reschedulable',
 ] as const;
 export type KnownReason = (typeof KNOWN_REASONS)[number];
 

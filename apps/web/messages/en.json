@@ -155,6 +155,12 @@
     "approvalOff": "Off: bookings are confirmed automatically."
   },
   "Calendar": {
+    "doneSaved": "Saved to the calendar",
+    "doneMoved": "Booking moved",
+    "doneConfirmed": "Booking confirmed",
+    "donePaid": "Marked as paid",
+    "doneNoShow": "Marked as a no-show",
+    "noShowLater": "A no-show can be recorded once the hour has started.",
     "lessonCount": "{count, plural, one {# lesson} other {# lessons}}",
     "until": "until {time}",
     "bookedCount": "{count, plural, one {# booking} other {# bookings}}",
@@ -1051,6 +1057,10 @@
     "footnote": "Revenue is counted on the day played, for confirmed, completed and no-show bookings plus group-training sign-ups. A lesson's price includes the court and is credited to the coach in full."
   },
   "Errors": {
+    "not_started": "That hour has not started yet.",
+    "not_confirmed": "That booking is not confirmed.",
+    "not_awaiting_approval": "That booking is not awaiting approval.",
+    "not_reschedulable": "That booking cannot be moved.",
     "beyond_max_advance": "Bookings can only be made within the allowed booking window.",
     "in_past": "That time is already in the past.",
     "invalid_start": "Invalid start time.",

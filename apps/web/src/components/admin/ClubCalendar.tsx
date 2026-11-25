@@ -194,6 +194,7 @@ export function ClubCalendar({ clubId, initialDate }: { clubId: number; initialD
       setSelection(null);
       setCustomer({ userId: null, name: '' });
       setBlockReason('');
+      toast(t('doneSaved'));
     },
     onError: onErr,
   });
@@ -214,6 +215,7 @@ export function ClubCalendar({ clubId, initialDate }: { clubId: number; initialD
       invalidate();
       setMoveEntry(null);
       setSelection(null);
+      toast(t('doneMoved'));
     },
     onError: onErr,
   });
@@ -222,6 +224,7 @@ export function ClubCalendar({ clubId, initialDate }: { clubId: number; initialD
     onSuccess: () => {
       invalidate();
       setSelection(null);
+      toast(tt('cancelled'));
     },
     onError: onErr,
   });
@@ -232,13 +235,18 @@ export function ClubCalendar({ clubId, initialDate }: { clubId: number; initialD
     onSuccess: () => {
       invalidate();
       setSelection(null);
+      toast(t('doneConfirmed'));
     },
     onError: onErr,
   });
 
   const paidMut = useMutation({
     mutationFn: (id: number) => markReservationPaid(clubId, id),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      setSelection(null);
+      toast(t('donePaid'));
+    },
     onError: onErr,
   });
   const noShowMut = useMutation({
@@ -246,6 +254,7 @@ export function ClubCalendar({ clubId, initialDate }: { clubId: number; initialD
     onSuccess: () => {
       invalidate();
       setSelection(null);
+      toast(t('doneNoShow'));
     },
     onError: onErr,
   });
@@ -875,47 +884,71 @@ export function ClubCalendar({ clubId, initialDate }: { clubId: number; initialD
             {entryNote(selection.entry)}
           </p>
         )}
-        {selection?.kind === 'entry' && (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {selection.entry.status === 'PENDING_APPROVAL' && (
-              <button
-                type="button"
-                disabled={confirmMut.isPending}
-                onClick={() => confirmMut.mutate(selection.entry.id)}
-                style={{ ...smallBtn, background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', fontWeight: 700 }}
-              >
-                <BusyLabel busy={confirmMut.isPending}>{t('confirmBooking')}</BusyLabel>
-              </button>
-            )}
-            {!isBlockLike(selection.entry) && (
-              <button type="button" onClick={() => paidMut.mutate(selection.entry.id)} style={smallBtn}>
-                {t('markPaid')}
-              </button>
-            )}
-            {!isBlockLike(selection.entry) && (
-              <button type="button" onClick={() => noShowMut.mutate(selection.entry.id)} style={smallBtn}>
-                {t('noShow')}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                setMoveEntry(selection.entry);
-                setSelection(null);
-              }}
-              style={smallBtn}
-            >
-              {t('move')}
-            </button>
-            <button
-              type="button"
-              onClick={() => cancelMut.mutate(selection.entry.id)}
-              style={{ ...smallBtn, borderColor: 'var(--clay)', color: 'var(--clay)' }}
-            >
-              {t('cancel')}
-            </button>
-          </div>
-        )}
+        {selection?.kind === 'entry' &&
+          (() => {
+            const e = selection.entry;
+            const busy =
+              confirmMut.isPending || paidMut.isPending || noShowMut.isPending || cancelMut.isPending;
+            const paid = e.paymentStatus === 'CAPTURED';
+            // "Did not turn up" only makes sense for a confirmed booking whose
+            // hour has begun; before that the button is there, switched off,
+            // with a line saying when it will work.
+            const started = new Date(e.startsAt).getTime() <= Date.now();
+            const noShowApplies = !isBlockLike(e) && e.status === 'CONFIRMED';
+            return (
+              <>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {e.status === 'PENDING_APPROVAL' && (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => confirmMut.mutate(e.id)}
+                      style={{ ...smallBtn, background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', fontWeight: 700 }}
+                    >
+                      <BusyLabel busy={confirmMut.isPending}>{t('confirmBooking')}</BusyLabel>
+                    </button>
+                  )}
+                  {!isBlockLike(e) && !paid && (
+                    <button type="button" disabled={busy} onClick={() => paidMut.mutate(e.id)} style={smallBtn}>
+                      <BusyLabel busy={paidMut.isPending}>{t('markPaid')}</BusyLabel>
+                    </button>
+                  )}
+                  {noShowApplies && (
+                    <button
+                      type="button"
+                      disabled={busy || !started}
+                      onClick={() => noShowMut.mutate(e.id)}
+                      style={{ ...smallBtn, ...(started ? {} : { opacity: 0.5, cursor: 'not-allowed' }) }}
+                    >
+                      <BusyLabel busy={noShowMut.isPending}>{t('noShow')}</BusyLabel>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setMoveEntry(e);
+                      setSelection(null);
+                    }}
+                    style={smallBtn}
+                  >
+                    {t('move')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => cancelMut.mutate(e.id)}
+                    style={{ ...smallBtn, borderColor: 'var(--clay)', color: 'var(--clay)' }}
+                  >
+                    <BusyLabel busy={cancelMut.isPending}>{t('cancel')}</BusyLabel>
+                  </button>
+                </div>
+                {noShowApplies && !started && (
+                  <p style={{ marginTop: 10, fontSize: 12.5, color: 'var(--ink-3)' }}>{t('noShowLater')}</p>
+                )}
+              </>
+            );
+          })()}
       </Modal>
     </div>
   );

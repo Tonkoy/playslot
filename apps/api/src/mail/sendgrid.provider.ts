@@ -71,6 +71,8 @@ export class SendGridMailProvider implements MailProvider {
 
     const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
+      // A provider that stops answering must not leave the send hanging forever.
+      signal: AbortSignal.timeout(10_000),
       headers: {
         Authorization: `Bearer ${this.env.SENDGRID_API_KEY!}`,
         'Content-Type': 'application/json',

@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import type { ServerEnv } from '@playslot/config';
 import {
   type BlockInput,
@@ -76,8 +76,13 @@ function shortWhen(when: string): string {
   return m ? `${m[3]}.${m[2]} ${m[4]}` : when;
 }
 
+/** How long an action waits for its emails and pushes before answering anyway. */
+const NOTIFY_WAIT_MS = 2500;
+
 @Injectable()
 export class ReservationsService {
+  private readonly logger = new Logger('Reservations');
+
   constructor(
     private readonly prisma: PrismaService,
     @Inject(SERVER_ENV) private readonly env: ServerEnv,
@@ -171,9 +176,9 @@ export class ReservationsService {
       });
       checkoutUrl = url;
     } else if (needsApproval) {
-      await this.sendBookingReceivedEmail(reservation.id);
+      await this.afterNotifying(this.sendBookingReceivedEmail(reservation.id));
     } else {
-      await this.sendConfirmationEmail(reservation.id);
+      await this.afterNotifying(this.sendConfirmationEmail(reservation.id));
     }
 
     return {
@@ -226,8 +231,8 @@ export class ReservationsService {
     this.events.emitAvailabilityChanged(slot.clubId);
     // Confirmed: tell the customer it is booked. Awaiting the club's word:
     // tell them it is held, the same two-step flow the public booking uses.
-    if (reservation.status === 'PENDING_APPROVAL') await this.sendBookingReceivedEmail(reservation.id, staffUserId);
-    else await this.sendConfirmationEmail(reservation.id, staffUserId);
+    if (reservation.status === 'PENDING_APPROVAL') await this.afterNotifying(this.sendBookingReceivedEmail(reservation.id, staffUserId));
+    else await this.afterNotifying(this.sendConfirmationEmail(reservation.id, staffUserId));
     return { reservationId: reservation.id, status: reservation.status, priceCents, currency: slot.currency };
   }
 
@@ -422,7 +427,7 @@ export class ReservationsService {
       // Notify the parties the booking moved (not for maintenance BLOCKs).
       if (existing.type !== 'BLOCK') {
         const previousWhen = formatInZone(existing.startsAt, slot.timezone, 'yyyy-MM-dd HH:mm');
-        await this.sendRescheduleEmails(reservationId, previousWhen, staffUserId);
+        await this.afterNotifying(this.sendRescheduleEmails(reservationId, previousWhen, staffUserId));
       }
       return { id: updated.id, startsAt: updated.startsAt.toISOString(), priceCents };
     } catch (e) {
@@ -452,7 +457,7 @@ export class ReservationsService {
       from: r.status,
     });
     this.events.emitAvailabilityChanged(clubId);
-    await this.sendConfirmationEmail(reservationId, staffUserId);
+    await this.afterNotifying(this.sendConfirmationEmail(reservationId, staffUserId));
     return { id: reservationId, status: 'CONFIRMED' as const };
   }
 
@@ -472,7 +477,7 @@ export class ReservationsService {
       update: { status: 'CAPTURED', capturedAt: new Date() },
     });
     await this.audit(this.prisma, staffUserId, 'reservation.marked_paid', reservationId, {});
-    await this.sendReceiptEmail(reservationId);
+    await this.afterNotifying(this.sendReceiptEmail(reservationId));
     return { id: reservationId, paymentStatus: 'CAPTURED' as const };
   }
 
@@ -484,7 +489,7 @@ export class ReservationsService {
     await this.prisma.reservation.update({ where: { id: reservationId }, data: { status: 'NO_SHOW' } });
     await this.audit(this.prisma, staffUserId, 'reservation.no_show', reservationId, {});
     this.events.emitAvailabilityChanged(clubId);
-    await this.sendNoShowEmail(reservationId);
+    await this.afterNotifying(this.sendNoShowEmail(reservationId));
     return { id: reservationId, status: 'NO_SHOW' as const };
   }
 
@@ -704,7 +709,7 @@ export class ReservationsService {
       }),
     ]);
     this.events.emitAvailabilityChanged(r.clubId);
-    await this.sendConfirmationEmail(reservationId);
+    await this.afterNotifying(this.sendConfirmationEmail(reservationId));
   }
 
   /** Webhook: a failed/expired online payment releases inventory (no phantom). */
@@ -788,9 +793,29 @@ export class ReservationsService {
     this.events.emitAvailabilityChanged(r.clubId);
 
     // Notify all parties (customer with refund; club staff + any coach). Best-effort.
-    await this.sendCancellationEmails(reservationId, refundCents, userId);
+    await this.afterNotifying(this.sendCancellationEmails(reservationId, refundCents, userId));
 
     return { status: 'CANCELLED' as const, refundCents, refundStatus };
+  }
+
+  /**
+   * Emails and pushes are a courtesy to the people involved — by the time they
+   * go out the booking is already saved. So an action waits for them only
+   * briefly (normally they are done well within that) and then answers; a slow
+   * or unreachable mail or push provider keeps working in the background and
+   * can never hold up, or fail, confirming or cancelling a booking.
+   */
+  private async afterNotifying(work: Promise<void>): Promise<void> {
+    const done = work.catch((e: unknown) => {
+      this.logger.warn(`notification failed: ${e instanceof Error ? e.message : String(e)}`);
+    });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const waited = new Promise<'slow'>((resolve) => {
+      timer = setTimeout(() => resolve('slow'), NOTIFY_WAIT_MS);
+    });
+    const outcome = await Promise.race([done, waited]);
+    clearTimeout(timer);
+    if (outcome === 'slow') this.logger.warn(`notifications still sending after ${NOTIFY_WAIT_MS} ms; answering without them`);
   }
 
   /**
@@ -808,7 +833,7 @@ export class ReservationsService {
   private async sendBookingReceivedEmail(reservationId: number, actorUserId?: number): Promise<void> {
     const p = await this.loadReservationParties(reservationId);
     if (!p) return;
-    await this.pushToTeam(p, 'awaiting', { actorUserId });
+    void this.pushToTeam(p, 'awaiting', { actorUserId });
     if (p.customer) {
       await this.mail
         .sendBookingReceived(
@@ -881,7 +906,7 @@ export class ReservationsService {
   private async sendConfirmationEmail(reservationId: number, actorUserId?: number): Promise<void> {
     const p = await this.loadReservationParties(reservationId);
     if (!p) return;
-    await this.pushToTeam(p, 'booked', { actorUserId });
+    void this.pushToTeam(p, 'booked', { actorUserId });
     // 1. customer (skip synthetic walk-in addresses)
     if (p.customer) {
       await this.mail
@@ -936,7 +961,7 @@ export class ReservationsService {
   ): Promise<void> {
     const p = await this.loadReservationParties(reservationId);
     if (!p) return;
-    await this.pushToTeam(p, 'cancelled', { actorUserId });
+    void this.pushToTeam(p, 'cancelled', { actorUserId });
     // 1. customer (skip synthetic walk-in addresses)
     if (p.customer) {
       await this.mail
@@ -988,7 +1013,7 @@ export class ReservationsService {
   ): Promise<void> {
     const p = await this.loadReservationParties(reservationId);
     if (!p) return;
-    await this.pushToTeam(p, 'moved', {
+    void this.pushToTeam(p, 'moved', {
       actorUserId,
       // The email shows the full date; a notification has room for "dd.MM HH:mm".
       previousWhen: previousWhen ? shortWhen(previousWhen) : undefined,

@@ -15,6 +15,8 @@ export class ResendMailProvider implements MailProvider {
   async send(input: SendEmailInput): Promise<void> {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
+      // A provider that stops answering must not leave the send hanging forever.
+      signal: AbortSignal.timeout(10_000),
       headers: {
         Authorization: `Bearer ${this.env.RESEND_API_KEY!}`,
         'Content-Type': 'application/json',

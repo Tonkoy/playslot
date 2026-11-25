@@ -86,6 +86,9 @@ export class PushService {
           await webpush.sendNotification(
             { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
             payload,
+            // Give up on a push service that does not answer, and let it drop
+            // a notification nobody has been online to receive for a day.
+            { timeout: 10_000, TTL: 24 * 60 * 60 },
           );
         } catch (err) {
           const status = (err as { statusCode?: number }).statusCode;

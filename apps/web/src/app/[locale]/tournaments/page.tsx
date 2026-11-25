@@ -1,5 +1,3 @@
-/* eslint-disable @next/next/no-img-element -- covers are remote URLs on Smile
-   Cup's image host, already resized there; see lib/smilecup.ts. */
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { SiteHeader } from '@/components/SiteHeader';
@@ -174,15 +172,19 @@ function TournamentCard({
         overflow: 'hidden',
       }}
     >
-      <div style={{ position: 'relative', aspectRatio: '16 / 10', background: 'var(--surface-2)' }}>
-        {x.image && (
-          <img
-            src={x.image}
-            alt=""
-            loading="lazy"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-          />
-        )}
+      {/* The cover is a background, not an <img>: it is decoration, and a
+          cover that fails to load then leaves the plain tile instead of a
+          broken-image icon. */}
+      <div
+        style={{
+          position: 'relative',
+          aspectRatio: '16 / 10',
+          backgroundColor: 'var(--surface-2)',
+          backgroundImage: x.image ? `url(${JSON.stringify(x.image)})` : undefined,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
         {closedLabel && (
           <span
             style={{
@@ -203,8 +205,8 @@ function TournamentCard({
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 18, flex: 1 }}>
-        <div className="mono" style={{ fontSize: 12.5, color: 'var(--green)', textTransform: 'capitalize' }}>
-          {date}
+        <div className="mono" style={{ fontSize: 12.5, color: 'var(--green)' }}>
+          {date.charAt(0).toUpperCase() + date.slice(1)}
         </div>
         <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, lineHeight: 1.25 }}>{x.name}</h2>
         {place && <div style={{ fontSize: 14, color: 'var(--ink-2)' }}>{place}</div>}

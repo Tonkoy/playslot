@@ -355,7 +355,8 @@
     "closed": "Closed",
     "rules": "Rules",
     "coaches": "Coaches",
-    "hour": "hour"
+    "hour": "hour",
+    "today": "Today"
   },
   "Grid": {
     "heading": "Availability by court and time",

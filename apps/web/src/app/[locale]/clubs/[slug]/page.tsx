@@ -123,6 +123,11 @@ export default async function ClubProfilePage({
       ],
     },
   ];
+  // Today in the club's own time zone, whatever zone the server runs in.
+  const todayWeekday = DAY.indexOf(
+    new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: club.timezone }).format(new Date()),
+  );
+  const todayHours = club.openingHours?.find((h) => h.weekday === todayWeekday);
   const weekday = (w: number) =>
     new Intl.DateTimeFormat(locale === 'bg' ? 'bg-BG' : 'en-US', { weekday: 'long' }).format(new Date(Date.UTC(2024, 0, 7 + w)));
 
@@ -185,38 +190,41 @@ export default async function ClubProfilePage({
           </div>
         </header>
 
-        {/* opening hours + rules */}
-        <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', marginBottom: 8 }}>
-          {(club.openingHours?.length ?? 0) > 0 && (
-            <section style={infoCard}>
-              <h2 style={infoH2}>{t('openingHours')}</h2>
-              <div style={{ display: 'grid', gap: 4 }}>
-                {WEEK.map((w) => {
-                  const h = club.openingHours!.find((x) => x.weekday === w);
-                  return (
-                    <div key={w} style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                      <span style={{ textTransform: 'capitalize', color: 'var(--ink-2)' }}>{weekday(w)}</span>
-                      <span className="mono" style={{ color: h ? 'var(--ink)' : 'var(--ink-3)', fontSize: 13 }}>
-                        {h ? `${minToHHMM(h.startMin)}–${minToHHMM(h.endMin)}` : t('closed')}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-          {club.rules && (
-            <section style={infoCard}>
-              <h2 style={infoH2}>{t('rules')}</h2>
-              <p style={{ color: 'var(--ink-2)', whiteSpace: 'pre-wrap' }}>{club.rules}</p>
-            </section>
-          )}
-        </div>
-
         <h2 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 700, margin: '16px 0 8px' }}>
           {t('availability')}
         </h2>
         <AvailabilityGrid clubId={club.id} initialDate={date} />
+
+        {/* Opening hours come after the calendar, folded to one line with
+            today's hours: the week is reference, not what people came for. */}
+        {(club.openingHours?.length ?? 0) > 0 && (
+          <details className="club-fold" style={{ marginTop: 24 }}>
+            <summary>
+              <span style={{ fontWeight: 700 }}>{t('openingHours')}</span>
+              <span className="mono" style={{ marginLeft: 'auto', fontSize: 13, color: 'var(--ink-2)' }}>
+                {t('today')}{' '}
+                {todayHours ? `${minToHHMM(todayHours.startMin)}–${minToHHMM(todayHours.endMin)}` : t('closed')}
+              </span>
+              <span className="club-fold-chev" aria-hidden>
+                ›
+              </span>
+            </summary>
+            <div className="club-fold-body">
+              {WEEK.map((w) => {
+                const h = club.openingHours!.find((x) => x.weekday === w);
+                const isToday = w === todayWeekday;
+                return (
+                  <div key={w} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontWeight: isToday ? 700 : 400 }}>
+                    <span style={{ textTransform: 'capitalize', color: isToday ? 'var(--ink)' : 'var(--ink-2)' }}>{weekday(w)}</span>
+                    <span className="mono" style={{ color: h ? 'var(--ink)' : 'var(--ink-3)', fontSize: 13 }}>
+                      {h ? `${minToHHMM(h.startMin)}–${minToHHMM(h.endMin)}` : t('closed')}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </details>
+        )}
 
         {coaches.length > 0 && (
           <section style={{ marginTop: 32 }}>
@@ -240,6 +248,14 @@ export default async function ClubProfilePage({
         <EventsSection clubId={club.id} currency={club.currency} timezone={club.timezone} />
         <MembershipPlansSection clubId={club.id} currency={club.currency} />
         <ReviewsSection clubId={club.id} />
+
+        {/* House rules last: worth having, rarely the reason for the visit. */}
+        {club.rules && (
+          <section style={{ ...infoCard, marginTop: 32 }}>
+            <h2 style={infoH2}>{t('rules')}</h2>
+            <p style={{ color: 'var(--ink-2)', whiteSpace: 'pre-wrap' }}>{club.rules}</p>
+          </section>
+        )}
       </main>
     </>
   );

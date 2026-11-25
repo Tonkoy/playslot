@@ -2,10 +2,17 @@
 
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 /**
  * Accessible centered modal: backdrop click + Esc to close, aria-modal, focus
  * moved to the dialog, and scroll locked while open. Theme-aware.
+ *
+ * Rendered into `document.body`, not where it is used: a dialog opened from
+ * inside a card that is itself a link (a coach's photo on the coaches list)
+ * would otherwise be part of that link, and closing it followed the link.
+ * React still bubbles events from a portal to the component that rendered it,
+ * so clicks are also stopped here rather than reaching that card.
  */
 export function Modal({
   open,
@@ -60,11 +67,14 @@ export function Modal({
     };
   }, [open]);
 
-  if (!open) return null;
+  if (!open || typeof document === 'undefined') return null;
 
-  return (
+  return createPortal(
     <div
-      onClick={onClose}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
       style={{
         position: 'fixed',
         inset: 0,
@@ -142,6 +152,7 @@ export function Modal({
         )}
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

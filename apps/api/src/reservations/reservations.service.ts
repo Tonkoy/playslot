@@ -370,7 +370,14 @@ export class ReservationsService {
   }
 
   // ── move / reschedule / change court (re-runs conflict logic) ──
-  async reschedule(clubId: number, reservationId: number, input: RescheduleInput, staffUserId: number) {
+  async reschedule(
+    clubId: number,
+    reservationId: number,
+    input: RescheduleInput,
+    staffUserId: number,
+    /** `notify: false` when the caller tells the people involved itself (group sessions). */
+    opts: { notify?: boolean } = {},
+  ) {
     const existing = await this.prisma.reservation.findFirst({
       where: { id: reservationId, clubId },
       include: { resources: { select: { resource: { select: { id: true, type: true, coachProfileId: true } } } } },
@@ -445,7 +452,7 @@ export class ReservationsService {
       });
       this.events.emitAvailabilityChanged(clubId);
       // Notify the parties the booking moved (not for maintenance BLOCKs).
-      if (existing.type !== 'BLOCK') {
+      if (existing.type !== 'BLOCK' && opts.notify !== false) {
         const previousWhen = formatInZone(existing.startsAt, slot.timezone, 'yyyy-MM-dd HH:mm');
         await this.afterNotifying(this.sendRescheduleEmails(reservationId, previousWhen, staffUserId));
       }

@@ -1,5 +1,10 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
-import { createGroupSessionSchema, type CreateGroupSessionInput } from '@playslot/contracts';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  createGroupSessionSchema,
+  updateGroupSessionSchema,
+  type CreateGroupSessionInput,
+  type UpdateGroupSessionInput,
+} from '@playslot/contracts';
 import { CurrentUser, Public } from '../auth/decorators';
 import { ZodBody } from '../common/zod-validation.pipe';
 import { GroupSessionsService } from './group-sessions.service';
@@ -33,6 +38,16 @@ export class GroupSessionsController {
     @Body(new ZodBody(createGroupSessionSchema)) body: CreateGroupSessionInput,
   ) {
     return this.sessions.create(userId, body);
+  }
+
+  /** The coach edits their own session (words, size, price, level, day and hour). */
+  @Patch('group-sessions/:id')
+  update(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: number,
+    @Body(new ZodBody(updateGroupSessionSchema)) body: UpdateGroupSessionInput,
+  ) {
+    return this.sessions.update(Number(id), userId, body);
   }
 
   @Post('group-sessions/:id/register')

@@ -915,6 +915,45 @@ export class MailService {
     });
   }
 
+  /** The coach moved a group session: tell everyone who signed up. */
+  async sendGroupSessionMoved(
+    to: string,
+    info: { title: string; clubName: string; when: string; previousWhen: string },
+    locale: ApiLocale = DEFAULT_LOCALE,
+  ): Promise<void> {
+    const copy =
+      locale === 'en'
+        ? {
+            subject: `Group session moved — ${info.title}`,
+            body: `“${info.title}” at ${info.clubName} was moved from ${info.previousWhen} to ${info.when}. Your place is kept.`,
+          }
+        : {
+            subject: `Преместена групова тренировка — ${info.title}`,
+            body: `„${info.title}“ в ${info.clubName} е преместена от ${info.previousWhen} на ${info.when}. Мястото ви е запазено.`,
+          };
+    const l = (bg: string, en: string) => (locale === 'en' ? en : bg);
+    await this.send({
+      to,
+      subject: copy.subject,
+      text: copy.body,
+      html: emailShell(`<p>${copy.body}</p>`),
+      template: this.notice({
+        tone: 'warn',
+        status: l('Преместена', 'Moved'),
+        heading: l('Нов ден и час', 'A new day and time'),
+        intro: copy.body,
+        details: [
+          { label: l('Тренировка', 'Session'), value: info.title },
+          { label: l('Клуб', 'Club'), value: info.clubName },
+          { label: l('Беше', 'Was'), value: info.previousWhen },
+          { label: l('Сега', 'Now'), value: info.when },
+        ],
+        ctaLabel: l('Виж тренировката', 'See the session'),
+        ctaUrl: this.webLink(locale, 'sessions'),
+      }),
+    });
+  }
+
   /**
    * The booking is off. Carries the refund when there is one — the first thing
    * a player looks for — and a way back to booking another slot.

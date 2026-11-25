@@ -476,6 +476,8 @@ model GroupSession {
   reservationId  Int       @unique
   title          String
   description    String?
+  /// Player level it is meant for (COACH_LEVELS); null = every level.
+  level          String?
   startsAt       DateTime // UTC
   endsAt         DateTime
   capacity       Int

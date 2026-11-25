@@ -31,12 +31,15 @@ export function DatePicker({
   locale,
   min,
   placeholder,
+  weekday = false,
 }: {
   value: string;
   onChange: (v: string) => void;
   locale: string;
   min?: string; // YYYY-MM-DD (inclusive); defaults to today
   placeholder?: string;
+  /** Show the day of the week on the trigger ("ср, 25.11.2026 г."). */
+  weekday?: boolean;
 }) {
   const loc = locale === 'bg' ? 'bg-BG' : 'en-US';
   const today = new Date();
@@ -65,6 +68,9 @@ export function DatePicker({
 
   useLayoutEffect(() => {
     if (!open) return;
+    // The value can change from outside (prev/next day buttons): open on the
+    // month of the selected day, not the month that was showing last time.
+    if (selected) setView(new Date(selected.getFullYear(), selected.getMonth(), 1));
     reposition();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -93,7 +99,12 @@ export function DatePicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const dfTrigger = new Intl.DateTimeFormat(loc, { day: 'numeric', month: 'short', year: 'numeric' });
+  const dfTrigger = new Intl.DateTimeFormat(loc, {
+    ...(weekday ? { weekday: 'short' as const } : {}),
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
   const dfHeader = new Intl.DateTimeFormat(loc, { month: 'long', year: 'numeric' });
   const dfWeekday = new Intl.DateTimeFormat(loc, { weekday: 'short' });
   const weekdays = Array.from({ length: 7 }, (_, i) => dfWeekday.format(new Date(2024, 0, 1 + i))); // 2024-01-01 = Monday

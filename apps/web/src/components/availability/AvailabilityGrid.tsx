@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
+import { DatePicker } from '@/components/DatePicker';
 import { useEffect, useMemo, useState } from 'react';
 import type { AvailabilitySlot } from '@playslot/contracts';
 import { Link, usePathname } from '@/i18n/navigation';
@@ -157,12 +158,11 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
   return (
     <section aria-labelledby="grid-heading" style={{ marginTop: 8 }}>
       {/* Controls */}
+      {/* Layout lives in globals.css (.avail-*): one row on desktop; on a phone
+          the date takes the full width and Today + duration share the next row. */}
       <div
+        className="avail-controls"
         style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 16,
-          alignItems: 'flex-end',
           marginBottom: 14,
           background: 'var(--surface)',
           border: '1px solid var(--line)',
@@ -170,19 +170,17 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
           padding: 16,
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div className="avail-date">
           <span style={labelText}>{t('date')}</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div className="avail-date-row">
             <button type="button" onClick={() => setDate(shiftDate(date, -1))} style={navBtn} aria-label={t('prevDay')}>
               ‹
             </button>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value || todayIso())}
-              style={dateInput}
-              aria-label={t('date')}
-            />
+            {/* The site's own calendar rather than the browser's date field,
+                which showed the date in the phone's format (11/25/2026). */}
+            <div className="avail-date-pick">
+              <DatePicker value={date} onChange={(v) => setDate(v || todayIso())} locale={locale} weekday />
+            </div>
             <button type="button" onClick={() => setDate(shiftDate(date, 1))} style={navBtn} aria-label={t('nextDay')}>
               ›
             </button>
@@ -191,13 +189,14 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
 
         <button
           type="button"
+          className="avail-today"
           onClick={() => setDate(todayIso())}
           style={date === todayIso() ? todayBtnActive : todayBtn}
         >
           {t('today')}
         </button>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div className="avail-duration">
           <span style={labelText}>{t('duration')}</span>
           <select
             value={duration}
@@ -542,8 +541,9 @@ function GridSkeleton() {
 
 const labelText: React.CSSProperties = { fontWeight: 700, fontSize: 13, color: 'var(--ink)' };
 const navBtn: React.CSSProperties = {
-  minWidth: 40,
-  minHeight: 44,
+  minWidth: 46,
+  minHeight: 46,
+  flex: 'none',
   border: '1px solid var(--line-2)',
   background: 'var(--surface)',
   color: 'var(--green-deep)',
@@ -552,7 +552,7 @@ const navBtn: React.CSSProperties = {
   cursor: 'pointer',
 };
 const todayBtn: React.CSSProperties = {
-  minHeight: 44,
+  minHeight: 46,
   padding: '0 18px',
   border: '1px solid var(--line-2)',
   background: 'var(--surface)',
@@ -564,8 +564,10 @@ const todayBtn: React.CSSProperties = {
 };
 const todayBtnActive: React.CSSProperties = { ...todayBtn, background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', fontWeight: 800 };
 const dateInput: React.CSSProperties = {
-  minHeight: 44,
-  padding: '0 10px',
+  minHeight: 46,
+  width: '100%',
+  padding: '0 12px',
+  fontSize: 15,
   border: '1px solid var(--line-2)',
   background: 'var(--surface)',
   color: 'var(--ink)',

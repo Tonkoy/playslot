@@ -160,6 +160,50 @@ select {
   }
 }
 
+/* Availability controls (date, Today, duration) above the booking grid. */
+.avail-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+}
+.avail-date,
+.avail-duration {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.avail-date-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.avail-date-pick {
+  min-width: 200px;
+}
+.avail-duration {
+  min-width: 120px;
+}
+@media (max-width: 640px) {
+  .avail-controls {
+    gap: 12px;
+  }
+  /* Date: its own row, the picker filling everything between the arrows. */
+  .avail-date {
+    flex: 1 1 100%;
+  }
+  .avail-date-pick {
+    flex: 1;
+    min-width: 0;
+  }
+  /* Today + duration: the second row, split in half, edge to edge. */
+  .avail-today,
+  .avail-duration {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
 /* Responsive main nav: inline on desktop, hamburger + dropdown on mobile. */
 .nav-desktop {
   display: flex;

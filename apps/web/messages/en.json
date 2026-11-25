@@ -25,6 +25,7 @@
     "settings": "Settings",
     "schedule": "My schedule",
     "sessions": "Sessions",
+    "tournaments": "Tournaments",
     "coachHub": "Coach profile",
     "searchAria": "Search availability"
   },
@@ -497,6 +498,36 @@
     "cancel": "Cancel",
     "cancelledTag": "Cancelled"
   },
+  "Tournaments": {
+    "title": "Tournaments",
+    "subtitle": "Upcoming amateur tournaments from <site>Smile Cup</site>. You sign up on their site.",
+    "filterLabel": "Filter tournaments",
+    "filterAll": "All",
+    "gender": {
+      "f": "Women",
+      "m": "Men",
+      "uni": "Mixed"
+    },
+    "discipline": {
+      "singles": "Singles",
+      "doubles": "Doubles",
+      "mixed_doubles": "Mixed doubles"
+    },
+    "format": "Format",
+    "fee": "Entry fee",
+    "places": "Places",
+    "spotsLeft": "{left} of {capacity} left",
+    "registeredOf": "{registered} of {capacity} registered",
+    "full": "Fully booked",
+    "closed": "Registration closed",
+    "register": "Sign up",
+    "view": "View tournament",
+    "opensSmileCup": "opens in Smile Cup",
+    "empty": "No upcoming tournaments have been announced yet.",
+    "emptyFiltered": "No upcoming tournaments in this category.",
+    "unavailable": "We can't load the tournaments right now.",
+    "openSite": "See them on Smile Cup"
+  },
   "Platform": {
     "title": "Platform admin",
     "subtitle": "Create clubs and assign club administrators across the whole system.",
@@ -658,6 +689,10 @@
     "sessions": {
       "title": "Group sessions with a coach",
       "description": "Join a group session with a coach — see open spots, level and price, and book online in minutes."
+    },
+    "tournaments": {
+      "title": "Amateur tennis tournaments — upcoming",
+      "description": "Upcoming amateur tennis tournaments from Smile Cup: date, club, level, entry fee and places left. Pick a tournament and sign up online."
     },
     "search": {
       "title": "Find a free court by date and time",

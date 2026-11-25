@@ -83,6 +83,7 @@ export function SiteNav() {
     { href: '/clubs', label: t('clubs'), show: true },
     { href: '/coaches', label: t('coaches'), show: true },
     { href: '/sessions', label: t('sessions'), show: true },
+    { href: '/tournaments', label: t('tournaments'), show: true },
     { href: '/admin', label: t('admin'), show: isStaff, late: lateItem(isStaff) },
     { href: '/me/coach', label: t('coachHub'), show: isCoach, late: lateItem(isCoach) },
     { href: '/me/schedule', label: t('schedule'), show: isCoach, late: lateItem(isCoach) },

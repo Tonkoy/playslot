@@ -26,7 +26,7 @@ type Support = 'checking' | 'supported' | 'unsupported';
  * Browser push permission for this device. Push is per-browser, not per
  * account, so the state here describes the browser you're reading it in.
  */
-export function PushNotificationToggle() {
+export function PushNotificationToggle({ plain = false }: { plain?: boolean } = {}) {
   const t = useTranslations('PushNotifications');
   const tt = useTranslations('Toasts');
   const qc = useQueryClient();
@@ -130,7 +130,8 @@ export function PushNotificationToggle() {
   })();
 
   return (
-    <div style={row}>
+    // `plain`: no box of its own, for use as one row in a list of settings.
+    <div style={plain ? plainRow : row}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <strong style={{ fontWeight: 600, fontSize: 14 }}>{t('title')}</strong>
         <span style={{ display: 'block', color: 'var(--ink-3)', fontSize: 12, marginTop: 2 }}>
@@ -167,6 +168,7 @@ const row: React.CSSProperties = {
   padding: '12px 14px',
   background: 'var(--surface-2)',
 };
+const plainRow: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '14px 0' };
 const primaryBtn: React.CSSProperties = {
   minHeight: 40,
   padding: '0 16px',

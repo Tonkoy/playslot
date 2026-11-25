@@ -17,6 +17,21 @@ const ROLE_KEYS: Record<string, string> = {
   PLAYER: 'rolePlayer',
 };
 
+/** Line icons for the shortcut list (16px, drawn with the current colour). */
+const ICONS = {
+  bookings: 'M2.5 4.5h11v9h-11zM2.5 7.5h11M5.5 2.5v3M10.5 2.5v3',
+  favorites: 'M8 13.5S2.5 10.3 2.5 6.4A2.9 2.9 0 0 1 8 5a2.9 2.9 0 0 1 5.5 1.4c0 3.9-5.5 7.1-5.5 7.1z',
+  coach: 'M8 8a2.75 2.75 0 1 0 0-5.5A2.75 2.75 0 0 0 8 8zM2.75 13.5a5.25 5.25 0 0 1 10.5 0',
+  schedule: 'M8 14A6 6 0 1 0 8 2a6 6 0 0 0 0 12zM8 4.75V8l2.25 1.5',
+  club: 'M2.5 13.5v-8l5.5-3 5.5 3v8M6.5 13.5v-3.5h3v3.5',
+} as const;
+
+/**
+ * The account page. Two columns on a wide screen: who you are and where you
+ * can go on the left (it stays in view), what you can change on the right.
+ * One column on a phone, in the same order. Sign-out is a quiet action at the
+ * end of the side column, not the first button under the name.
+ */
 export function AccountClient() {
   const t = useTranslations('Account');
   const router = useRouter();
@@ -44,124 +59,89 @@ export function AccountClient() {
 
   if (me.isLoading || me.isError) return <p style={{ color: 'var(--ink-3)' }}>…</p>;
   const user = me.data!.user;
-  const isStaff = user.roles.some((r) => r === 'CLUB_ADMIN' || r === 'CLUB_STAFF');
+  const isStaff = user.roles.some((r) => r === 'CLUB_ADMIN' || r === 'CLUB_STAFF' || r === 'PLATFORM_ADMIN');
   const isCoach = user.roles.includes('COACH');
   const activeMemberships = (memberships.data ?? []).filter((m) => m.active);
 
+  const links: { href: string; label: string; icon: keyof typeof ICONS }[] = [
+    { href: '/me/bookings', label: t('myBookings'), icon: 'bookings' },
+    { href: '/me/favorites', label: t('myFavorites'), icon: 'favorites' },
+    ...(isCoach
+      ? ([
+          { href: '/me/coach', label: t('coachProfile'), icon: 'coach' },
+          { href: '/me/schedule', label: t('mySchedule'), icon: 'schedule' },
+        ] as const)
+      : []),
+    ...(isStaff ? ([{ href: '/admin', label: t('manageClub'), icon: 'club' }] as const) : []),
+  ];
+
   return (
-    <div style={{ display: 'grid', gap: 24 }}>
-      {/* identity card */}
-      <section style={card}>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-          <Avatar name={user.name} photoUrl={user.avatarUrl} size={64} />
+    <div className="acct">
+      <aside className="acct-side">
+        {/* identity */}
+        <section className="acct-card acct-id">
+          <Avatar name={user.name} photoUrl={user.avatarUrl} size={72} />
           <div style={{ minWidth: 0 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.1 }}>{user.name}</h1>
-            <p style={{ color: 'var(--ink-2)', marginTop: 4, wordBreak: 'break-all' }}>{user.email}</p>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
-              <span
-                className="mono"
-                style={{
-                  ...pill,
-                  color: user.emailVerified ? 'var(--teal)' : 'var(--clay)',
-                  borderColor: user.emailVerified ? 'var(--teal)' : 'var(--clay)',
-                }}
-              >
-                {user.emailVerified ? t('verified') : t('notVerified')}
+            <h1 className="acct-name">{user.name}</h1>
+            <p className="acct-email">{user.email}</p>
+            <div className="acct-badges">
+              <span className={`acct-badge ${user.emailVerified ? 'is-ok' : 'is-warn'}`}>
+                {user.emailVerified ? `✓ ${t('verified')}` : t('notVerified')}
               </span>
               {user.roles.map((r) => (
-                <span key={r} className="mono" style={pill}>
+                <span key={r} className="acct-badge">
                   {ROLE_KEYS[r] ? t(ROLE_KEYS[r]) : r}
                 </span>
               ))}
             </div>
           </div>
-        </div>
+        </section>
 
-        <button
-          type="button"
-          onClick={() => logoutMut.mutate()}
-          disabled={logoutMut.isPending}
-          style={{
-            marginTop: 20,
-            minHeight: 44,
-            padding: '0 20px',
-            border: '1px solid var(--clay)',
-            color: 'var(--clay)',
-            background: 'var(--surface)',
-            borderRadius: 'var(--pill)',
-            fontWeight: 700,
-            cursor: 'pointer',
-          }}
-        >
+        {/* where to go */}
+        <nav className="acct-card acct-nav" aria-label={t('shortcuts')}>
+          {links.map((l) => (
+            <Link key={l.href} href={l.href} className="acct-nav-link">
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d={ICONS[l.icon]} />
+              </svg>
+              <span>{l.label}</span>
+              <span className="acct-nav-chev" aria-hidden>
+                ›
+              </span>
+            </Link>
+          ))}
+        </nav>
+
+        {/* active memberships */}
+        {activeMemberships.length > 0 && (
+          <section className="acct-card">
+            <h2 className="acct-h2">{t('memberships')}</h2>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {activeMemberships.map((m) => (
+                <div key={m.id}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', justifyContent: 'space-between' }}>
+                    <strong>{m.clubName}</strong>
+                    <span className="mono" style={{ color: 'var(--teal)', fontWeight: 700 }}>
+                      −{m.discountPercent}%
+                    </span>
+                  </div>
+                  <div style={{ color: 'var(--ink-2)', fontSize: 13 }}>
+                    {m.planName} · {t('until', { date: m.validUntil.slice(0, 10) })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <button type="button" onClick={() => logoutMut.mutate()} disabled={logoutMut.isPending} className="acct-logout">
           <BusyLabel busy={logoutMut.isPending}>{t('logout')}</BusyLabel>
         </button>
-      </section>
+      </aside>
 
-      {/* account settings */}
-      <AccountProfileEditor />
-
-      {/* quick links */}
-      <section style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
-        {isCoach && <AccountLink href="/me/coach" label={t('coachProfile')} />}
-        {isCoach && <AccountLink href="/me/schedule" label={t('mySchedule')} />}
-        <AccountLink href="/me/bookings" label={t('myBookings')} />
-        <AccountLink href="/me/favorites" label={t('myFavorites')} />
-        {isStaff && <AccountLink href="/admin" label={t('manageClub')} />}
-      </section>
-
-      {/* active memberships */}
-      {activeMemberships.length > 0 && (
-        <section style={card}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>{t('memberships')}</h2>
-          <div style={{ display: 'grid', gap: 8 }}>
-            {activeMemberships.map((m) => (
-              <div key={m.id} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'baseline' }}>
-                <strong>{m.clubName}</strong>
-                <span style={{ color: 'var(--ink-2)' }}>{m.planName}</span>
-                <span className="mono" style={{ color: 'var(--teal)', fontWeight: 700 }}>−{m.discountPercent}%</span>
-                <span className="mono" style={{ color: 'var(--ink-3)', fontSize: 12, marginLeft: 'auto' }}>
-                  {t('until', { date: m.validUntil.slice(0, 10) })}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      <div className="acct-main">
+        <AccountProfileEditor />
+      </div>
     </div>
   );
 }
-
-function AccountLink({ href, label }: { href: string; label: string }) {
-  return (
-    <Link
-      href={href}
-      style={{
-        ...card,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        textDecoration: 'none',
-        color: 'var(--ink)',
-        fontWeight: 700,
-      }}
-    >
-      {label}
-      <span aria-hidden style={{ color: 'var(--teal)' }}>→</span>
-    </Link>
-  );
-}
-
-const card: React.CSSProperties = {
-  background: 'var(--surface)',
-  border: '1px solid var(--line)',
-  borderRadius: 'var(--radius)',
-  padding: 20,
-  boxShadow: 'var(--shadow-sm)',
-};
-const pill: React.CSSProperties = {
-  fontSize: 12,
-  padding: '3px 10px',
-  borderRadius: 100,
-  border: '1px solid var(--line-2)',
-  color: 'var(--ink-2)',
-};

@@ -446,7 +446,8 @@
     "mySchedule": "My schedule",
     "coachProfile": "Coach profile",
     "title": "Account",
-    "subtitle": "Manage your profile, bookings, and preferences."
+    "subtitle": "Manage your profile, bookings, and preferences.",
+    "shortcuts": "Shortcuts"
   },
   "Toasts": {
     "booked": "Booking confirmed",
@@ -669,14 +670,14 @@
   },
   "AccountSettings": {
     "title": "Account settings",
-    "avatarUrl": "Avatar URL",
+    "avatarUrl": "Photo link",
     "name": "Display name",
     "bio": "About you",
     "notify": "Email notifications",
     "notifyHelp": "Booking confirmations, cancellations and reminders.",
     "newsletter": "Newsletter",
     "newsletterHelp": "Occasional news and offers, and group-session invites.",
-    "save": "Save settings",
+    "save": "Save",
     "levelTitle": "My level",
     "levelHelp": "Helps coaches and other players judge whether you are a good match. You can change it at any time.",
     "levelNone": "Not set",
@@ -685,7 +686,16 @@
     "levelAdvancedDesc": "Solid technique and tactics, a strong serve and good court movement. You have competitive experience.",
     "phone": "Phone",
     "phoneHelp": "Optional. Lets the club reach you if a booking changes. Never shown publicly.",
-    "phonePlaceholder": "0888 123 456"
+    "phonePlaceholder": "0888 123 456",
+    "sectionProfile": "Profile",
+    "sectionNotifications": "Notifications",
+    "addPhoto": "Add a photo",
+    "changePhoto": "Change photo",
+    "removePhoto": "Remove",
+    "photoHelp": "Paste the address of a picture on the web (https://…). Clubs and coaches see your photo.",
+    "nameRequired": "Your name cannot be empty.",
+    "unsaved": "You have unsaved changes",
+    "discard": "Discard"
   },
   "Closures": {
     "title": "Special days",

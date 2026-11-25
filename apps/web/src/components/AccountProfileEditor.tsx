@@ -6,11 +6,29 @@ import { useEffect, useState } from 'react';
 import { PLAYER_LEVELS, type PlayerLevel } from '@playslot/contracts';
 import { getMyUserProfile, updateMyUserProfile } from '@/lib/api';
 import { Avatar } from './Avatar';
+import { Collapse } from './Collapse';
 import { PushNotificationToggle } from './PushNotificationToggle';
 import { useToast } from './Toast';
 import { BusyLabel } from '@/components/Spinner';
 
-/** A user's own account settings: name, avatar, bio, notification + newsletter prefs. */
+interface Form {
+  name: string;
+  avatarUrl: string;
+  bio: string;
+  phone: string;
+  level: PlayerLevel | null;
+  notify: boolean;
+  subscribed: boolean;
+}
+const EMPTY: Form = { name: '', avatarUrl: '', bio: '', phone: '', level: null, notify: true, subscribed: false };
+
+/**
+ * A user's own settings, in three cards — profile, playing level,
+ * notifications — instead of one long form. Nothing is saved until asked: a
+ * bar appears at the bottom as soon as something differs from what is stored,
+ * with Save and Discard, so the save button is always in reach and it is
+ * always clear whether there is anything to save.
+ */
 export function AccountProfileEditor() {
   const t = useTranslations('AccountSettings');
   const tt = useTranslations('Toasts');
@@ -19,37 +37,43 @@ export function AccountProfileEditor() {
   const toast = useToast();
 
   const profile = useQuery({ queryKey: ['userProfile'], queryFn: getMyUserProfile });
-  const [name, setName] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState('');
-  const [bio, setBio] = useState('');
-  const [notify, setNotify] = useState(true);
-  const [subscribed, setSubscribed] = useState(false);
-  const [level, setLevel] = useState<PlayerLevel | null>(null);
-  const [phone, setPhone] = useState('');
+  const [form, setForm] = useState<Form>(EMPTY);
+  const [saved, setSaved] = useState<Form>(EMPTY);
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm((f) => ({ ...f, [key]: value }));
 
   useEffect(() => {
     if (!profile.data) return;
-    setName(profile.data.name);
-    setAvatarUrl(profile.data.avatarUrl ?? '');
-    setBio(profile.data.bio ?? '');
-    setNotify(profile.data.notifyByEmail);
-    setSubscribed(profile.data.subscribed);
-    setLevel(profile.data.level);
-    setPhone(profile.data.phone ?? '');
+    const next: Form = {
+      name: profile.data.name,
+      avatarUrl: profile.data.avatarUrl ?? '',
+      bio: profile.data.bio ?? '',
+      phone: profile.data.phone ?? '',
+      level: profile.data.level,
+      notify: profile.data.notifyByEmail,
+      subscribed: profile.data.subscribed,
+    };
+    setForm(next);
+    setSaved(next);
   }, [profile.data]);
+
+  const dirty = (Object.keys(form) as (keyof Form)[]).some((k) => form[k] !== saved[k]);
+  const nameMissing = form.name.trim() === '';
 
   const save = useMutation({
     mutationFn: () =>
       updateMyUserProfile({
-        name: name.trim(),
-        avatarUrl: avatarUrl.trim(),
-        bio: bio.trim(),
-        notifyByEmail: notify,
-        subscribed,
-        level,
-        phone: phone.trim(),
+        name: form.name.trim(),
+        avatarUrl: form.avatarUrl.trim(),
+        bio: form.bio.trim(),
+        notifyByEmail: form.notify,
+        subscribed: form.subscribed,
+        level: form.level,
+        phone: form.phone.trim(),
       }),
     onSuccess: () => {
+      setSaved(form);
+      setPhotoOpen(false);
       qc.invalidateQueries({ queryKey: ['userProfile'] });
       qc.invalidateQueries({ queryKey: ['me'] });
       toast(tt('profileSaved'));
@@ -58,134 +82,185 @@ export function AccountProfileEditor() {
   });
 
   return (
-    <section style={card}>
-      <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 14 }}>{t('title')}</h2>
+    <form
+      className="acct-sections"
+      style={{ paddingBottom: dirty ? 84 : 0 }}
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (dirty && !nameMissing) save.mutate();
+      }}
+    >
+      {/* ── profile ── */}
+      <section className="acct-card">
+        <h2 className="acct-h2">{t('sectionProfile')}</h2>
 
-      <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 14 }}>
-        <Avatar name={name || '?'} photoUrl={avatarUrl || null} size={72} />
-        <label style={{ ...field, flex: 1 }}>
-          {t('avatarUrl')}
-          <input type="url" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://…" style={input} />
+        <div className="acct-photo">
+          <Avatar name={form.name || '?'} photoUrl={form.avatarUrl || null} size={64} />
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" className="acct-btn" onClick={() => setPhotoOpen((v) => !v)} aria-expanded={photoOpen}>
+              {form.avatarUrl ? t('changePhoto') : t('addPhoto')}
+            </button>
+            {form.avatarUrl && (
+              <button type="button" className="acct-btn is-quiet" onClick={() => set('avatarUrl', '')}>
+                {t('removePhoto')}
+              </button>
+            )}
+          </div>
+        </div>
+        <Collapse open={photoOpen}>
+          <label className="acct-field" style={{ paddingTop: 12 }}>
+            {t('avatarUrl')}
+            <input
+              type="url"
+              value={form.avatarUrl}
+              onChange={(e) => set('avatarUrl', e.target.value)}
+              placeholder="https://…"
+              className="acct-input"
+            />
+            <span className="acct-help">{t('photoHelp')}</span>
+          </label>
+        </Collapse>
+
+        <div className="acct-grid2">
+          <label className="acct-field">
+            {t('name')}
+            <input
+              value={form.name}
+              onChange={(e) => set('name', e.target.value)}
+              className="acct-input"
+              autoComplete="name"
+              aria-invalid={nameMissing && dirty}
+            />
+            {nameMissing && dirty && <span className="acct-help is-error">{t('nameRequired')}</span>}
+          </label>
+          <label className="acct-field">
+            {t('phone')}
+            <input
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              value={form.phone}
+              onChange={(e) => set('phone', e.target.value)}
+              placeholder={t('phonePlaceholder')}
+              className="acct-input"
+            />
+          </label>
+        </div>
+        <p className="acct-help" style={{ marginTop: 6 }}>
+          {t('phoneHelp')}
+        </p>
+
+        <label className="acct-field" style={{ marginTop: 14 }}>
+          {t('bio')}
+          <textarea
+            value={form.bio}
+            onChange={(e) => set('bio', e.target.value)}
+            rows={3}
+            className="acct-input"
+            style={{ minHeight: 84, padding: '10px 12px', resize: 'vertical' }}
+          />
         </label>
-      </div>
+      </section>
 
-      <label style={{ ...field, marginBottom: 12 }}>
-        {t('name')}
-        <input value={name} onChange={(e) => setName(e.target.value)} style={input} />
-      </label>
-
-      <label style={{ ...field, marginBottom: 12 }}>
-        {t('phone')}
-        <input
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder={t('phonePlaceholder')}
-          style={input}
-        />
-        <span style={{ color: 'var(--ink-3)', fontSize: 12 }}>{t('phoneHelp')}</span>
-      </label>
-
-      <label style={{ ...field, marginBottom: 4 }}>
-        {t('bio')}
-        <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} style={{ ...input, minHeight: 76, padding: '8px 10px', resize: 'vertical' }} />
-      </label>
-
-      {/* ── playing level ── */}
-      <fieldset style={{ border: 0, padding: 0, margin: '18px 0 0' }}>
-        <legend style={{ fontWeight: 600, fontSize: 14, padding: 0 }}>{t('levelTitle')}</legend>
-        <p style={{ color: 'var(--ink-3)', fontSize: 12, margin: '4px 0 10px' }}>{t('levelHelp')}</p>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      {/* ── playing level: each choice says what it means ── */}
+      <section className="acct-card">
+        <h2 className="acct-h2">{t('levelTitle')}</h2>
+        <p className="acct-help" style={{ margin: '-6px 0 14px' }}>
+          {t('levelHelp')}
+        </p>
+        <div className="acct-levels" role="group" aria-label={t('levelTitle')}>
           {PLAYER_LEVELS.map((value) => {
-            const on = level === value;
-            const description = t(DESC_KEY[value]);
+            const on = form.level === value;
             return (
               <button
                 key={value}
                 type="button"
-                // Clicking the active level clears it — "not set" is a valid
+                // Clicking the chosen level clears it — "not set" is a valid
                 // answer, and there is no other control to get back to it.
-                onClick={() => setLevel(on ? null : value)}
+                onClick={() => set('level', on ? null : value)}
                 aria-pressed={on}
-                // Native tooltip on hover, and the same text is rendered below
-                // for the chosen level so touch users and screen readers get it.
-                title={description}
-                style={{
-                  minHeight: 40,
-                  padding: '0 16px',
-                  borderRadius: 'var(--pill)',
-                  border: `2px solid ${on ? 'var(--green-deep)' : 'var(--line-2)'}`,
-                  background: on ? 'var(--lime)' : 'var(--surface)',
-                  color: on ? 'var(--on-lime)' : 'var(--ink)',
-                  fontWeight: 600,
-                  fontSize: 14,
-                  cursor: 'pointer',
-                }}
+                className={`acct-level${on ? ' is-on' : ''}`}
               >
-                {lv(value)}
+                <span className="acct-level-top">
+                  <strong>{lv(value)}</strong>
+                  <span className="acct-level-check" aria-hidden>
+                    ✓
+                  </span>
+                </span>
+                <span className="acct-level-desc">{t(DESC_KEY[value])}</span>
               </button>
             );
           })}
         </div>
-        <p style={{ color: 'var(--ink-2)', fontSize: 13, margin: '10px 0 0', minHeight: 34 }}>
-          {level ? t(DESC_KEY[level]) : t('levelNone')}
-        </p>
-      </fieldset>
+        {form.level === null && <p className="acct-help" style={{ marginTop: 10 }}>{t('levelNone')}</p>}
+      </section>
 
-      <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
-        {/* Browser push is per-device and saves itself, so it sits outside the
-            form's Save button rather than pretending to be part of it. */}
-        <PushNotificationToggle />
-        <label style={toggleRow}>
-          <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
-          <span>
-            <strong style={{ fontWeight: 600 }}>{t('notify')}</strong>
-            <span style={{ display: 'block', color: 'var(--ink-3)', fontSize: 12 }}>{t('notifyHelp')}</span>
-          </span>
-        </label>
-        <label style={toggleRow}>
-          <input type="checkbox" checked={subscribed} onChange={(e) => setSubscribed(e.target.checked)} />
-          <span>
-            <strong style={{ fontWeight: 600 }}>{t('newsletter')}</strong>
-            <span style={{ display: 'block', color: 'var(--ink-3)', fontSize: 12 }}>{t('newsletterHelp')}</span>
-          </span>
-        </label>
-      </div>
+      {/* ── notifications ── */}
+      <section className="acct-card">
+        <h2 className="acct-h2">{t('sectionNotifications')}</h2>
+        <div className="acct-rows">
+          <Switch
+            label={t('notify')}
+            help={t('notifyHelp')}
+            checked={form.notify}
+            onChange={(v) => set('notify', v)}
+          />
+          <Switch
+            label={t('newsletter')}
+            help={t('newsletterHelp')}
+            checked={form.subscribed}
+            onChange={(v) => set('subscribed', v)}
+          />
+          {/* Browser push is per-device and saves itself, so it has its own
+              button rather than pretending to be part of the form. */}
+          <PushNotificationToggle plain />
+        </div>
+      </section>
 
-      <div style={{ marginTop: 16 }}>
-        <button
-          type="button"
-          onClick={() => save.mutate()}
-          disabled={save.isPending}
-          style={{ minHeight: 44, padding: '0 20px', background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', borderRadius: 'var(--pill)', fontWeight: 700, cursor: 'pointer' }}
-        >
-          <BusyLabel busy={save.isPending}>{t('save')}</BusyLabel>
-        </button>
-      </div>
-    </section>
+      {/* ── unsaved changes ── */}
+      {dirty && (
+        <div className="acct-savebar" role="region" aria-label={t('unsaved')}>
+          <div>
+            <span className="acct-savebar-text">{t('unsaved')}</span>
+            <span className="acct-savebar-actions">
+              <button type="button" className="acct-btn" onClick={() => setForm(saved)} disabled={save.isPending}>
+                {t('discard')}
+              </button>
+              <button type="submit" className="acct-btn is-primary" disabled={save.isPending || nameMissing}>
+                <BusyLabel busy={save.isPending}>{t('save')}</BusyLabel>
+              </button>
+            </span>
+          </div>
+        </div>
+      )}
+    </form>
   );
 }
 
-const card: React.CSSProperties = {
-  background: 'var(--surface)',
-  border: '1px solid var(--line)',
-  borderRadius: 'var(--radius)',
-  padding: 20,
-  boxShadow: 'var(--shadow-sm)',
-};
-const field: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--ink-2)' };
-const input: React.CSSProperties = {
-  minHeight: 44,
-  padding: '0 10px',
-  border: '1px solid var(--line-2)',
-  background: 'var(--surface)',
-  color: 'var(--ink)',
-  borderRadius: 'var(--radius-sm)',
-  fontFamily: 'inherit',
-};
-const toggleRow: React.CSSProperties = { display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer' };
+/** A labelled on/off switch (a real checkbox underneath, so it works with a keyboard). */
+function Switch({
+  label,
+  help,
+  checked,
+  onChange,
+}: {
+  label: string;
+  help: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <label className="acct-row">
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <strong style={{ fontWeight: 600, fontSize: 14 }}>{label}</strong>
+        <span className="acct-help" style={{ display: 'block', marginTop: 2 }}>
+          {help}
+        </span>
+      </span>
+      <input type="checkbox" role="switch" className="acct-switch" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+    </label>
+  );
+}
 
 /** Level → the AccountSettings key holding its plain-language description. */
 const DESC_KEY: Record<PlayerLevel, 'levelBeginnerDesc' | 'levelIntermediateDesc' | 'levelAdvancedDesc'> = {

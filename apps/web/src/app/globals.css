@@ -826,6 +826,357 @@ button.avail-hour-top {
   transform: rotate(90deg);
 }
 
+/*
+ * Account page (components/AccountClient.tsx, AccountProfileEditor.tsx): who
+ * you are and where you can go on the left, what you can change on the right.
+ */
+.acct {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.acct-side {
+  position: sticky;
+  top: 96px;
+  display: grid;
+  gap: 16px;
+}
+.acct-sections {
+  display: grid;
+  gap: 16px;
+}
+.acct-card {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.acct-h2 {
+  margin-bottom: 14px;
+  font-size: 18px;
+  font-weight: 700;
+}
+.acct-id {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  text-align: center;
+}
+.acct-name {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.acct-email {
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.acct-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+.acct-badge {
+  padding: 3px 10px;
+  border-radius: var(--pill);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+.acct-badge.is-ok {
+  background: var(--teal-soft);
+  color: var(--teal);
+}
+.acct-badge.is-warn {
+  background: var(--clay-soft);
+  color: var(--clay);
+}
+.acct-nav {
+  display: grid;
+  padding: 8px;
+}
+.acct-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 46px;
+  padding: 0 12px;
+  border-radius: 12px;
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+.acct-nav-link svg {
+  flex: none;
+  color: var(--green);
+}
+.acct-nav-link span:nth-of-type(1) {
+  flex: 1;
+}
+.acct-nav-link:hover {
+  background: var(--surface-2);
+}
+.acct-nav-chev {
+  color: var(--ink-3);
+}
+.acct-logout {
+  justify-self: start;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  background: none;
+  color: var(--clay);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.acct-photo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.acct-grid2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+.acct-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.acct-input {
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 400;
+}
+.acct-input:focus-visible {
+  border-color: var(--green);
+  outline: 2px solid color-mix(in srgb, var(--green) 30%, transparent);
+  outline-offset: 0;
+}
+.acct-input[aria-invalid='true'] {
+  border-color: var(--clay);
+}
+.acct-help {
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+.acct-help.is-error {
+  color: var(--clay);
+}
+.acct-btn {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--pill);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.acct-btn.is-quiet {
+  border-color: transparent;
+  color: var(--ink-2);
+}
+.acct-btn.is-primary {
+  border-color: transparent;
+  background: var(--lime);
+  color: var(--on-lime);
+}
+.acct-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.acct-levels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+.acct-level {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 1.5px solid var(--line-2);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.acct-level:hover {
+  border-color: var(--green);
+}
+.acct-level.is-on {
+  border-color: var(--green-deep);
+  background: var(--green-soft);
+  box-shadow: inset 0 0 0 1px var(--green-deep);
+}
+.acct-level-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 15px;
+}
+.acct-level-check {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--line-2);
+  border-radius: 50%;
+  color: transparent;
+  font-size: 12px;
+  font-weight: 800;
+}
+.acct-level.is-on .acct-level-check {
+  border-color: var(--green-deep);
+  background: var(--green-deep);
+  color: var(--lime);
+}
+.acct-level-desc {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.acct-rows > * + * {
+  border-top: 1px solid var(--line);
+}
+.acct-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+  cursor: pointer;
+}
+.acct-rows > :first-child {
+  padding-top: 0;
+}
+.acct-rows > :last-child {
+  padding-bottom: 0 !important;
+}
+/* On/off switch drawn on a real checkbox. */
+.acct-switch {
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 28px;
+  margin: 0;
+  border-radius: var(--pill);
+  background: var(--line-2);
+  appearance: none;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+.acct-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(18, 24, 27, 0.25);
+  transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.acct-switch:checked {
+  background: var(--green);
+}
+.acct-switch:checked::after {
+  transform: translateX(18px);
+}
+.acct-savebar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 150;
+  padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 -8px 30px rgba(18, 59, 44, 0.1);
+  animation: acct-savebar-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes acct-savebar-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+.acct-savebar > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+.acct-savebar-text {
+  font-weight: 700;
+}
+.acct-savebar-actions {
+  display: flex;
+  gap: 8px;
+}
+@media (max-width: 860px) {
+  .acct {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .acct-side {
+    position: static;
+  }
+  .acct-id {
+    grid-template-columns: auto minmax(0, 1fr);
+    justify-items: start;
+    align-items: center;
+    gap: 14px;
+    text-align: left;
+  }
+  .acct-badges {
+    justify-content: flex-start;
+  }
+  /* Sign-out moves to the very end of the page on a phone. */
+  .acct-side {
+    display: contents;
+  }
+  .acct-main {
+    order: 3;
+  }
+  .acct-logout {
+    order: 4;
+  }
+  .acct-savebar-text {
+    font-size: 14px;
+  }
+}
+
 /* "Добави в календара" button and its menu (components/AddToCalendar.tsx). */
 .atc-btn {
   display: inline-flex;
@@ -1285,6 +1636,11 @@ button.avail-hour-top {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .acct-savebar {
+    animation: none;
+  }
+  .acct-switch,
+  .acct-switch::after,
   .atc-menu,
   .ps-collapse,
   .ps-collapse-inner,

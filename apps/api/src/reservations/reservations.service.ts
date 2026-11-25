@@ -371,11 +371,18 @@ export class ReservationsService {
 
   // ── move / reschedule / change court (re-runs conflict logic) ──
   async reschedule(clubId: number, reservationId: number, input: RescheduleInput, staffUserId: number) {
-    const existing = await this.prisma.reservation.findFirst({ where: { id: reservationId, clubId } });
+    const existing = await this.prisma.reservation.findFirst({
+      where: { id: reservationId, clubId },
+      include: { resources: { select: { resource: { select: { id: true, type: true, coachProfileId: true } } } } },
+    });
     if (!existing) throw new AppException('not_found');
     if (!['HOLD', 'PENDING_PAYMENT', 'PENDING_APPROVAL', 'CONFIRMED'].includes(existing.status)) {
       throw new AppException('policy_violation', { reason: 'not_reschedulable' });
     }
+    // The coach of a lesson. The calendar only says where the court goes, so
+    // the coach has to be carried over here — otherwise a moved lesson comes
+    // out the other side as a plain court booking with nobody teaching it.
+    const coach = existing.resources.map((x) => x.resource).find((r) => r.type === 'COACH' && r.coachProfileId != null);
 
     const slot = await this.resolveSlot({
       clubId,
@@ -385,8 +392,21 @@ export class ReservationsService {
       enforceHours: existing.type === 'COURT' || existing.type === 'LESSON',
       allowMidnightCross: existing.type === 'BLOCK',
     });
+    // A lesson keeps what was agreed for it (the coach's service price does not
+    // depend on the hour or the court); anything else is priced for its new slot.
     const priceCents =
-      existing.type === 'BLOCK' ? 0 : this.priceFor(await this.loadPriceRules(clubId), slot);
+      existing.type === 'BLOCK'
+        ? 0
+        : coach
+          ? existing.priceCents
+          : this.priceFor(await this.loadPriceRules(clubId), slot);
+    if (coach && !slot.resourceIds.includes(coach.id)) {
+      // Refuses the move when the coach does not work at the new hour; being
+      // free of other lessons then is checked with the courts, below.
+      const coachResourceId = await this.resolveCoachResource(coach.coachProfileId!, slot);
+      slot.resourceIds = [...slot.resourceIds, coachResourceId];
+    }
+    const courtIds = input.resourceIds;
 
     try {
       const updated = await this.prisma.$transaction(async (tx) => {
@@ -395,7 +415,7 @@ export class ReservationsService {
           Prisma.sql`DELETE FROM "ReservationResource" WHERE "reservationId" = ${reservationId}`,
         );
         await tx.$queryRaw(
-          Prisma.sql`SELECT id FROM "Resource" WHERE id IN (${Prisma.join(slot.resourceIds)}) AND "clubId" = ${clubId} FOR UPDATE`,
+          Prisma.sql`SELECT id FROM "Resource" WHERE id IN (${Prisma.join(courtIds)}) AND "clubId" = ${clubId} FOR UPDATE`,
         );
         const conflicts = await tx.$queryRaw<Array<{ one: number }>>(
           Prisma.sql`SELECT 1 as one FROM "ReservationResource"

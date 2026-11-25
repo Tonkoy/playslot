@@ -7,6 +7,10 @@
  * colors stay distinct from the brand accent and are never used color-only.
  */
 :root {
+  /* Family names of the faces declared in src/fonts/fonts.css. */
+  --font-bricolage: 'Bricolage Grotesque';
+  --font-hanken: 'Hanken Grotesk';
+  --font-plex-mono: 'IBM Plex Mono';
   --ground: #ffffff;
   --surface: #ffffff;
   --surface-2: #f3f7f4;

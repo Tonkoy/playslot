@@ -791,6 +791,195 @@ button.avail-hour-top {
   }
 }
 
+/* List / calendar switch (my bookings). */
+.view-switch {
+  display: inline-flex;
+  gap: 2px;
+  margin-bottom: 18px;
+  padding: 4px;
+  border-radius: var(--pill);
+  background: var(--surface-2);
+}
+.view-switch button {
+  padding: 8px 16px;
+  border: 0;
+  border-radius: var(--pill);
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.view-switch button.is-on {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Month calendar of my bookings (components/BookingsCalendar.tsx). */
+.bcal {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.bcal-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.bcal-month {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+}
+.bcal-nav {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line-2);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 18px;
+  cursor: pointer;
+}
+.bcal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+.bcal-wd {
+  padding: 4px 0 6px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  text-align: center;
+  text-transform: capitalize;
+}
+.bcal-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  min-height: 84px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.bcal-cell.is-empty {
+  border: 0;
+  background: none;
+  cursor: default;
+}
+.bcal-cell.is-past {
+  background: var(--past-soft);
+}
+.bcal-cell.is-past .bcal-day {
+  color: var(--ink-3);
+}
+.bcal-cell.has-bookings {
+  border-color: var(--line-2);
+}
+.bcal-cell.is-selected {
+  border: 2px solid var(--green-deep);
+  padding: 5px;
+}
+.bcal-day {
+  font-size: 13px;
+  font-weight: 700;
+}
+.bcal-cell.is-today .bcal-day {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--lime);
+  color: var(--on-lime);
+}
+.bcal-chips {
+  display: grid;
+  gap: 3px;
+}
+.bcal-chip {
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bcal-chip.tone-mine {
+  background: var(--mine);
+  color: #fff;
+}
+.bcal-chip.tone-held {
+  background: var(--held-soft);
+  color: var(--held);
+}
+.bcal-chip.tone-past {
+  background: var(--booked-soft);
+  color: var(--ink-2);
+}
+.bcal-more {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.bcal-dots {
+  display: none;
+  gap: 3px;
+  justify-content: center;
+}
+.bcal-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.bcal-dots i.tone-mine {
+  background: var(--mine);
+}
+.bcal-dots i.tone-held {
+  background: var(--held);
+}
+.bcal-dots i.tone-past {
+  background: var(--ink-3);
+}
+.bcal-none {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--ink-3);
+  text-align: center;
+}
+@media (max-width: 640px) {
+  .bcal {
+    padding: 12px 10px;
+  }
+  .bcal-cell {
+    align-items: center;
+    min-height: 48px;
+    padding: 6px 2px;
+  }
+  .bcal-cell.is-selected {
+    padding: 5px 1px;
+  }
+  .bcal-chips {
+    display: none;
+  }
+  .bcal-dots {
+    display: flex;
+  }
+}
+
 /* Folded info card on the club page (opening hours): native <details>. */
 .club-fold {
   background: var(--surface);

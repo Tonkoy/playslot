@@ -12,6 +12,10 @@ import { Modal } from './Modal';
 import { useToast } from './Toast';
 import { SkeletonRows } from '@/components/Skeleton';
 import { BusyLabel } from '@/components/Spinner';
+import { BookingsCalendar } from './BookingsCalendar';
+
+type View = 'list' | 'calendar';
+const VIEW_KEY = 'playslot.bookingsView';
 
 const CANCELLABLE = ['HOLD', 'PENDING_PAYMENT', 'PENDING_APPROVAL', 'CONFIRMED'];
 
@@ -36,6 +40,23 @@ export function MyBookings() {
     enabled: me.isSuccess,
   });
   const [pending, setPending] = useState<ReservationSummary | null>(null);
+  // List or calendar; the choice is remembered on this device.
+  const [view, setView] = useState<View>('list');
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(VIEW_KEY) === 'calendar') setView('calendar');
+    } catch {
+      /* storage blocked: stay on the list */
+    }
+  }, []);
+  const chooseView = (v: View) => {
+    setView(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      /* ignore */
+    }
+  };
 
   const cancel = useMutation({
     mutationFn: (id: number) => cancelMyReservation(id),
@@ -107,7 +128,8 @@ export function MyBookings() {
       >
         {st.has(r.status) ? st(r.status) : r.status}
       </span>
-      {CANCELLABLE.includes(r.status) && (
+      {/* A booking that has already started cannot be cancelled from here. */}
+      {CANCELLABLE.includes(r.status) && new Date(r.startsAt).getTime() > now && (
         <button
           type="button"
           onClick={() => setPending(r)}
@@ -130,16 +152,34 @@ export function MyBookings() {
 
   return (
     <div>
+      {list.isSuccess && all.length > 0 && (
+        <div className="view-switch" role="tablist" aria-label={t('viewLabel')}>
+          {(['list', 'calendar'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              role="tab"
+              aria-selected={view === v}
+              className={view === v ? 'is-on' : undefined}
+              onClick={() => chooseView(v)}
+            >
+              <span aria-hidden>{v === 'list' ? '☰' : '▦'}</span> {t(v === 'list' ? 'viewList' : 'viewCalendar')}
+            </button>
+          ))}
+        </div>
+      )}
       {list.isLoading && <SkeletonRows />}
       {list.isSuccess && all.length === 0 && <p style={{ color: 'var(--ink-2)' }}>{t('empty')}</p>}
 
-      {upcoming.length > 0 && (
+      {view === 'calendar' && list.isSuccess && all.length > 0 && <BookingsCalendar bookings={all} renderRow={row} />}
+
+      {view === 'list' && upcoming.length > 0 && (
         <section style={{ marginBottom: 28 }}>
           <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>{t('upcoming')}</h2>
           <div style={{ display: 'grid', gap: 12 }}>{upcoming.map(row)}</div>
         </section>
       )}
-      {past.length > 0 && (
+      {view === 'list' && past.length > 0 && (
         <section>
           <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>{t('past')}</h2>
           <div style={{ display: 'grid', gap: 12 }}>{past.map(row)}</div>

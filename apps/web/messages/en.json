@@ -328,7 +328,15 @@
     "cancelConfirmBody": "Booking {ref} at {club} on {when} will be cancelled.",
     "cancelConfirmNote": "Any refund follows the club's cancellation policy. The customer, the club and the coach are notified.",
     "keepBooking": "Keep booking",
-    "confirmCancel": "Cancel booking"
+    "confirmCancel": "Cancel booking",
+    "viewLabel": "View",
+    "viewList": "List",
+    "viewCalendar": "Calendar",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "bookingsCount": "{count, plural, =0 {no bookings} one {# booking} other {# bookings}}",
+    "noneThisMonth": "No bookings this month.",
+    "noneThisDay": "No bookings on this day."
   },
   "SlotStates": {
     "FREE": "Free",

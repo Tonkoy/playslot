@@ -274,7 +274,9 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
                   <th
                     scope="row"
                     className="mono"
-                    style={{ ...timeCell, position: 'sticky', left: 0, background: 'var(--green-soft)', zIndex: 1 }}
+                    // Plain, not tinted: the hours are a label for the row, and a
+                    // coloured strip beside the slots read as one more slot state.
+                    style={{ ...timeCell, position: 'sticky', left: 0, background: 'var(--surface)', zIndex: 1 }}
                   >
                     {time}
                   </th>

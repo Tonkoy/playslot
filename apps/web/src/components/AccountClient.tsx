@@ -64,7 +64,7 @@ export function AccountClient() {
   const activeMemberships = (memberships.data ?? []).filter((m) => m.active);
 
   const links: { href: string; label: string; icon: keyof typeof ICONS }[] = [
-    { href: '/me/bookings', label: t('myBookings'), icon: 'bookings' },
+    ...(isCoach ? [] : ([{ href: '/me/bookings', label: t('myBookings'), icon: 'bookings' }] as const)),
     { href: '/me/favorites', label: t('myFavorites'), icon: 'favorites' },
     ...(isCoach
       ? ([

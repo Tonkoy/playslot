@@ -1,15 +1,19 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import type { GroupSessionDto } from '@playslot/contracts';
-import { useRouter } from '@/i18n/navigation';
+import { Link, useRouter } from '@/i18n/navigation';
 import { getMe, listGroupSessions, registerGroupSession, unregisterGroupSession } from '@/lib/api';
-import { formatInstant } from '@/lib/tz';
+import { errorMessage } from '@/lib/errors';
+import { BusyLabel } from '@/components/Spinner';
+import { Avatar } from './Avatar';
+import { useToast } from './Toast';
 
 /**
- * Public list of upcoming coach-hosted group sessions with one-tap registration.
- * Optionally scoped to a club and/or a single coach.
+ * Upcoming coach-hosted group trainings. A player joins or gives up their
+ * place with one tap; the coach who runs a training sees how it is filling up
+ * and a way to manage it instead. Optionally scoped to a club and/or a coach.
  */
 export function GroupSessionsList({
   clubId,
@@ -23,139 +27,129 @@ export function GroupSessionsList({
   heading?: string;
 }) {
   const t = useTranslations('GroupSessions');
+  const tt = useTranslations('Toasts');
+  const te = useTranslations('Errors');
+  const lv = useTranslations('Levels');
+  const locale = useLocale();
   const qc = useQueryClient();
   const router = useRouter();
+  const toast = useToast();
 
   const me = useQuery({ queryKey: ['me'], queryFn: getMe, retry: false });
   const sessions = useQuery({
-    queryKey: ['groupSessions', clubId ?? 'all'],
+    // Who is asking changes the answer ("am I in?", "is it mine?").
+    queryKey: ['groupSessions', clubId ?? 'all', me.data?.user.id ?? null],
     queryFn: () => listGroupSessions(clubId),
   });
+  const refresh = () => qc.invalidateQueries({ queryKey: ['groupSessions'] });
+  const onError = (e: unknown) => toast(errorMessage(e, te, tt('error')), 'error');
 
   const reg = useMutation({
     mutationFn: (id: number) => registerGroupSession(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['groupSessions'] }),
+    onSuccess: () => {
+      refresh();
+      toast(t('joined'));
+    },
+    onError,
   });
   const unreg = useMutation({
     mutationFn: (id: number) => unregisterGroupSession(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['groupSessions'] }),
+    onSuccess: () => {
+      refresh();
+      toast(t('left'));
+    },
+    onError,
   });
 
-  const items = (sessions.data ?? []).filter(
-    (s) => !coachProfileId || s.coachProfileId === coachProfileId,
-  );
-  if (sessions.isSuccess && items.length === 0) return null;
+  const items = (sessions.data ?? []).filter((s) => !coachProfileId || s.coachProfileId === coachProfileId);
+  if (sessions.isSuccess && items.length === 0) {
+    // On the page of its own an empty list says so; inside another page it just isn't there.
+    return heading === '' ? <p className="gs-empty">{t('none')}</p> : null;
+  }
 
+  const loc = locale === 'bg' ? 'bg-BG' : 'en-GB';
+  const part = (iso: string, opts: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat(loc, { ...opts, timeZone: timezone }).format(new Date(iso));
+  const time = (iso: string) => part(iso, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const money = (cents: number, currency: string) =>
+    new Intl.NumberFormat(loc, { style: 'currency', currency, maximumFractionDigits: cents % 100 ? 2 : 0 }).format(cents / 100);
   const h = heading ?? t('title');
+
   return (
     <section style={{ marginTop: 24 }}>
       {h && <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 12 }}>{h}</h2>}
-      <div style={{ display: 'grid', gap: 12 }}>
-        {items.map((s) => (
-          <Card
-            key={s.id}
-            s={s}
-            timezone={timezone}
-            signedIn={me.isSuccess}
-            busy={reg.isPending || unreg.isPending}
-            onRegister={() => (me.isSuccess ? reg.mutate(s.id) : router.push('/login?returnTo=/sessions'))}
-            onUnregister={() => unreg.mutate(s.id)}
-            t={t}
-          />
-        ))}
+      <div className="gs-list">
+        {items.map((s) => {
+          const full = s.spotsLeft <= 0 && !s.registered;
+          const busy = (reg.isPending && reg.variables === s.id) || (unreg.isPending && unreg.variables === s.id);
+          return (
+            <article key={s.id} className={`gs-card${s.mine ? ' is-mine' : ''}${s.registered ? ' is-in' : ''}`}>
+              {/* when */}
+              <div className="gs-date">
+                <small>{part(s.startsAt, { weekday: 'short' })}</small>
+                <b>{part(s.startsAt, { day: 'numeric' })}</b>
+                <small>{part(s.startsAt, { month: 'long' }).slice(0, 3)}</small>
+                <span className="mono">{time(s.startsAt)}</span>
+              </div>
+
+              {/* what and with whom */}
+              <div className="gs-body">
+                <div className="gs-tags">
+                  <span className="gs-tag is-level">{s.level ? lv(s.level) : t('levelAll')}</span>
+                  {s.mine && <span className="gs-tag is-mine">{t('yourSession')}</span>}
+                  {s.registered && <span className="gs-tag is-in">✓ {t('youAreIn')}</span>}
+                </div>
+                <h3 className="gs-title">{s.title}</h3>
+                <div className="gs-coach">
+                  <Avatar name={s.coachName} photoUrl={s.coachPhotoUrl} size={40} />
+                  <span>
+                    <Link href={`/coaches/${s.coachProfileId}`} className="gs-coach-name">
+                      {s.coachName}
+                    </Link>
+                    <small>
+                      {[s.clubName, s.courtName].filter(Boolean).join(' · ')} · {time(s.startsAt)}–{time(s.endsAt)}
+                    </small>
+                  </span>
+                </div>
+                {s.description && <p className="gs-desc">{s.description}</p>}
+              </div>
+
+              {/* places, price, action */}
+              <div className="gs-side">
+                <div className="gs-price">{s.priceCents > 0 ? money(s.priceCents, s.currency) : t('free')}</div>
+                <div className="gs-meter" aria-hidden>
+                  <i style={{ width: `${Math.min(100, (s.registeredCount / s.capacity) * 100)}%` }} />
+                </div>
+                <div className="gs-spots">
+                  {s.mine
+                    ? t('registeredOf', { n: s.registeredCount, cap: s.capacity })
+                    : full
+                      ? t('full')
+                      : t('spotsLeft', { n: s.spotsLeft })}
+                </div>
+                {s.mine ? (
+                  <Link href="/me/coach" className="gs-btn is-outline">
+                    {t('manage')} →
+                  </Link>
+                ) : s.registered ? (
+                  <button type="button" className="gs-btn is-outline" disabled={busy} onClick={() => unreg.mutate(s.id)}>
+                    <BusyLabel busy={busy}>{t('leave')}</BusyLabel>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="gs-btn"
+                    disabled={busy || full}
+                    onClick={() => (me.isSuccess ? reg.mutate(s.id) : router.push('/login?returnTo=/sessions'))}
+                  >
+                    <BusyLabel busy={busy}>{me.isSuccess ? t('join') : t('signInToJoin')}</BusyLabel>
+                  </button>
+                )}
+              </div>
+            </article>
+          );
+        })}
       </div>
     </section>
   );
 }
-
-function Card({
-  s,
-  timezone,
-  signedIn,
-  busy,
-  onRegister,
-  onUnregister,
-  t,
-}: {
-  s: GroupSessionDto;
-  timezone: string;
-  signedIn: boolean;
-  busy: boolean;
-  onRegister: () => void;
-  onUnregister: () => void;
-  t: ReturnType<typeof useTranslations>;
-}) {
-  const full = s.spotsLeft <= 0 && !s.registered;
-  return (
-    <div
-      style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--line)',
-        borderRadius: 'var(--radius)',
-        padding: 16,
-        display: 'flex',
-        gap: 12,
-        flexWrap: 'wrap',
-        alignItems: 'center',
-      }}
-    >
-      <div style={{ flex: 1, minWidth: 220 }}>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span
-            className="mono"
-            style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--teal)', border: '1px solid var(--teal)', borderRadius: 999, padding: '2px 8px' }}
-          >
-            {t('badge')}
-          </span>
-          <h3 style={{ fontSize: 17, fontWeight: 700 }}>{s.title}</h3>
-        </div>
-        <p className="mono" style={{ color: 'var(--ink-3)', fontSize: 13, marginTop: 6 }}>
-          {s.coachName} · {s.clubName}
-        </p>
-        {s.description && <p style={{ color: 'var(--ink-2)', fontSize: 14, marginTop: 6 }}>{s.description}</p>}
-        <p className="mono" style={{ color: 'var(--ink-3)', fontSize: 13, marginTop: 8 }}>
-          {formatInstant(s.startsAt, timezone)} ·{' '}
-          {s.priceCents > 0 ? `${(s.priceCents / 100).toFixed(2)} ${s.currency}` : t('free')} ·{' '}
-          {full ? t('full') : t('spotsLeft', { n: s.spotsLeft })}
-        </p>
-      </div>
-      <div>
-        {s.registered ? (
-          <button type="button" onClick={onUnregister} disabled={busy} style={outlineBtn}>
-            {t('leave')}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={onRegister}
-            disabled={busy || full}
-            style={{ ...primaryBtn, opacity: full ? 0.5 : 1, cursor: full ? 'not-allowed' : 'pointer' }}
-          >
-            {signedIn ? t('join') : t('signInToJoin')}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-const primaryBtn: React.CSSProperties = {
-  minHeight: 44,
-  padding: '0 20px',
-  background: 'var(--lime)',
-  color: 'var(--on-lime)',
-  border: 'none',
-  borderRadius: 'var(--pill)',
-  fontWeight: 700,
-  cursor: 'pointer',
-};
-const outlineBtn: React.CSSProperties = {
-  minHeight: 44,
-  padding: '0 18px',
-  background: 'var(--surface)',
-  color: 'var(--ink)',
-  border: '1px solid var(--line-2)',
-  borderRadius: 'var(--pill)',
-  fontWeight: 600,
-  cursor: 'pointer',
-};

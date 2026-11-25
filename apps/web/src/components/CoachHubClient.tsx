@@ -7,7 +7,7 @@ import { Link, useRouter } from '@/i18n/navigation';
 import { getMe, getMyCoachProfile } from '@/lib/api';
 import { Avatar } from './Avatar';
 import { CoachProfileEditor } from './CoachProfileEditor';
-import { GroupSessionManager } from './GroupSessionManager';
+import { GroupSessionManager, MyGroupSessions } from './GroupSessionManager';
 import { PushNotificationToggle } from './PushNotificationToggle';
 
 const ICON = {
@@ -77,6 +77,8 @@ export function CoachHubClient() {
 
       <div style={{ display: 'grid', gap: 16, minWidth: 0 }}>
         <PushNotificationToggle nudge="coach" />
+        {/* What is coming up first; the profile and the form to open a new one after it. */}
+        {profile.data && <MyGroupSessions coachProfileId={profile.data.coachProfileId} />}
         <CoachProfileEditor name={user.name} />
         {profile.data && <GroupSessionManager coachProfileId={profile.data.coachProfileId} />}
       </div>

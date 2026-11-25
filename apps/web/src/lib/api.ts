@@ -608,6 +608,12 @@ export function getMyGroupSessions(): Promise<GroupSessionDto[]> {
 export function createGroupSession(input: CreateGroupSessionInput): Promise<GroupSessionDto> {
   return apiFetch('/group-sessions', { method: 'POST', body: JSON.stringify(input) });
 }
+export function updateGroupSession(
+  id: number,
+  input: import('@playslot/contracts').UpdateGroupSessionInput,
+): Promise<GroupSessionDto> {
+  return apiFetch(`/group-sessions/${id}`, { method: 'PATCH', body: JSON.stringify(input) });
+}
 export function registerGroupSession(id: number): Promise<{ ok: true; spotsLeft: number }> {
   return apiFetch(`/group-sessions/${id}/register`, { method: 'POST' });
 }

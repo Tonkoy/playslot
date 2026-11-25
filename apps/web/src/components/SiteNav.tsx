@@ -83,13 +83,15 @@ export function SiteNav() {
 
   const navItems: NavItem[] = [
     { href: '/clubs', label: t('clubs'), show: true },
-    { href: '/coaches', label: t('coaches'), show: true },
+    // The directory is for picking a coach; a coach is not looking for one.
+    { href: '/coaches', label: t('coaches'), show: !isCoach },
     { href: '/sessions', label: t('sessions'), show: true },
     { href: '/tournaments', label: t('tournaments'), show: true },
     { href: '/admin', label: t('admin'), show: isStaff, late: lateItem(isStaff) },
     { href: '/me/coach', label: t('coachHub'), show: isCoach, late: lateItem(isCoach) },
     { href: '/me/schedule', label: t('schedule'), show: isCoach, late: lateItem(isCoach) },
-    { href: '/me/bookings', label: t('bookings'), show: signedIn, late: lateItem(signedIn) },
+    // "My bookings" is a player's page: a coach's work is on their schedule.
+    { href: '/me/bookings', label: t('bookings'), show: signedIn && !isCoach, late: lateItem(signedIn && !isCoach) },
   ].filter((i) => i.show);
   // Lives in the account menu on desktop (and in the one list on a phone), not
   // in the main bar: it is a personal shortcut, not a section of the site.

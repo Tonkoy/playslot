@@ -66,6 +66,8 @@ export const KNOWN_REASONS = [
   'not_finished',
   'ended',
   'not_started',
+  'below_registered',
+  'not_a_coach',
   'not_confirmed',
   'not_awaiting_approval',
   'not_reschedulable',

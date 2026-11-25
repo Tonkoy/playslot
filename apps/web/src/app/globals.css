@@ -2080,3 +2080,320 @@ button.bk-coach.is-on .bk-coach-dot {
   color: var(--green-deep);
   font-weight: 700;
 }
+
+/* ── Group trainings: the public list ── */
+.gs-empty {
+  margin-top: 24px;
+  padding: 28px 20px;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius);
+  color: var(--ink-2);
+  text-align: center;
+}
+.gs-list {
+  display: grid;
+  gap: 14px;
+}
+.gs-card {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) 190px;
+  gap: 20px;
+  align-items: center;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.gs-card:hover {
+  border-color: var(--line-2);
+  box-shadow: 0 6px 22px rgba(18, 59, 44, 0.08);
+}
+.gs-card.is-mine {
+  border-color: var(--lesson-fill);
+  box-shadow: inset 4px 0 0 var(--lesson-fill), var(--shadow-sm);
+}
+.gs-card.is-in {
+  border-color: var(--green);
+}
+.gs-date {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  padding: 10px 6px;
+  border-radius: 14px;
+  background: var(--green-deep);
+  color: #fff;
+  text-align: center;
+}
+.gs-date small {
+  font-size: 12px;
+  color: #b9cfc4;
+  text-transform: capitalize;
+}
+.gs-date b {
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1.05;
+}
+.gs-date span {
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: var(--pill);
+  background: var(--lime);
+  color: var(--on-lime);
+  font-size: 13px;
+  font-weight: 700;
+}
+.gs-body {
+  min-width: 0;
+}
+.gs-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.gs-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--pill);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.gs-tag.is-level {
+  background: var(--green-soft);
+  color: var(--green-deep);
+}
+.gs-tag.is-mine {
+  background: var(--lesson-fill);
+  color: #fff;
+}
+.gs-tag.is-in {
+  background: var(--lime);
+  color: var(--on-lime);
+}
+.gs-tag.is-off {
+  background: var(--past-soft);
+  color: var(--ink-3);
+}
+.gs-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.gs-coach {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.gs-coach > span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.gs-coach-name {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.gs-coach-name:hover {
+  color: var(--green);
+  text-decoration: underline;
+}
+.gs-coach small {
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.gs-desc {
+  margin-top: 10px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.gs-side {
+  display: grid;
+  gap: 8px;
+  text-align: right;
+}
+.gs-price {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+}
+.gs-meter {
+  height: 6px;
+  border-radius: var(--pill);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.gs-meter i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--green);
+}
+.gs-spots {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.gs-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  margin-top: 4px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: var(--pill);
+  background: var(--lime);
+  color: var(--on-lime);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.gs-btn.is-outline {
+  border: 1px solid var(--line-2);
+  background: var(--surface);
+  color: var(--ink);
+}
+.gs-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media (max-width: 760px) {
+  .gs-card {
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+  }
+  .gs-date b {
+    font-size: 26px;
+  }
+  .gs-side {
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    text-align: left;
+  }
+  .gs-side .gs-meter {
+    grid-column: 1 / -1;
+    order: -1;
+  }
+  .gs-side .gs-btn {
+    grid-column: 1 / -1;
+  }
+  .gs-title {
+    font-size: 19px;
+  }
+}
+
+/* ── Group trainings: the coach's own list ── */
+.gsm-list {
+  display: grid;
+  gap: 12px;
+}
+.gsm-item {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.gsm-item.is-off {
+  background: var(--surface-2);
+  color: var(--ink-3);
+}
+.gsm-when {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.gsm-when b {
+  font-size: 15px;
+  text-transform: capitalize;
+}
+.gsm-when span {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.gsm-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.gsm-title strong {
+  font-size: 16px;
+  font-weight: 700;
+}
+.gsm-meta {
+  margin: 4px 0 8px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.gsm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.acct-btn.is-danger {
+  border-color: var(--clay);
+  color: var(--clay);
+}
+.gsm-people {
+  padding-top: 12px;
+}
+.gsm-people ol {
+  margin: 0;
+  padding-left: 22px;
+  list-style: decimal;
+  display: grid;
+  gap: 4px;
+  font-size: 14.5px;
+}
+.gsm-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--clay);
+  border-radius: 12px;
+  background: var(--clay-soft);
+  font-size: 14px;
+}
+.gsm-move {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+@media (max-width: 560px) {
+  .gsm-item {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .gsm-when {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 10px;
+  }
+}

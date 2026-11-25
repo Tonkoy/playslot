@@ -20,6 +20,16 @@ function mondayOfThisWeek(): string {
   d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
   return ymd(d);
 }
+/** The Monday of the week a day falls in. */
+function mondayOf(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y!, m! - 1, d!);
+  const day = dt.getDay();
+  dt.setDate(dt.getDate() + (day === 0 ? -6 : 1 - day));
+  return ymd(dt);
+}
+const VIEW_KEY = 'playslot.scheduleView';
+type View = 'week' | 'day';
 function addDays(iso: string, n: number): string {
   const [y, m, d] = iso.split('-').map(Number);
   return ymd(new Date(y!, m! - 1, d! + n));
@@ -94,6 +104,22 @@ export function CoachScheduleClient() {
   const todayIso = ymd(new Date());
   // The day in focus: its column is marked, and on a phone it is the open one.
   const [focusDay, setFocusDay] = useState<string | null>(todayIso);
+  // The whole week, or one day of it. Remembered on this device.
+  const [view, setViewState] = useState<View>(() => {
+    try {
+      return typeof window !== 'undefined' && window.localStorage.getItem(VIEW_KEY) === 'day' ? 'day' : 'week';
+    } catch {
+      return 'week';
+    }
+  });
+  const setView = (v: View) => {
+    setViewState(v);
+    try {
+      window.localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      /* private mode: the choice just isn't remembered */
+    }
+  };
 
   const schedule = useQuery({
     queryKey: ['coachSchedule', weekStart],
@@ -126,14 +152,27 @@ export function CoachScheduleClient() {
   const days = schedule.data?.days ?? [];
   const byDate = new Map(days.map((d) => [d.date, d.lessons.map(place)]));
   const lessonsOn = (day: string) => byDate.get(day) ?? [];
-  const total = days.reduce((n, d) => n + d.lessons.length, 0);
-  const rangeLabel = `${dfRange.format(new Date(`${weekStart}T00:00:00`))} – ${dfRange.format(
-    new Date(`${addDays(weekStart, 6)}T00:00:00`),
-  )}`;
+  // The one day a day view shows: the day in focus, else today (this week) or Monday.
+  const day = focusDay ?? (weekStart === thisWeek ? todayIso : weekStart);
+  const shownDays = view === 'day' ? [day] : weekDays;
+  const shownLessons = shownDays.flatMap((d) => lessonsOn(d));
+  const total = shownLessons.length;
+  const rangeLabel =
+    view === 'day'
+      ? `${dfLong.format(new Date(`${day}T00:00:00`))}, ${dfRange.format(new Date(`${day}T00:00:00`))}`
+      : `${dfRange.format(new Date(`${weekStart}T00:00:00`))} – ${dfRange.format(new Date(`${addDays(weekStart, 6)}T00:00:00`))}`;
   const goToWeek = (start: string) => {
     setWeekStart(start);
-    // The current week opens on today; any other on nothing in particular.
+    // The current week opens on today; any other on nothing in particular
+    // (a day view then starts on its Monday).
     setFocusDay(start === thisWeek ? todayIso : null);
+  };
+  /** Step back or forward: a day at a time in the day view, a week in the week view. */
+  const step = (dir: 1 | -1) => {
+    if (view === 'week') return goToWeek(addDays(weekStart, 7 * dir));
+    const next = addDays(day, dir);
+    setFocusDay(next);
+    if (mondayOf(next) !== weekStart) setWeekStart(mondayOf(next));
   };
 
   // ── working hours ──
@@ -147,10 +186,12 @@ export function CoachScheduleClient() {
     return !!w && min + STEP > w.startMin && min < w.endMin;
   };
 
-  // ── rows: from the earliest start to the latest end of the week's work and lessons ──
-  const all = [...byDate.values()].flat();
-  const starts = [...[...work.values()].map((w) => w.startMin), ...all.map((x) => x.startMin)];
-  const ends = [...[...work.values()].map((w) => w.endMin), ...all.map((x) => x.endMin)];
+  // ── rows: from the earliest start to the latest end of the work and lessons in view ──
+  const all = shownLessons;
+  const workInView =
+    view === 'day' ? [work.get(weekdayOf(day))].filter((w) => w != null) : [...work.values()];
+  const starts = [...workInView.map((w) => w.startMin), ...all.map((x) => x.startMin)];
+  const ends = [...workInView.map((w) => w.endMin), ...all.map((x) => x.endMin)];
   const lo = starts.length ? Math.floor(Math.min(...starts) / STEP) * STEP : 8 * 60;
   const hi = ends.length ? Math.ceil(Math.max(...ends) / STEP) * STEP : 20 * 60;
   const rows: number[] = [];
@@ -225,13 +266,17 @@ export function CoachScheduleClient() {
     );
   };
 
+  // The file holds what is on screen: the day, or the week.
   const exportIcs = () => {
-    const ics = buildIcs(days, (l) => `${t('lessonWith')} ${l.customerName}`);
+    const ics = buildIcs(
+      days.filter((d) => shownDays.includes(d.date)),
+      (l) => `${t('lessonWith')} ${l.customerName}`,
+    );
     const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `playslot-schedule-${weekStart}.ics`;
+    a.download = `playslot-schedule-${view === 'day' ? day : `week-${weekStart}`}.ics`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -260,7 +305,7 @@ export function CoachScheduleClient() {
       {/* The week as a strip of days, like the calendar's; arrows move a week. */}
       <div className="avail-bar">
         <div className="avail-days" role="group" aria-label={rangeLabel}>
-          <button type="button" className="avail-day acal-step" onClick={() => goToWeek(addDays(weekStart, -7))} aria-label={t('prevWeek')}>
+          <button type="button" className="avail-day acal-step" onClick={() => step(-1)} aria-label={view === 'day' ? t('prevDay') : t('prevWeek')}>
             ‹
           </button>
           {weekStart !== thisWeek && (
@@ -270,34 +315,43 @@ export function CoachScheduleClient() {
               <em />
             </button>
           )}
-          {weekDays.map((day) => {
-            const n = lessonsOn(day).length;
+          {weekDays.map((d) => {
+            const n = lessonsOn(d).length;
+            const on = view === 'day' ? d === day : d === focusDay;
             return (
               <button
-                key={day}
+                key={d}
                 type="button"
-                className={`avail-day${day === focusDay ? ' is-on' : ''}`}
-                aria-pressed={day === focusDay}
-                onClick={() => setFocusDay(day === focusDay ? null : day)}
+                className={`avail-day${on ? ' is-on' : ''}`}
+                aria-pressed={on}
+                // A day view always has a day; in the week view a second tap lets go of it.
+                onClick={() => setFocusDay(view === 'week' && d === focusDay ? null : d)}
               >
-                <small>{day === todayIso ? tg('todayShort') : dfShort.format(new Date(`${day}T00:00:00`))}</small>
-                <b>{Number(day.slice(8, 10))}</b>
+                <small>{d === todayIso ? tg('todayShort') : dfShort.format(new Date(`${d}T00:00:00`))}</small>
+                <b>{Number(d.slice(8, 10))}</b>
                 <em className={n === 0 ? 'is-none' : undefined}>{schedule.isSuccess ? t('dayLessons', { count: n }) : ''}</em>
               </button>
             );
           })}
-          <button type="button" className="avail-day acal-step" onClick={() => goToWeek(addDays(weekStart, 7))} aria-label={t('nextWeek')}>
+          <button type="button" className="avail-day acal-step" onClick={() => step(1)} aria-label={view === 'day' ? t('nextDay') : t('nextWeek')}>
             ›
           </button>
         </div>
 
+        <div className="avail-seg" role="group" aria-label={t('view')}>
+          {(['week', 'day'] as const).map((v) => (
+            <button key={v} type="button" className={v === view ? 'is-on' : undefined} aria-pressed={v === view} onClick={() => setView(v)}>
+              {t(v === 'week' ? 'viewWeek' : 'viewDay')}
+            </button>
+          ))}
+        </div>
         <button type="button" className="acal-block" onClick={exportIcs} disabled={total === 0}>
-          <span aria-hidden>↓</span> {t('export')}
+          <span aria-hidden>↓</span> {view === 'day' ? t('exportDay') : t('exportWeek')}
         </button>
       </div>
 
       <p className="acal-day mono" style={{ textTransform: 'none' }}>
-        {rangeLabel} · {t('lessonCount', { count: total })}
+        {rangeLabel} · {t('lessonsInView', { count: total })}
       </p>
 
       {schedule.isLoading && <SkeletonRows />}
@@ -305,10 +359,10 @@ export function CoachScheduleClient() {
       {/* Desktop: hours down, the seven days across. */}
       {schedule.isSuccess && (
         <div className="avail-table-wrap">
-          <table className="avail-table acal-table" style={{ minWidth: 64 + 7 * 108 }}>
+          <table className="avail-table acal-table" style={{ minWidth: 64 + shownDays.length * 108 }}>
             <colgroup>
               <col style={{ width: 64 }} />
-              {weekDays.map((d) => (
+              {shownDays.map((d) => (
                 <col key={d} />
               ))}
             </colgroup>
@@ -317,16 +371,16 @@ export function CoachScheduleClient() {
                 <th className="avail-time" style={{ background: 'var(--surface-2)' }}>
                   <span className="avail-sr">{tg('time')}</span>
                 </th>
-                {weekDays.map((day) => (
+                {shownDays.map((d) => (
                   <th
-                    key={day}
+                    key={d}
                     scope="col"
-                    className={`${day === todayIso ? 'csch-today' : ''}${day === focusDay ? ' csch-focus' : ''}`}
+                    className={`${d === todayIso ? 'csch-today' : ''}${view === 'week' && d === focusDay ? ' csch-focus' : ''}`}
                     style={{ textTransform: 'capitalize' }}
                   >
-                    {dfShort.format(new Date(`${day}T00:00:00`))} {Number(day.slice(8, 10))}
+                    {(view === 'day' ? dfLong : dfShort).format(new Date(`${d}T00:00:00`))} {Number(d.slice(8, 10))}
                     <small style={{ textTransform: 'none' }}>
-                      {day === todayIso ? tg('todayShort') : t('dayLessons', { count: lessonsOn(day).length })}
+                      {d === todayIso ? tg('todayShort') : t('dayLessons', { count: lessonsOn(d).length })}
                     </small>
                   </th>
                 ))}
@@ -337,7 +391,7 @@ export function CoachScheduleClient() {
                 <Fragment key={min}>
                   {startsBand(i) && (
                     <tr>
-                      <th colSpan={8} className="avail-band" scope="colgroup">
+                      <th colSpan={shownDays.length + 1} className="avail-band" scope="colgroup">
                         <div className="avail-clip">{tg(bandOf(min))}</div>
                       </th>
                     </tr>
@@ -346,7 +400,7 @@ export function CoachScheduleClient() {
                     <th scope="row" className="avail-time mono">
                       <div className="avail-clip avail-clip-time">{minToHHMM(min)}</div>
                     </th>
-                    {weekDays.map((day) => gridCell(day, min, i))}
+                    {shownDays.map((d) => gridCell(d, min, i))}
                   </tr>
                 </Fragment>
               ))}
@@ -358,10 +412,11 @@ export function CoachScheduleClient() {
       {/* Phone: one row per day; tapping a day unfolds its lessons. */}
       {schedule.isSuccess && (
         <div className="avail-list">
-          {weekDays.map((day) => {
+          {shownDays.map((day) => {
             const list = lessonsOn(day);
             const w = work.get(weekdayOf(day));
-            const open = focusDay === day && list.length > 0;
+            // In the day view the one day is simply open.
+            const open = (view === 'day' || focusDay === day) && list.length > 0;
             const label = (
               <>
                 <span className="avail-hour-time mono csch-daylabel">

@@ -8,6 +8,7 @@ import { googleLoginUrl, login } from '@/lib/api';
 import { errorMessage, fieldErrorsOf } from '@/lib/errors';
 import { FieldError } from '../FieldError';
 import { PasswordInput } from './PasswordInput';
+import { GoogleMark } from './GoogleMark';
 import { authInput, authLabel, authPrimaryBtn, googleBtn } from './styles';
 
 export function LoginForm({ locale, returnTo }: { locale: string; returnTo: string }) {
@@ -83,6 +84,7 @@ export function LoginForm({ locale, returnTo }: { locale: string; returnTo: stri
       </div>
 
       <a href={googleLoginUrl(returnTo)} style={googleBtn}>
+        <GoogleMark />
         {t('google')}
       </a>
 

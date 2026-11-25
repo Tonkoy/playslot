@@ -10,6 +10,7 @@ import { FieldError } from '../FieldError';
 import { PageHeader } from '../PageHeader';
 import { SuccessMark } from '../SuccessMark';
 import { PasswordInput } from './PasswordInput';
+import { GoogleMark } from './GoogleMark';
 import { authInput, authLabel, authPrimaryBtn, googleBtn } from './styles';
 
 export function RegisterForm() {
@@ -153,6 +154,7 @@ export function RegisterForm() {
 
       <div style={{ textAlign: 'center', color: 'var(--ink-3)', margin: '16px 0', fontSize: 13 }}>{t('or')}</div>
       <a href={googleLoginUrl('/me/bookings')} style={googleBtn}>
+        <GoogleMark />
         {t('google')}
       </a>
       <p style={{ textAlign: 'center', marginTop: 16, fontSize: 14, color: 'var(--ink-2)' }}>

@@ -30,10 +30,11 @@ export const authPrimaryBtn: React.CSSProperties = {
 };
 
 export const googleBtn: React.CSSProperties = {
-  display: 'block',
-  textAlign: 'center',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 10,
   minHeight: 46,
-  lineHeight: '46px',
   background: 'var(--surface)',
   color: 'var(--ink)',
   border: '1px solid var(--line-2)',

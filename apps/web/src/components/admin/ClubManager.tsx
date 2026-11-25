@@ -15,6 +15,7 @@ import { ClubExport } from './ClubExport';
 import { ClubFeedback } from './ClubFeedback';
 import { EventManager } from './EventManager';
 import { SmileCupImport } from './SmileCupImport';
+import { PushNotificationToggle } from '@/components/PushNotificationToggle';
 import { MembershipManager } from './MembershipManager';
 import { TeamManager } from './TeamManager';
 import { SkeletonRows } from '@/components/Skeleton';
@@ -122,6 +123,7 @@ export function ClubManager({ clubId }: { clubId: number }) {
       <Link href="/admin" style={{ color: 'var(--teal)', fontSize: 14 }}>
         ← {t('back')}
       </Link>
+      <PushNotificationToggle nudge="club" />
       <div>
         <span
           className="mono"

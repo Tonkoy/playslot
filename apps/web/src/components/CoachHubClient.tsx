@@ -1,5 +1,6 @@
 'use client';
 
+import { PushNotificationToggle } from './PushNotificationToggle';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
@@ -32,6 +33,7 @@ export function CoachHubClient() {
 
   return (
     <div style={{ display: 'grid', gap: 20 }}>
+      <PushNotificationToggle nudge="coach" />
       <CoachProfileEditor name={me.data!.user.name} />
       {profile.data && <GroupSessionManager coachProfileId={profile.data.coachProfileId} />}
     </div>

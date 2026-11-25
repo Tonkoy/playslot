@@ -32,7 +32,9 @@ import { MailService } from '../mail/mail.service';
 import { applyDiscount, MembershipsService } from '../memberships/memberships.service';
 import { PaymentsService } from '../payments/payments.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PushService } from '../push/push.service';
 import { HoldQueueService } from './hold-queue.service';
+import { type BookingPushKind, coachBookingPush, staffBookingPush } from './push-copy';
 
 interface Actor {
   userId: number;
@@ -54,6 +56,26 @@ interface ResolvedSlot {
   resourceIds: number[];
 }
 
+/** What a push about a booking needs to know (a slice of loadReservationParties). */
+interface BookingParties {
+  reservationId: number;
+  clubId: number;
+  customerUserId: number;
+  clubName: string;
+  customerName: string;
+  what: string;
+  /** "yyyy-MM-dd HH:mm" in the club's time. */
+  when: string;
+  staff: { id: number; locale: string }[];
+  coachUser: { id: number; locale: string } | null;
+}
+
+/** "2026-11-26 18:00" → "26.11 18:00": the form a notification has room for. */
+function shortWhen(when: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})$/.exec(when);
+  return m ? `${m[3]}.${m[2]} ${m[4]}` : when;
+}
+
 @Injectable()
 export class ReservationsService {
   constructor(
@@ -67,6 +89,7 @@ export class ReservationsService {
     @Inject(forwardRef(() => PaymentsService))
     private readonly payments: PaymentsService,
     private readonly memberships: MembershipsService,
+    private readonly push: PushService,
   ) {}
 
   // ── player self-booking (spec §8) ──
@@ -203,8 +226,8 @@ export class ReservationsService {
     this.events.emitAvailabilityChanged(slot.clubId);
     // Confirmed: tell the customer it is booked. Awaiting the club's word:
     // tell them it is held, the same two-step flow the public booking uses.
-    if (reservation.status === 'PENDING_APPROVAL') await this.sendBookingReceivedEmail(reservation.id);
-    else await this.sendConfirmationEmail(reservation.id);
+    if (reservation.status === 'PENDING_APPROVAL') await this.sendBookingReceivedEmail(reservation.id, staffUserId);
+    else await this.sendConfirmationEmail(reservation.id, staffUserId);
     return { reservationId: reservation.id, status: reservation.status, priceCents, currency: slot.currency };
   }
 
@@ -399,7 +422,7 @@ export class ReservationsService {
       // Notify the parties the booking moved (not for maintenance BLOCKs).
       if (existing.type !== 'BLOCK') {
         const previousWhen = formatInZone(existing.startsAt, slot.timezone, 'yyyy-MM-dd HH:mm');
-        await this.sendRescheduleEmails(reservationId, previousWhen);
+        await this.sendRescheduleEmails(reservationId, previousWhen, staffUserId);
       }
       return { id: updated.id, startsAt: updated.startsAt.toISOString(), priceCents };
     } catch (e) {
@@ -429,7 +452,7 @@ export class ReservationsService {
       from: r.status,
     });
     this.events.emitAvailabilityChanged(clubId);
-    await this.sendConfirmationEmail(reservationId);
+    await this.sendConfirmationEmail(reservationId, staffUserId);
     return { id: reservationId, status: 'CONFIRMED' as const };
   }
 
@@ -765,7 +788,7 @@ export class ReservationsService {
     this.events.emitAvailabilityChanged(r.clubId);
 
     // Notify all parties (customer with refund; club staff + any coach). Best-effort.
-    await this.sendCancellationEmails(reservationId, refundCents);
+    await this.sendCancellationEmails(reservationId, refundCents, userId);
 
     return { status: 'CANCELLED' as const, refundCents, refundStatus };
   }
@@ -782,9 +805,10 @@ export class ReservationsService {
    * Booking made, club's turn: the player hears that the slot is held, and the
    * club hears that something is waiting for them.
    */
-  private async sendBookingReceivedEmail(reservationId: number): Promise<void> {
+  private async sendBookingReceivedEmail(reservationId: number, actorUserId?: number): Promise<void> {
     const p = await this.loadReservationParties(reservationId);
     if (!p) return;
+    await this.pushToTeam(p, 'awaiting', { actorUserId });
     if (p.customer) {
       await this.mail
         .sendBookingReceived(
@@ -854,9 +878,10 @@ export class ReservationsService {
       .catch(() => undefined);
   }
 
-  private async sendConfirmationEmail(reservationId: number): Promise<void> {
+  private async sendConfirmationEmail(reservationId: number, actorUserId?: number): Promise<void> {
     const p = await this.loadReservationParties(reservationId);
     if (!p) return;
+    await this.pushToTeam(p, 'booked', { actorUserId });
     // 1. customer (skip synthetic walk-in addresses)
     if (p.customer) {
       await this.mail
@@ -904,9 +929,14 @@ export class ReservationsService {
    *   2. the club's admins/staff — the slot reopened;
    *   3. for a LESSON, the selected coach — the lesson is off.
    */
-  private async sendCancellationEmails(reservationId: number, refundCents: number): Promise<void> {
+  private async sendCancellationEmails(
+    reservationId: number,
+    refundCents: number,
+    actorUserId?: number,
+  ): Promise<void> {
     const p = await this.loadReservationParties(reservationId);
     if (!p) return;
+    await this.pushToTeam(p, 'cancelled', { actorUserId });
     // 1. customer (skip synthetic walk-in addresses)
     if (p.customer) {
       await this.mail
@@ -951,9 +981,18 @@ export class ReservationsService {
    * On a reschedule/move, notify the customer, admins/staff, and (for a LESSON)
    * the coach that the booking shifted. Best-effort; skipped for BLOCKs.
    */
-  private async sendRescheduleEmails(reservationId: number, previousWhen?: string): Promise<void> {
+  private async sendRescheduleEmails(
+    reservationId: number,
+    previousWhen?: string,
+    actorUserId?: number,
+  ): Promise<void> {
     const p = await this.loadReservationParties(reservationId);
     if (!p) return;
+    await this.pushToTeam(p, 'moved', {
+      actorUserId,
+      // The email shows the full date; a notification has room for "dd.MM HH:mm".
+      previousWhen: previousWhen ? shortWhen(previousWhen) : undefined,
+    });
     if (p.customer) {
       await this.mail
         .sendReschedule(
@@ -1010,6 +1049,43 @@ export class ReservationsService {
   }
 
   /**
+   * The push side of the emails above: the club's admins and staff, and the
+   * coach of a lesson, on every browser where they allowed notifications.
+   * Whoever did the thing (`actorUserId`) and the customer themselves are left
+   * out — nobody needs a notification about their own tap. Best-effort: a
+   * failed push never affects the booking.
+   */
+  private async pushToTeam(
+    p: BookingParties,
+    kind: BookingPushKind,
+    opts: { actorUserId?: number; previousWhen?: string } = {},
+  ): Promise<void> {
+    const info = {
+      reservationId: p.reservationId,
+      clubId: p.clubId,
+      clubName: p.clubName,
+      customerName: p.customerName,
+      what: p.what,
+      when: shortWhen(p.when),
+      day: p.when.slice(0, 10),
+      previousWhen: opts.previousWhen,
+    };
+    const skip = (userId: number) => userId === opts.actorUserId || userId === p.customerUserId;
+
+    const sends: Promise<void>[] = [];
+    for (const s of p.staff) {
+      if (skip(s.id)) continue;
+      sends.push(this.push.sendToUser(s.id, staffBookingPush(kind, normalizeLocale(s.locale), info)));
+    }
+    // The coach hears about a lesson once it is definite, like their email.
+    const coach = p.coachUser;
+    if (coach && kind !== 'awaiting' && !skip(coach.id) && !p.staff.some((s) => s.id === coach.id)) {
+      sends.push(this.push.sendToUser(coach.id, coachBookingPush(kind, normalizeLocale(coach.locale), info)));
+    }
+    await Promise.all(sends.map((x) => x.catch(() => undefined)));
+  }
+
+  /**
    * Shared recipient resolution for booking notifications (spec §19): loads the
    * reservation with its club staff and coach, and derives the display fields.
    * Returns null if the reservation is gone. `customer` is null for synthetic
@@ -1026,7 +1102,7 @@ export class ReservationsService {
             timezone: true,
             members: {
               where: { status: 'ACTIVE', role: { in: ['CLUB_ADMIN', 'CLUB_STAFF'] } },
-              select: { user: { select: { email: true, locale: true } } },
+              select: { user: { select: { id: true, email: true, locale: true } } },
             },
           },
         },
@@ -1036,7 +1112,7 @@ export class ReservationsService {
               select: {
                 type: true,
                 name: true,
-                coachProfile: { select: { user: { select: { email: true, locale: true, name: true } } } },
+                coachProfile: { select: { user: { select: { id: true, email: true, locale: true, name: true } } } },
               },
             },
           },
@@ -1058,13 +1134,16 @@ export class ReservationsService {
         .find((res) => res.type === 'COACH' && res.coachProfile?.user)?.coachProfile?.user ?? null;
 
     // Deduped club admins/staff, excluding the booking customer.
-    const staffByEmail = new Map<string, { email: string; locale: string }>();
+    const staffByEmail = new Map<string, { id: number; email: string; locale: string }>();
     for (const m of r.club.members) {
       if (m.user.email === customerEmail) continue;
       staffByEmail.set(m.user.email, m.user);
     }
 
     return {
+      reservationId: r.id,
+      clubId: r.clubId,
+      customerUserId: r.userId,
       clubName: r.club.name,
       when,
       // Skip the customer's own transactional email when they've turned notifications off.

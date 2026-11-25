@@ -811,7 +811,11 @@
   },
   "PushNotifications": {
     "title": "Browser notifications",
-    "help": "Get a reminder before you play and an alert when a booking changes — even with the site closed.",
+    "help": "An alert when a slot is booked, cancelled or moved — for club teams and coaches. Works with the site closed.",
+    "nudgeClubTitle": "Booking notifications on this device",
+    "nudgeClubHelp": "Know the moment someone books, cancels or moves a slot at the club — even with the site closed.",
+    "nudgeCoachTitle": "Lesson notifications on this device",
+    "nudgeCoachHelp": "Know the moment someone books a lesson with you, cancels it or moves it — even with the site closed.",
     "enable": "Allow",
     "disable": "Turn off",
     "enabled": "Notifications are on for this device.",

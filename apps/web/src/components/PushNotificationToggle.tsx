@@ -26,7 +26,18 @@ type Support = 'checking' | 'supported' | 'unsupported';
  * Browser push permission for this device. Push is per-browser, not per
  * account, so the state here describes the browser you're reading it in.
  */
-export function PushNotificationToggle({ plain = false }: { plain?: boolean } = {}) {
+export function PushNotificationToggle({
+  plain = false,
+  nudge,
+}: {
+  plain?: boolean;
+  /**
+   * A prompt on the club-admin and coach pages rather than a setting: says what
+   * that role gets notified about, and disappears once this device is set up
+   * (or when there is nothing the person can do about it here).
+   */
+  nudge?: 'club' | 'coach';
+} = {}) {
   const t = useTranslations('PushNotifications');
   const tt = useTranslations('Toasts');
   const qc = useQueryClient();
@@ -129,13 +140,20 @@ export function PushNotificationToggle({ plain = false }: { plain?: boolean } = 
     return { text: t('help'), action: 'enable' as const };
   })();
 
+  // As a prompt: only while there is a step to take — allow it here, or (on an
+  // iPhone that hasn't installed the app yet) learn that installing comes first.
+  if (nudge && status.action !== 'enable' && !(support === 'unsupported')) return null;
+  const heading = nudge === 'club' ? t('nudgeClubTitle') : nudge === 'coach' ? t('nudgeCoachTitle') : t('title');
+  const text =
+    nudge && status.action === 'enable' ? t(nudge === 'club' ? 'nudgeClubHelp' : 'nudgeCoachHelp') : status.text;
+
   return (
     // `plain`: no box of its own, for use as one row in a list of settings.
     <div style={plain ? plainRow : row}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <strong style={{ fontWeight: 600, fontSize: 14 }}>{t('title')}</strong>
+        <strong style={{ fontWeight: 600, fontSize: 14 }}>{heading}</strong>
         <span style={{ display: 'block', color: 'var(--ink-3)', fontSize: 12, marginTop: 2 }}>
-          {status.text}
+          {text}
         </span>
         {config.data && config.data.subscriptions > 1 && (
           <span className="mono" style={{ display: 'block', color: 'var(--ink-3)', fontSize: 11, marginTop: 4 }}>

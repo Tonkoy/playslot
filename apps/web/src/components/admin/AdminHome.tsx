@@ -1,5 +1,6 @@
 'use client';
 
+import { PushNotificationToggle } from '@/components/PushNotificationToggle';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
@@ -35,6 +36,12 @@ export function AdminHome() {
       {isPlatform && <AdminStats scope="platform" />}
       {isPlatform && <PlatformConsole />}
       {isPlatform && <UsersModeration />}
+
+      {clubs.isSuccess && clubs.data.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <PushNotificationToggle nudge="club" />
+        </div>
+      )}
 
       <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>{t('yourClubs')}</h2>
 

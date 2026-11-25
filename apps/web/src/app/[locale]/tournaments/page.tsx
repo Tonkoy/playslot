@@ -1,3 +1,5 @@
+/* eslint-disable @next/next/no-img-element -- covers are remote URLs on Smile
+   Cup's image host, already resized there; see lib/smilecup.ts. */
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { SiteHeader } from '@/components/SiteHeader';
@@ -172,19 +174,50 @@ function TournamentCard({
         overflow: 'hidden',
       }}
     >
-      {/* The cover is a background, not an <img>: it is decoration, and a
-          cover that fails to load then leaves the plain tile instead of a
-          broken-image icon. */}
+      {/* Covers are posters with the tournament's name on them, in whatever
+          shape the organiser made: the whole poster is shown, never cropped.
+          It keeps its own proportions up to a height limit; past that it is
+          fitted inside, over a blurred copy of itself that fills the sides.
+          With no cover, or one that fails to load, the plain tile remains. */}
       <div
         style={{
           position: 'relative',
-          aspectRatio: '16 / 10',
+          overflow: 'hidden',
+          minHeight: 180,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           backgroundColor: 'var(--surface-2)',
-          backgroundImage: x.image ? `url(${JSON.stringify(x.image)})` : undefined,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
         }}
       >
+        {x.image && (
+          <>
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                inset: -24,
+                backgroundImage: `url(${JSON.stringify(x.image)})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                filter: 'blur(22px) brightness(0.85)',
+              }}
+            />
+            <img
+              src={x.image}
+              alt=""
+              loading="lazy"
+              style={{
+                position: 'relative',
+                display: 'block',
+                width: '100%',
+                height: 'auto',
+                maxHeight: 440,
+                objectFit: 'contain',
+              }}
+            />
+          </>
+        )}
         {closedLabel && (
           <span
             style={{

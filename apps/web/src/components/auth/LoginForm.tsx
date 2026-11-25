@@ -1,10 +1,10 @@
 'use client';
 
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useRouter } from '@/i18n/navigation';
-import { googleLoginUrl, login } from '@/lib/api';
+import { getMe, googleLoginUrl, login } from '@/lib/api';
 import { errorMessage, fieldErrorsOf } from '@/lib/errors';
 import { FieldError } from '../FieldError';
 import { PasswordInput } from './PasswordInput';
@@ -23,6 +23,20 @@ export function LoginForm({ locale, returnTo }: { locale: string; returnTo: stri
   const [fields, setFields] = useState<Record<string, string[]>>({});
   const [busy, setBusy] = useState(false);
 
+  // The page redirects a signed-in visitor on the server; this covers the ways
+  // back that never reach the server — the Back button and cached pages. One
+  // exit for both cases, and `replace`, so Back never lands on this form again.
+  const me = useQuery({ queryKey: ['me'], queryFn: getMe, retry: false });
+  const left = useRef(false);
+  const leave = useCallback(() => {
+    if (left.current) return;
+    left.current = true;
+    router.replace(returnTo);
+  }, [router, returnTo]);
+  useEffect(() => {
+    if (me.isSuccess) leave();
+  }, [me.isSuccess, leave]);
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -30,7 +44,7 @@ export function LoginForm({ locale, returnTo }: { locale: string; returnTo: stri
     try {
       await login(email, password);
       await qc.invalidateQueries({ queryKey: ['me'] });
-      router.push(returnTo.startsWith('/') ? returnTo : '/');
+      leave();
     } catch (err) {
       const perField = fieldErrorsOf(err);
       setFields(perField);
@@ -39,6 +53,9 @@ export function LoginForm({ locale, returnTo }: { locale: string; returnTo: stri
       setBusy(false);
     }
   }
+
+  // Signed in and on the way out: don't flash a form nobody should fill in.
+  if (me.isSuccess) return null;
 
   return (
     <div style={{ maxWidth: 400, margin: '0 auto' }}>

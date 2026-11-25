@@ -1,5 +1,6 @@
 // Server-only by construction: `next/headers` throws if imported on the client.
 import { cookies } from 'next/headers';
+import { cache } from 'react';
 import type { Me } from './api';
 
 /** Must match apps/api/src/auth/auth.types.ts → SESSION_COOKIE. */
@@ -15,8 +16,11 @@ const TIMEOUT_MS = 1500;
  *
  * Never throws: no cookie, an expired one, a slow or failing API all return
  * null, and the page falls back to asking from the browser as before.
+ *
+ * Wrapped in `cache`, so the layout and a page that both ask during the same
+ * request share one call to the API.
  */
-export async function getServerSession(): Promise<{ user: Me } | null> {
+export const getServerSession = cache(async (): Promise<{ user: Me } | null> => {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   try {
@@ -32,4 +36,4 @@ export async function getServerSession(): Promise<{ user: Me } | null> {
   } catch {
     return null;
   }
-}
+});

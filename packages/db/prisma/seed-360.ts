@@ -14,7 +14,7 @@
  *    9 winter-dome overrides for courts 4–6 (23 / 26 / 26 EUR, 1 Nov – 3 May).
  *    Click&Play needs 9 rows for the same thing. Skipped if the club already has
  *    price rules, unless you set RESET_PRICES=1 (then the club's rules are rebuilt)
- *  - five trainers: Явор, Димитър, Дани, Тихомир and Ивайло, each linked to the
+ *  - four trainers: Явор, Димитър, Тихомир and Ивайло, each linked to the
  *    club with a shareable COACH resource and availability; Тихомир and Ивайло
  *    also carry the club's own photo and a short bio.
  *  - the club's admin(s), with the CLUB_ADMIN role and membership.
@@ -55,9 +55,6 @@ const TRAINERS: {
     bio: 'Започва да играе тенис на 6 години. Треньор в 360 Тенис клуб от близо две години. Работи предимно с деца — освен техника, държи на дисциплината и спортната култура.',
   },
   { email: 'dimitar.penchev.dr@gmail.com', name: 'Димитър Пенчев' },
-  // Also the club's admin (see CLUB_ADMINS): one identity, both roles — the
-  // golden rule of §2.8. The two loops below each add their own role.
-  { email: 'furnadzhievay@gmail.com', name: 'Дани Фурнаджиева' },
   {
     email: 'ivayloik@gmail.com',
     previousEmail: 'ivaylo.koev@360tennis.test',
@@ -66,6 +63,12 @@ const TRAINERS: {
     bio: 'Започва да играе тенис на 5 години. В 360 Тенис клуб е от самото му начало преди около 5 години. Работи както с начинаещи, така и със състезатели — за него тенисът е спорт, който се учи цял живот.',
   },
 ];
+
+// Accounts that were once set up here as trainers and are not: the coach role,
+// the link to the club and the bookable coach resource are withdrawn. The coach
+// profile itself stays, so past lessons and feedback keep pointing at someone.
+// Dani runs the club (see CLUB_ADMINS) and does not coach.
+const NOT_TRAINERS = ['furnadzhievay@gmail.com'];
 
 // Club admins: full access to this club's console (calendar, prices, team).
 const CLUB_ADMINS = [{ email: 'furnadzhievay@gmail.com', name: 'Дани Фурнаджиева' }];
@@ -252,6 +255,25 @@ async function main() {
         data: weekWindows(OPEN_MIN, CLOSE_MIN).map((w) => ({ ...w, resourceId: resource!.id })),
       });
     }
+  }
+
+  // ── no longer trainers ──
+  for (const email of NOT_TRAINERS) {
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, name: true, coachProfile: { select: { id: true } } },
+    });
+    if (!user) continue;
+    const role = await prisma.userRole.deleteMany({ where: { userId: user.id, role: Role.COACH } });
+    await prisma.clubMember.deleteMany({ where: { userId: user.id, role: Role.COACH } });
+    if (user.coachProfile) {
+      await prisma.coachClub.deleteMany({ where: { coachProfileId: user.coachProfile.id } });
+      await prisma.resource.updateMany({
+        where: { type: 'COACH', coachProfileId: user.coachProfile.id },
+        data: { status: 'INACTIVE' },
+      });
+    }
+    if (role.count > 0) console.log(`${user.name}: no longer a trainer (coach role and club link removed).`);
   }
 
   console.log(

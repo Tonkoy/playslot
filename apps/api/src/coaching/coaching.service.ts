@@ -35,7 +35,8 @@ export class CoachingService {
   // ── directory ──
   async listCoaches(clubId?: number): Promise<CoachListItem[]> {
     const coaches = await this.prisma.coachProfile.findMany({
-      where: clubId ? { clubs: { some: { clubId } } } : {},
+      // No club, nowhere to book them: such a profile is not listed.
+      where: { clubs: { some: clubId ? { clubId } : {} } },
       include: {
         user: { select: { name: true } },
         services: { orderBy: { id: 'asc' } },

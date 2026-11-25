@@ -1285,6 +1285,26 @@ button.avail-hour-top {
 }
 
 /* Month calendar of my bookings (components/BookingsCalendar.tsx). */
+.bcal-layout {
+  display: grid;
+  gap: 20px;
+}
+/* One column: the picked day's bookings come first — on opening, that is the
+   next booking, the thing people come to this page for — and the month below. */
+.bcal-daypanel {
+  order: -1;
+}
+@media (min-width: 960px) {
+  .bcal-layout {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    align-items: start;
+  }
+  .bcal-daypanel {
+    order: 0;
+    position: sticky;
+    top: 96px;
+  }
+}
 .bcal {
   padding: 16px;
   border: 1px solid var(--line);

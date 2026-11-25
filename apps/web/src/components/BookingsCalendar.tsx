@@ -75,7 +75,9 @@ export function BookingsCalendar({
   const inMonth = [...byDay.keys()].some((k) => k.startsWith(dayKey(first).slice(0, 7)));
 
   return (
-    <div>
+    // Wide screens: the month on the left, the picked day's bookings beside
+    // it. Narrow screens: the day's bookings under the month.
+    <div className="bcal-layout">
       <div className="bcal">
         <div className="bcal-head">
           <button type="button" className="bcal-nav" onClick={() => shift(-1)} aria-label={t('prevMonth')}>
@@ -129,7 +131,7 @@ export function BookingsCalendar({
         {!inMonth && <p className="bcal-none">{t('noneThisMonth')}</p>}
       </div>
 
-      <section style={{ marginTop: 20 }} aria-live="polite">
+      <section className="bcal-daypanel" aria-live="polite">
         <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12, textTransform: 'none' }}>
           {selectedLabel.charAt(0).toUpperCase() + selectedLabel.slice(1)}
         </h2>

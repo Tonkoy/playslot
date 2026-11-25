@@ -19,7 +19,9 @@ export default async function MyBookingsPage({ params }: { params: Promise<{ loc
   return (
     <>
       <SiteHeader />
-      <main style={{ maxWidth: 760, margin: '0 auto', padding: '32px 20px 64px' }}>
+      {/* Wide enough for the month calendar with the day's bookings beside it;
+          760px was sized for the list alone. */}
+      <main style={{ maxWidth: 1080, margin: '0 auto', padding: '32px 20px 64px' }}>
         <PageHeader title={t('title')} />
         <AccountStandingBanner />
         <MyBookings />

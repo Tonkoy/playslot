@@ -2001,3 +2001,21 @@ button.bk-coach.is-on .bk-coach-dot {
     width: 100%;
   }
 }
+
+/* A lesson with a coach: filled, so it never reads as one more free (pale green) tile. */
+:root {
+  --lesson-fill: color-mix(in srgb, var(--teal) 80%, #000);
+}
+.acal-entry.is-solid,
+.avail-court.acal-tile.is-solid {
+  border-color: var(--lesson-fill);
+  background: var(--lesson-fill);
+  color: #fff;
+}
+.acal-entry.is-solid small,
+.avail-court.acal-tile.is-solid small {
+  color: rgba(255, 255, 255, 0.86);
+}
+.avail-badge.acal-badge-lesson {
+  background: var(--lesson-fill);
+}

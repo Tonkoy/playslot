@@ -362,6 +362,9 @@ export function ClubCalendar({ clubId, initialDate }: { clubId: number; initialD
     const s = STATUS_STYLE[entryKind(e)] ?? STATUS_STYLE[e.status] ?? STATUS_STYLE.CONFIRMED!;
     return { '--tone': s.fg, '--tone-soft': s.bg } as React.CSSProperties;
   };
+  // A lesson is filled in, not tinted: a pale teal tile is too close to a free
+  // (pale green) one, and a coach's hour is the thing staff look for first.
+  const solidOf = (e: CalendarEntry) => (entryKind(e) === 'LESSON' ? ' is-solid' : '');
   const isSelectedEntry = (e: CalendarEntry) => selection?.kind === 'entry' && selection.entry.id === e.id;
   const isSelectedFree = (courtId: number, min: number) =>
     selection?.kind === 'free' && selection.courtId === courtId && selection.startMin === min;
@@ -383,7 +386,7 @@ export function ClubCalendar({ clubId, initialDate }: { clubId: number; initialD
       // band label, where it ends and picks up again below with its name.
       const head = hit.isStart || startsBand(i);
       const joinsNext = !hit.isEnd && i + 1 < rows.length && !startsBand(i + 1);
-      const cls = `slot acal-entry${head ? '' : ' is-cont'}${joinsNext ? ' is-open-b' : ''}${isSelectedEntry(e) ? ' is-selected' : ''}`;
+      const cls = `slot acal-entry${solidOf(e)}${head ? '' : ' is-cont'}${joinsNext ? ' is-open-b' : ''}${isSelectedEntry(e) ? ' is-selected' : ''}`;
       return (
         <td key={c.id}>
           <button
@@ -438,6 +441,7 @@ export function ClubCalendar({ clubId, initialDate }: { clubId: number; initialD
     const cells = courts.map((c) => ({ c, hit: entryAt(c.id, min), closed: closureAt(c.id, min) }));
     const free = cells.filter((x) => !x.hit && !x.closed).length;
     const booked = new Set(cells.filter((x) => x.hit && !isBlockLike(x.hit.entry)).map((x) => x.hit!.entry.id)).size;
+    const lessons = new Set(cells.filter((x) => x.hit && entryKind(x.hit.entry) === 'LESSON').map((x) => x.hit!.entry.id)).size;
     const waiting = cells.some((x) => x.hit?.entry.status === 'PENDING_APPROVAL');
     const tournament = cells.some((x) => x.hit?.entry.type === 'TOURNAMENT');
     const allClosed = cells.length > 0 && cells.every((x) => x.closed);
@@ -452,7 +456,8 @@ export function ClubCalendar({ clubId, initialDate }: { clubId: number; initialD
             : free > 0
               ? tg.rich('freeCourts', { count: free, b: (x) => <b>{x}</b> })
               : tg('noneFree')}
-          {booked > 0 && <span className="avail-badge">{t('bookedCount', { count: booked })}</span>}
+          {booked - lessons > 0 && <span className="avail-badge">{t('bookedCount', { count: booked - lessons })}</span>}
+          {lessons > 0 && <span className="avail-badge acal-badge-lesson">{t('lessonCount', { count: lessons })}</span>}
           {waiting && <span className="avail-badge badge-event">{st('PENDING_APPROVAL')}</span>}
           {tournament && <span className="avail-badge badge-event">{t('legendTournament')}</span>}
         </span>
@@ -488,7 +493,7 @@ export function ClubCalendar({ clubId, initialDate }: { clubId: number; initialD
                     <button
                       key={c.id}
                       type="button"
-                      className={`avail-court acal-tile${isSelectedEntry(e) ? ' is-selected' : ''}`}
+                      className={`avail-court acal-tile${solidOf(e)}${isSelectedEntry(e) ? ' is-selected' : ''}`}
                       style={{ ...stagger, ...toneOf(e) }}
                       onClick={() => setSelection({ kind: 'entry', entry: e })}
                     >
@@ -582,7 +587,10 @@ export function ClubCalendar({ clubId, initialDate }: { clubId: number; initialD
             <span key={l.kind}>
               <i
                 className="avail-swatch"
-                style={{ background: STATUS_STYLE[l.kind]!.bg, border: `1.5px solid ${STATUS_STYLE[l.kind]!.fg}` }}
+                style={{
+                  background: l.kind === 'LESSON' ? 'var(--lesson-fill)' : STATUS_STYLE[l.kind]!.bg,
+                  border: `1.5px solid ${l.kind === 'LESSON' ? 'var(--lesson-fill)' : STATUS_STYLE[l.kind]!.fg}`,
+                }}
               />
               {l.label}
             </span>

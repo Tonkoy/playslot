@@ -357,7 +357,8 @@
     "rules": "Rules",
     "coaches": "Coaches",
     "hour": "hour",
-    "today": "Today"
+    "today": "Today",
+    "rulesTitle": "Club rules"
   },
   "Grid": {
     "heading": "Availability by court and time",

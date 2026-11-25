@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
-import { getClubReviews, getMe, submitReview } from '@/lib/api';
+import { getMe, listClubReviews, submitReview } from '@/lib/api';
 
 function Stars({ n }: { n: number }) {
   return (
@@ -19,7 +19,7 @@ export function ReviewsSection({ clubId }: { clubId: number }) {
   const locale = useLocale();
   const qc = useQueryClient();
   const me = useQuery({ queryKey: ['me'], queryFn: getMe, retry: false });
-  const reviews = useQuery({ queryKey: ['reviews', clubId], queryFn: () => getClubReviews(clubId) });
+  const reviews = useQuery({ queryKey: ['reviews', clubId], queryFn: () => listClubReviews(clubId) });
 
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
@@ -38,9 +38,12 @@ export function ReviewsSection({ clubId }: { clubId: number }) {
   const dtf = new Intl.DateTimeFormat(locale === 'bg' ? 'bg-BG' : 'en-US', { dateStyle: 'medium' });
   const data = reviews.data;
 
+  // Reviews that could not be loaded leave no bare heading behind.
+  if (reviews.isError) return null;
+
   return (
     <section style={{ marginTop: 32 }}>
-      <h2 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 700, marginBottom: 12 }}>
+      <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 12 }}>
         {t('title')}
         {data && data.count > 0 && (
           <span style={{ fontSize: 16, color: 'var(--ink-2)', marginLeft: 10 }}>
@@ -79,7 +82,12 @@ export function ReviewsSection({ clubId }: { clubId: number }) {
         </div>
       )}
 
-      {reviews.isSuccess && data && data.count === 0 && <p style={{ color: 'var(--ink-2)' }}>{t('empty')}</p>}
+      {/* Never an empty heading: a line saying so, in the same quiet card style. */}
+      {(reviews.isPending || (data && data.count === 0)) && (
+        <p style={{ color: 'var(--ink-2)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', margin: 0 }}>
+          {reviews.isPending ? '…' : t('empty')}
+        </p>
+      )}
       <div style={{ display: 'grid', gap: 10 }}>
         {(data?.reviews ?? []).map((r) => (
           <div key={r.id} style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', padding: 14 }}>

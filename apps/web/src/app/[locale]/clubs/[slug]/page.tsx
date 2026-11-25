@@ -249,11 +249,17 @@ export default async function ClubProfilePage({
         <MembershipPlansSection clubId={club.id} currency={club.currency} />
         <ReviewsSection clubId={club.id} />
 
-        {/* House rules last: worth having, rarely the reason for the visit. */}
+        {/* House rules last: worth having, rarely the reason for the visit.
+            A section of its own with a heading like the others, so it never
+            reads as part of the section above it. */}
         {club.rules && (
-          <section style={{ ...infoCard, marginTop: 32 }}>
-            <h2 style={infoH2}>{t('rules')}</h2>
-            <p style={{ color: 'var(--ink-2)', whiteSpace: 'pre-wrap' }}>{club.rules}</p>
+          <section style={{ marginTop: 32 }} aria-labelledby="club-rules">
+            <h2 id="club-rules" style={sectionH2}>
+              {t('rulesTitle')}
+            </h2>
+            <div style={infoCard}>
+              <p style={{ color: 'var(--ink-2)', whiteSpace: 'pre-wrap', margin: 0 }}>{club.rules}</p>
+            </div>
           </section>
         )}
       </main>
@@ -276,4 +282,5 @@ const infoCard: React.CSSProperties = {
   padding: 18,
   boxShadow: 'var(--shadow-sm)',
 };
-const infoH2: React.CSSProperties = { fontSize: 16, fontWeight: 700, marginBottom: 10 };
+/** Same as the other sections' headings (events, memberships, reviews). */
+const sectionH2: React.CSSProperties = { fontSize: 22, fontWeight: 800, marginBottom: 12 };

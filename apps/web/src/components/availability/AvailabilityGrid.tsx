@@ -336,14 +336,132 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
     );
   };
 
+  /** One hour in the phone list. */
+  const hourRow = (time: string) => {
+            const cells = courts
+              .map((c) => ({ c, slot: byKey.get(`${c.id}@${time}`) }))
+              .filter((x): x is { c: AvailabilityCourt; slot: AvailabilitySlot } => !!x.slot);
+            const free = cells.filter((x) => SLOT_STYLE[x.slot.state].bookable).length;
+            const mine = cells.some((x) => x.slot.state === 'MINE');
+            const tournament = cells.some((x) => x.slot.state === 'TOURNAMENT');
+            const event = cells.some((x) => x.slot.state === 'EVENT');
+            const special = tournament || event;
+            // The row's border takes the colour of what is special about the
+            // hour, so it stands out in the list, not just a small label.
+            const tone = mine ? ' tone-mine' : tournament ? ' tone-tournament' : event ? ' tone-event' : '';
+            const past = cells.every((x) => x.slot.state === 'PAST');
+            const cheapest = cheapestAt(time);
+            const open = openTime === time;
+            const info = (
+              <>
+                <span className="avail-hour-time mono">{time}</span>
+                <span className="avail-hour-info">
+                  {past ? st('PAST') : free > 0 ? t.rich('freeCourts', { count: free, b: (c) => <b>{c}</b> }) : t('noneFree')}
+                  {mine && <span className="avail-badge">{t('mine')}</span>}
+                  {tournament && <span className="avail-badge badge-tournament">{st('TOURNAMENT')}</span>}
+                  {event && <span className="avail-badge badge-event">{st('EVENT')}</span>}
+                </span>
+              </>
+            );
+            if (free === 0 && !mine && !special) {
+              return (
+                <div key={time} className="avail-hour is-full">
+                  <div className="avail-hour-top">{info}</div>
+                </div>
+              );
+            }
+            return (
+              <div key={time} className={`avail-hour${open ? ' is-open' : ''}${free === 0 ? ' is-full' : ''}${tone}`}>
+                <button
+                  type="button"
+                  className="avail-hour-top"
+                  aria-expanded={open}
+                  onClick={() => setOpenTime(open ? null : time)}
+                >
+                  {info}
+                  {cheapest != null && <span className="avail-hour-from">{t('fromPrice', { price: price(cheapest)! })}</span>}
+                  <span className="avail-hour-chev" aria-hidden>
+                    ›
+                  </span>
+                </button>
+                {/* Always rendered so it can slide open and shut; `inert` keeps
+                    the folded tiles out of the tab order and screen readers. */}
+                <div className={`avail-fold${open ? ' is-open' : ''}`} inert={!open}>
+                  <div className="avail-fold-inner">
+                    <div className="avail-courts">
+                      {cells.map(({ c, slot }, i) => {
+                        // Tiles follow one another in when the hour opens.
+                        const stagger = { '--i': i } as React.CSSProperties;
+                        if (SLOT_STYLE[slot.state].bookable) {
+                          const picked = isPicked(c, slot);
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              className={`avail-court slot-free${picked ? ' is-selected' : ''}`}
+                              style={stagger}
+                              aria-pressed={picked}
+                              onClick={() => pick(c, slot, time)}
+                            >
+                              <span>
+                                {c.name}
+                                <small>{courtNote(c)}</small>
+                              </span>
+                              <span>{price(slot.priceCents) ?? '✓'}</span>
+                            </button>
+                          );
+                        }
+                        const kind =
+                          slot.state === 'MINE'
+                            ? 'slot-mine'
+                            : slot.state === 'EVENT'
+                              ? 'slot-event'
+                              : slot.state === 'TOURNAMENT'
+                                ? 'slot-tournament'
+                                : 'slot-taken';
+                        const note =
+                          slot.state === 'MINE'
+                            ? t('mine')
+                            : slot.state === 'RESERVED' || slot.state === 'UNAVAILABLE'
+                              ? t('taken')
+                              : st(slot.state);
+                        return (
+                          <div key={c.id} className={`avail-court ${kind}`} style={stagger}>
+                            <span>
+                              {c.name}
+                              <small>{note}</small>
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+  };
+
+  // The whole bar is the toggle; the hours it hides slide open below it.
   const pastFold = foldPast && (
-    <div className="avail-past">
+    <button
+      type="button"
+      className={`avail-past${showPast ? ' is-open' : ''}`}
+      onClick={() => setShowPast((v) => !v)}
+      aria-expanded={showPast}
+    >
       <span>{t('pastHours', { from: pastTimes[0]!, to: pastTimes[pastTimes.length - 1]! })}</span>
-      <button type="button" onClick={() => setShowPast((v) => !v)} aria-expanded={showPast}>
+      <span className="avail-past-action">
         {showPast ? t('hidePast') : t('showPast')}
-      </button>
-    </div>
+        <span className="avail-past-chev" aria-hidden>
+          ›
+        </span>
+      </span>
+    </button>
   );
+  const isPastTime = (time: string) => foldPast && pastTimes.includes(time);
+  // Past rows are always in the page when folded away, so they can animate
+  // open and shut; `inert` keeps them out of reach while hidden.
+  const rowTimes = foldPast ? [...pastTimes, ...liveTimes] : shownTimes;
 
   return (
     <section aria-labelledby="grid-heading" style={{ marginTop: 8, paddingBottom: selected ? 84 : 0 }}>
@@ -472,22 +590,27 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
                   </td>
                 </tr>
               )}
-              {shownTimes.map((time, i) => {
+              {rowTimes.map((time, i) => {
                 const band = bandOf(time);
-                const newBand = i === 0 || bandOf(shownTimes[i - 1]!) !== band;
+                const past = isPastTime(time);
+                const collapsed = past && !showPast;
+                const firstLive = foldPast && !past && i === pastTimes.length;
+                // With the past folded away, the first live hour starts its band.
+                const newBand = i === 0 || bandOf(rowTimes[i - 1]!) !== band || (firstLive && !showPast);
                 const cheapest = cheapestAt(time);
+                const foldClass = past ? `avail-row-fold${collapsed ? ' is-collapsed' : ''}` : undefined;
                 return (
                   <Fragment key={time}>
                     {newBand && (
-                      <tr>
+                      <tr className={foldClass} inert={collapsed}>
                         <th colSpan={courts.length + 1} className="avail-band" scope="colgroup">
-                          {t(band)}
+                          <div className="avail-clip">{t(band)}</div>
                         </th>
                       </tr>
                     )}
-                    <tr>
+                    <tr className={foldClass} inert={collapsed}>
                       <th scope="row" className="avail-time mono">
-                        {time}
+                        <div className="avail-clip avail-clip-time">{time}</div>
                       </th>
                       {courts.map((c) => gridCell(c, time, cheapest))}
                     </tr>
@@ -504,109 +627,12 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
       {query.isSuccess && hasRows && (
         <div className="avail-list">
           {pastFold && <div style={{ marginBottom: 8 }}>{pastFold}</div>}
-          {shownTimes.map((time) => {
-            const cells = courts
-              .map((c) => ({ c, slot: byKey.get(`${c.id}@${time}`) }))
-              .filter((x): x is { c: AvailabilityCourt; slot: AvailabilitySlot } => !!x.slot);
-            const free = cells.filter((x) => SLOT_STYLE[x.slot.state].bookable).length;
-            const mine = cells.some((x) => x.slot.state === 'MINE');
-            const tournament = cells.some((x) => x.slot.state === 'TOURNAMENT');
-            const event = cells.some((x) => x.slot.state === 'EVENT');
-            const special = tournament || event;
-            // The row's border takes the colour of what is special about the
-            // hour, so it stands out in the list, not just a small label.
-            const tone = mine ? ' tone-mine' : tournament ? ' tone-tournament' : event ? ' tone-event' : '';
-            const past = cells.every((x) => x.slot.state === 'PAST');
-            const cheapest = cheapestAt(time);
-            const open = openTime === time;
-            const info = (
-              <>
-                <span className="avail-hour-time mono">{time}</span>
-                <span className="avail-hour-info">
-                  {past ? st('PAST') : free > 0 ? t.rich('freeCourts', { count: free, b: (c) => <b>{c}</b> }) : t('noneFree')}
-                  {mine && <span className="avail-badge">{t('mine')}</span>}
-                  {tournament && <span className="avail-badge badge-tournament">{st('TOURNAMENT')}</span>}
-                  {event && <span className="avail-badge badge-event">{st('EVENT')}</span>}
-                </span>
-              </>
-            );
-            if (free === 0 && !mine && !special) {
-              return (
-                <div key={time} className="avail-hour is-full">
-                  <div className="avail-hour-top">{info}</div>
-                </div>
-              );
-            }
-            return (
-              <div key={time} className={`avail-hour${open ? ' is-open' : ''}${free === 0 ? ' is-full' : ''}${tone}`}>
-                <button
-                  type="button"
-                  className="avail-hour-top"
-                  aria-expanded={open}
-                  onClick={() => setOpenTime(open ? null : time)}
-                >
-                  {info}
-                  {cheapest != null && <span className="avail-hour-from">{t('fromPrice', { price: price(cheapest)! })}</span>}
-                  <span className="avail-hour-chev" aria-hidden>
-                    ›
-                  </span>
-                </button>
-                {/* Always rendered so it can slide open and shut; `inert` keeps
-                    the folded tiles out of the tab order and screen readers. */}
-                <div className={`avail-fold${open ? ' is-open' : ''}`} inert={!open}>
-                  <div className="avail-fold-inner">
-                    <div className="avail-courts">
-                      {cells.map(({ c, slot }, i) => {
-                        // Tiles follow one another in when the hour opens.
-                        const stagger = { '--i': i } as React.CSSProperties;
-                        if (SLOT_STYLE[slot.state].bookable) {
-                          const picked = isPicked(c, slot);
-                          return (
-                            <button
-                              key={c.id}
-                              type="button"
-                              className={`avail-court slot-free${picked ? ' is-selected' : ''}`}
-                              style={stagger}
-                              aria-pressed={picked}
-                              onClick={() => pick(c, slot, time)}
-                            >
-                              <span>
-                                {c.name}
-                                <small>{courtNote(c)}</small>
-                              </span>
-                              <span>{price(slot.priceCents) ?? '✓'}</span>
-                            </button>
-                          );
-                        }
-                        const kind =
-                          slot.state === 'MINE'
-                            ? 'slot-mine'
-                            : slot.state === 'EVENT'
-                              ? 'slot-event'
-                              : slot.state === 'TOURNAMENT'
-                                ? 'slot-tournament'
-                                : 'slot-taken';
-                        const note =
-                          slot.state === 'MINE'
-                            ? t('mine')
-                            : slot.state === 'RESERVED' || slot.state === 'UNAVAILABLE'
-                              ? t('taken')
-                              : st(slot.state);
-                        return (
-                          <div key={c.id} className={`avail-court ${kind}`} style={stagger}>
-                            <span>
-                              {c.name}
-                              <small>{note}</small>
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {foldPast && (
+            <div className={`avail-fold${showPast ? ' is-open' : ''}`} inert={!showPast}>
+              <div className="avail-fold-inner">{pastTimes.map((time) => hourRow(time))}</div>
+            </div>
+          )}
+          {(foldPast ? liveTimes : shownTimes).map((time) => hourRow(time))}
         </div>
       )}
 

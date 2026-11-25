@@ -619,6 +619,14 @@ export function cancelGroupSession(id: number): Promise<{ ok: true }> {
 }
 
 // ── favorites + reviews (client) ──
+/**
+ * A club's reviews, from the browser. (getClubReviews above is the server-side
+ * read: it calls the API host directly, which a browser cannot reach — used
+ * from the client it always came back empty, and "Отзиви" showed nothing.)
+ */
+export function listClubReviews(clubId: number): Promise<ClubReviews> {
+  return apiFetch(`/clubs/${clubId}/reviews`);
+}
 export function getFavorites(): Promise<FavoriteClub[]> {
   return apiFetch('/me/favorites');
 }

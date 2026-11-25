@@ -45,7 +45,8 @@ export function EventsSection({
     onError: (e) => toast(e instanceof Error ? e.message : tt('error'), 'error'),
   });
 
-  if (events.isSuccess && events.data.length === 0) return null;
+  // Nothing to show (or it could not be loaded): no section, not a bare heading.
+  if (events.isError || (events.isSuccess && events.data.length === 0)) return null;
 
   return (
     <section style={{ marginTop: 32 }}>

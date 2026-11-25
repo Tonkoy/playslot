@@ -791,17 +791,18 @@ button.avail-hour-top {
   }
 }
 
-/* Generic slide-open block and chevron (components/Collapse.tsx). */
-.collapse {
+/* Generic slide-open block and chevron (components/Collapse.tsx). Not named
+   `.collapse`: that is a Tailwind utility (visibility: collapse), which hid it. */
+.ps-collapse {
   display: grid;
   grid-template-rows: 0fr;
   transition: grid-template-rows 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
-.collapse.is-open {
+.ps-collapse.is-open {
   grid-template-rows: 1fr;
   transition-duration: 280ms;
 }
-.collapse-inner {
+.ps-collapse-inner {
   min-height: 0;
   overflow: hidden;
   opacity: 0;
@@ -810,7 +811,7 @@ button.avail-hour-top {
     opacity 150ms ease,
     transform 150ms ease;
 }
-.collapse.is-open .collapse-inner {
+.ps-collapse.is-open .ps-collapse-inner {
   opacity: 1;
   transform: none;
   transition:
@@ -1285,9 +1286,9 @@ button.avail-hour-top {
 
 @media (prefers-reduced-motion: reduce) {
   .atc-menu,
-  .collapse,
-  .collapse-inner,
-  .collapse.is-open .collapse-inner,
+  .ps-collapse,
+  .ps-collapse-inner,
+  .ps-collapse.is-open .ps-collapse-inner,
   .chev,
   .avail-past-chev,
   .avail-row-fold > *,

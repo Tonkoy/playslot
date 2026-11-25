@@ -5,8 +5,8 @@
  */
 export function Collapse({ open, children, id }: { open: boolean; children: React.ReactNode; id?: string }) {
   return (
-    <div id={id} className={`collapse${open ? ' is-open' : ''}`} inert={!open}>
-      <div className="collapse-inner">{children}</div>
+    <div id={id} className={`ps-collapse${open ? ' is-open' : ''}`} inert={!open}>
+      <div className="ps-collapse-inner">{children}</div>
     </div>
   );
 }

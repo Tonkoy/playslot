@@ -193,7 +193,7 @@ export default async function ClubProfilePage({
         <h2 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 700, margin: '16px 0 8px' }}>
           {t('availability')}
         </h2>
-        <AvailabilityGrid clubId={club.id} initialDate={date} />
+        <AvailabilityGrid clubId={club.id} clubName={club.name} initialDate={date} />
 
         {/* Opening hours come after the calendar, folded to one line with
             today's hours: the week is reference, not what people came for. */}

@@ -1,4 +1,5 @@
-import { Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { cancelReservationSchema, createReservationSchema } from '@playslot/contracts';
 import { CurrentUser } from '../auth/decorators';
 import type { AuthenticatedUser } from '../auth/auth.types';
@@ -30,6 +31,17 @@ export class ReservationsController {
   @Get('reservations/:id')
   getOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.reservations.getOne(Number(id), user.id, user.roles);
+  }
+
+  /** The booking as a calendar file (.ics) — opens in the phone's calendar app. */
+  @Get('reservations/:id/calendar.ics')
+  async calendar(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser, @Res() res: Response) {
+    const file = await this.reservations.calendarFile(Number(id), user.id, user.roles);
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    // inline: iPhone Safari offers "Add to Calendar" instead of saving a file.
+    res.setHeader('Content-Disposition', `inline; filename="${file.filename}"`);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.send(file.body);
   }
 
   @Post('reservations/:id/cancel')

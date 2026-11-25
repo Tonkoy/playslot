@@ -9,6 +9,7 @@ import { Modal } from './Modal';
 import { StarInput, Stars } from './Stars';
 import { useToast } from './Toast';
 import { BusyLabel } from '@/components/Spinner';
+import { Chevron, Collapse } from './Collapse';
 
 /**
  * "How was it?" — past court bookings, lessons and group trainings the player
@@ -95,12 +96,16 @@ export function SessionFeedbackPanel() {
           <button
             type="button"
             onClick={() => setShowRated((v) => !v)}
-            style={{ ...linkBtn, marginTop: 12 }}
+            style={{ ...linkBtn, marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
             aria-expanded={showRated}
+            aria-controls="rated-sessions"
           >
             {showRated ? t('hideRated') : t('showRated', { count: rated.length })}
+            <Chevron open={showRated} />
           </button>
-          {showRated && <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>{rated.map(row)}</div>}
+          <Collapse open={showRated} id="rated-sessions">
+            <div style={{ display: 'grid', gap: 10, paddingTop: 10 }}>{rated.map(row)}</div>
+          </Collapse>
         </>
       )}
 

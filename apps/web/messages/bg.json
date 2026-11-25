@@ -338,6 +338,15 @@
     "noneThisMonth": "Няма резервации през този месец.",
     "noneThisDay": "Няма резервации в този ден."
   },
+  "AddToCalendar": {
+    "add": "Добави в календара",
+    "short": "В календара",
+    "apple": "iPhone, Mac, Outlook",
+    "appleHint": "файл .ics за всяко календарно приложение",
+    "google": "Google Календар",
+    "googleHint": "Android и уеб",
+    "bookingNo": "Резервация №"
+  },
   "SlotStates": {
     "FREE": "Свободен",
     "RESERVED": "Зает",

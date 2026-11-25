@@ -338,6 +338,15 @@
     "noneThisMonth": "No bookings this month.",
     "noneThisDay": "No bookings on this day."
   },
+  "AddToCalendar": {
+    "add": "Add to calendar",
+    "short": "Calendar",
+    "apple": "iPhone, Mac, Outlook",
+    "appleHint": ".ics file for any calendar app",
+    "google": "Google Calendar",
+    "googleHint": "Android and web",
+    "bookingNo": "Booking no."
+  },
   "SlotStates": {
     "FREE": "Free",
     "RESERVED": "Reserved",

@@ -791,6 +791,121 @@ button.avail-hour-top {
   }
 }
 
+/* Generic slide-open block and chevron (components/Collapse.tsx). */
+.collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.collapse.is-open {
+  grid-template-rows: 1fr;
+  transition-duration: 280ms;
+}
+.collapse-inner {
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+.collapse.is-open .collapse-inner {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 240ms ease 60ms,
+    transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1) 60ms;
+}
+.chev {
+  display: inline-block;
+  transition: transform 200ms ease;
+}
+.chev.is-open {
+  transform: rotate(90deg);
+}
+
+/* "Добави в календара" button and its menu (components/AddToCalendar.tsx). */
+.atc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--pill);
+  background: var(--surface);
+  color: var(--green-deep);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.atc-menu {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  gap: 2px;
+  min-width: 250px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+  transform-origin: top right;
+  pointer-events: none;
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+.atc-menu.is-open {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.atc-menu a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+}
+.atc-menu a:hover {
+  background: var(--surface-2);
+}
+.atc-menu a > span:first-child {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 7px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 15px;
+}
+.atc-menu a > span:first-child.atc-g {
+  background: #fff;
+  border: 1px solid var(--line-2);
+  color: var(--ink);
+  font-weight: 800;
+}
+.atc-menu small {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
 /* List / calendar switch (my bookings). */
 .view-switch {
   display: inline-flex;
@@ -1169,6 +1284,11 @@ button.avail-hour-top {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .atc-menu,
+  .collapse,
+  .collapse-inner,
+  .collapse.is-open .collapse-inner,
+  .chev,
   .avail-past-chev,
   .avail-row-fold > *,
   .avail-row-fold .slot,

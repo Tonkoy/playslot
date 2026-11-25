@@ -13,6 +13,7 @@ import { useToast } from './Toast';
 import { SkeletonRows } from '@/components/Skeleton';
 import { BusyLabel } from '@/components/Spinner';
 import { BookingsCalendar } from './BookingsCalendar';
+import { AddToCalendar } from './AddToCalendar';
 
 type View = 'list' | 'calendar';
 const VIEW_KEY = 'playslot.bookingsView';
@@ -128,24 +129,35 @@ export function MyBookings() {
       >
         {st.has(r.status) ? st(r.status) : r.status}
       </span>
-      {/* A booking that has already started cannot be cancelled from here. */}
+      {/* Upcoming and still on: add it to the phone's calendar, or cancel it.
+          A booking that has already started cannot be cancelled from here.
+          The two actions stay together when the row wraps on a phone. */}
       {CANCELLABLE.includes(r.status) && new Date(r.startsAt).getTime() > now && (
-        <button
-          type="button"
-          onClick={() => setPending(r)}
-          style={{
-            marginLeft: 'auto',
-            minHeight: 40,
-            padding: '0 14px',
-            border: '1px solid var(--clay)',
-            color: 'var(--clay)',
-            background: 'var(--surface)',
-            borderRadius: 'var(--pill)',
-            cursor: 'pointer',
-          }}
-        >
-          {t('cancel')}
-        </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <AddToCalendar
+            reservationId={r.id}
+            title={`${enumLabel(te, 'ReservationType', r.type)} · ${r.clubName ?? ''}`}
+            location={r.clubName}
+            startsAt={r.startsAt}
+            endsAt={r.endsAt}
+            compact
+          />
+          <button
+            type="button"
+            onClick={() => setPending(r)}
+            style={{
+              minHeight: 40,
+              padding: '0 14px',
+              border: '1px solid var(--clay)',
+              color: 'var(--clay)',
+              background: 'var(--surface)',
+              borderRadius: 'var(--pill)',
+              cursor: 'pointer',
+            }}
+          >
+            {t('cancel')}
+          </button>
+        </div>
       )}
     </div>
   );

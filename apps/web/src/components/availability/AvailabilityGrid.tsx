@@ -19,6 +19,7 @@ import {
 import { enumLabel } from '@/lib/enums';
 import { errorMessage } from '@/lib/errors';
 import { SLOT_STYLE } from '@/lib/slotStates';
+import { AddToCalendar } from '@/components/AddToCalendar';
 import { BusyLabel } from '@/components/Spinner';
 
 /** Days shown in the strip above the grid. */
@@ -67,7 +68,15 @@ interface SelectedSlot {
   coachIds: number[];
 }
 
-export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; initialDate?: string }) {
+export function AvailabilityGrid({
+  clubId,
+  clubName,
+  initialDate,
+}: {
+  clubId: number;
+  clubName?: string;
+  initialDate?: string;
+}) {
   const t = useTranslations('Grid');
   const st = useTranslations('SlotStates');
   const bk = useTranslations('Booking');
@@ -87,6 +96,8 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
   // picked); the checkout dialog opens from that bar.
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [confirmedRef, setConfirmedRef] = useState<number | null>(null);
+  // What was just booked, for "Добави в календара" in the confirmation.
+  const [booked, setBooked] = useState<{ start: string; end: string; courtName: string } | null>(null);
   const [coachId, setCoachId] = useState<number | null>(null);
   const [serviceId, setServiceId] = useState<number | null>(null);
   // Online payments are not live yet: clicking «pay online» only explains that.
@@ -191,6 +202,13 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
         return;
       }
       setConfirmedRef(res.reservationId);
+      if (selected) {
+        setBooked({
+          start: selected.start,
+          end: new Date(new Date(selected.start).getTime() + duration * 60_000).toISOString(),
+          courtName: selected.courtName,
+        });
+      }
       clearSelection();
       qc.invalidateQueries({ queryKey: ['availability', clubId] });
       qc.invalidateQueries({ queryKey: ['availabilitySummary', clubId] });
@@ -664,7 +682,18 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
       {/* Confirmation modal */}
       <Modal open={confirmedRef !== null} onClose={() => setConfirmedRef(null)} title={bk('confirmedTitle')}>
         <p style={{ color: 'var(--ink-2)' }}>{bk('confirmedBody', { ref: confirmedRef ?? 0 })}</p>
-        <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+        {confirmedRef !== null && booked && (
+          <div style={{ marginTop: 14 }}>
+            <AddToCalendar
+              reservationId={confirmedRef}
+              title={[clubName, booked.courtName].filter(Boolean).join(' · ')}
+              location={clubName}
+              startsAt={booked.start}
+              endsAt={booked.end}
+            />
+          </div>
+        )}
+        <div style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Link href="/me/bookings" style={{ ...pillBtn, background: 'var(--lime)', color: 'var(--on-lime)' }}>
             {bk('myBookings')}
           </Link>

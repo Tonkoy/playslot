@@ -23,6 +23,7 @@ import {
 } from '@playslot/domain';
 import { assertInGoodStanding } from '../common/standing';
 import { AppException } from '../common/app-exception';
+import { bookingIcs } from './ics';
 import { normalizeLocale } from '../common/i18n';
 import { TurnstileService } from '../common/turnstile.service';
 import { SERVER_ENV } from '../config/app-config.module';
@@ -1096,6 +1097,50 @@ export class ReservationsService {
     const isStaff = await this.isClubStaff(r.clubId, userId, roles);
     if (r.userId !== userId && !isStaff) throw new AppException('forbidden');
     return this.toSummary(r);
+  }
+
+  /**
+   * One booking as a calendar file, for "Добави в календара". The owner (or the
+   * club's staff) only; the event carries the club, address and court, the
+   * booking number and a reminder an hour before.
+   */
+  async calendarFile(id: number, userId: number, roles: string[]): Promise<{ filename: string; body: string }> {
+    const r = await this.prisma.reservation.findUnique({
+      where: { id },
+      include: {
+        user: { select: { locale: true } },
+        club: { select: { name: true, address: true, city: { select: { name: true } } } },
+        resources: { select: { resource: { select: { name: true, type: true } } } },
+      },
+    });
+    if (!r) throw new AppException('not_found');
+    const isStaff = await this.isClubStaff(r.clubId, userId, roles);
+    if (r.userId !== userId && !isStaff) throw new AppException('forbidden');
+
+    const bg = (r.user?.locale ?? 'bg') !== 'en';
+    const courts = r.resources.filter((x) => x.resource.type === 'COURT').map((x) => x.resource.name);
+    const kind =
+      r.type === 'LESSON' ? (bg ? 'Урок' : 'Lesson') : r.type === 'COURT' ? (bg ? 'Корт' : 'Court') : (bg ? 'Резервация' : 'Booking');
+    const base = this.env.APP_BASE_URL.replace(/\/$/, '');
+    const body = bookingIcs({
+      uid: `reservation-${r.id}@playslot.bg`,
+      start: r.startsAt,
+      end: r.endsAt,
+      summary: `${kind} · ${r.club.name}`,
+      location: [r.club.name, r.club.address, r.club.city?.name].filter(Boolean).join(', '),
+      description: [
+        courts.length ? `${bg ? 'Корт' : 'Court'}: ${courts.join(', ')}` : null,
+        `${bg ? 'Резервация №' : 'Booking no.'} ${r.id}`,
+        `${base}/${bg ? 'bg' : 'en'}/me/bookings`,
+      ]
+        .filter(Boolean)
+        .join('\n'),
+      url: `${base}/${bg ? 'bg' : 'en'}/me/bookings`,
+      status: r.status === 'CANCELLED' || r.status === 'REFUNDED' ? 'CANCELLED' : r.status === 'CONFIRMED' || r.status === 'COMPLETED' ? 'CONFIRMED' : 'TENTATIVE',
+      alarmMin: 60,
+      alarmText: `${kind} · ${r.club.name}`,
+    });
+    return { filename: `playslot-${r.id}.ics`, body };
   }
 
   // ── shared internals ──

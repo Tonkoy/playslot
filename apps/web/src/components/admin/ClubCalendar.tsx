@@ -52,6 +52,8 @@ const STATUS_STYLE: Record<string, { bg: string; fg: string }> = {
   PENDING_APPROVAL: { bg: 'var(--held-soft)', fg: 'var(--held)' },
   PENDING_PAYMENT: { bg: 'var(--held-soft)', fg: 'var(--held)' },
   BLOCK: { bg: 'var(--booked-soft)', fg: 'var(--booked)' },
+  // Amber, not the violet of group trainings, so the two never read alike.
+  TOURNAMENT: { bg: 'var(--event-soft)', fg: 'var(--event)' },
   NO_SHOW: { bg: 'var(--reserved-soft)', fg: 'var(--reserved)' },
   COMPLETED: { bg: 'var(--past-soft)', fg: 'var(--past)' },
 };
@@ -60,8 +62,12 @@ const STATUS_STYLE: Record<string, { bg: string; fg: string }> = {
  * What the cell is, for colour and legend: a group training and a lesson read
  * differently from a plain court booking, and a block from both.
  */
+/** Blocks and tournament blocks hold a court for the club, not for a customer. */
+const isBlockLike = (e: CalendarEntry) => e.type === 'BLOCK' || e.type === 'TOURNAMENT';
+
 function entryKind(e: CalendarEntry): string {
   if (e.type === 'BLOCK') return 'BLOCK';
+  if (e.type === 'TOURNAMENT') return 'TOURNAMENT';
   if (e.groupSession) return 'GROUP';
   if (e.coachName) return 'LESSON';
   return e.status;
@@ -72,13 +78,16 @@ type Selection =
   | { kind: 'entry'; entry: CalendarEntry }
   | null;
 
-export function ClubCalendar({ clubId }: { clubId: number }) {
+export function ClubCalendar({ clubId, initialDate }: { clubId: number; initialDate?: string }) {
   const t = useTranslations('Calendar');
   const st = useTranslations('ReservationStatus');
   const te = useTranslations('Errors');
   const tt = useTranslations('Toasts');
   const qc = useQueryClient();
-  const [date, setDate] = useState(todayIso());
+  // A link can open a given day (?date=YYYY-MM-DD), e.g. from the Smile Cup list.
+  const [date, setDate] = useState(
+    initialDate && /^\d{4}-\d{2}-\d{2}$/.test(initialDate) ? initialDate : todayIso(),
+  );
   const [selection, setSelection] = useState<Selection>(null);
   const [blockMode, setBlockMode] = useState(false);
   const [moveEntry, setMoveEntry] = useState<CalendarEntry | null>(null);
@@ -311,6 +320,7 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
           { solid: 'var(--mine)', label: t('legendBooked') },
           { solid: 'var(--teal)', label: t('legendLesson') },
           { solid: 'var(--tournament)', label: t('legendGroup') },
+          { solid: 'var(--event)', label: t('legendTournament') },
           { solid: 'var(--held)', label: t('legendHold') },
           { solid: 'var(--booked)', label: t('legendBlocked') },
           { solid: 'var(--past)', label: t('legendClosed') },
@@ -384,7 +394,9 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
                             <span style={{ fontSize: 12, fontWeight: 700 }}>
                               {hit.entry.groupSession
                                 ? `⚑ ${hit.entry.groupSession.title}`
-                                : hit.entry.type === 'BLOCK'
+                                : hit.entry.type === 'TOURNAMENT'
+                                  ? `🏆 ${hit.entry.blockReason ?? t('block')}`
+                                  : hit.entry.type === 'BLOCK'
                                   ? `⛔ ${hit.entry.blockReason ?? t('block')}`
                                   : (hit.entry.customerName ?? t('booking'))}
                             </span>
@@ -407,7 +419,7 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
                             )}
                             <span className="mono" style={{ display: 'block', fontSize: 10.5, color: s.fg, fontWeight: 700 }}>
                               {st.has(hit.entry.status) ? st(hit.entry.status) : hit.entry.status}
-                              {hit.entry.type !== 'BLOCK' && (paid ? ' · ✓' : ' · •')}
+                              {!isBlockLike(hit.entry) && (paid ? ' · ✓' : ' · •')}
                             </span>
                           </button>
                         </td>
@@ -490,7 +502,7 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
                 time: minToHHMM(selection.startMin),
               })
             : selection?.kind === 'entry'
-              ? `${selection.entry.type === 'BLOCK' ? t('block') : (selection.entry.customerName ?? t('booking'))} · ${localHHMM(selection.entry.startsAt)}–${localHHMM(selection.entry.endsAt)}`
+              ? `${isBlockLike(selection.entry) ? (selection.entry.blockReason ?? t('block')) : (selection.entry.customerName ?? t('booking'))} · ${localHHMM(selection.entry.startsAt)}–${localHHMM(selection.entry.endsAt)}`
               : undefined
         }
       >
@@ -606,12 +618,12 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
                 <BusyLabel busy={confirmMut.isPending}>{t('confirmBooking')}</BusyLabel>
               </button>
             )}
-            {selection.entry.type !== 'BLOCK' && (
+            {!isBlockLike(selection.entry) && (
               <button type="button" onClick={() => paidMut.mutate(selection.entry.id)} style={smallBtn}>
                 {t('markPaid')}
               </button>
             )}
-            {selection.entry.type !== 'BLOCK' && (
+            {!isBlockLike(selection.entry) && (
               <button type="button" onClick={() => noShowMut.mutate(selection.entry.id)} style={smallBtn}>
                 {t('noShow')}
               </button>

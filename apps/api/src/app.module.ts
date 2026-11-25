@@ -23,6 +23,7 @@ import { PushModule } from './push/push.module';
 import { ProgramsModule } from './programs/programs.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ReservationsModule } from './reservations/reservations.module';
+import { SmileCupModule } from './smilecup/smilecup.module';
 import { ResourcesModule } from './resources/resources.module';
 import { StatsModule } from './stats/stats.module';
 import { SearchModule } from './search/search.module';
@@ -49,6 +50,7 @@ import { SearchModule } from './search/search.module';
     ResourcesModule,
     AvailabilityModule,
     ReservationsModule,
+    SmileCupModule,
     PaymentsModule,
     CoachingModule,
     SearchModule,

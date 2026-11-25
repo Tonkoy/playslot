@@ -234,6 +234,63 @@ export class ReservationsService {
     return { reservationId: reservation.id, status: reservation.status };
   }
 
+  /**
+   * Block courts for an outside tournament (Smile Cup): the same checks and
+   * conflict lock as any booking, typed TOURNAMENT so the public grid shows
+   * "Турнир" and nobody can book over it. `meta` lands in `participants` and
+   * is how the blocks are found again (see SmileCupService).
+   */
+  async createTournamentBlock(
+    clubId: number,
+    input: { startsAt: string; durationMin: number; resourceIds: number[]; meta: Record<string, unknown> },
+    staffUserId: number,
+  ) {
+    const slot = await this.resolveSlot({
+      clubId,
+      startsAt: input.startsAt,
+      durationMin: input.durationMin,
+      resourceIds: input.resourceIds,
+      enforceHours: false,
+      allowMidnightCross: false,
+      // Tournaments are announced weeks ahead, beyond the players' booking window.
+      ignoreAdvanceLimit: true,
+    });
+    const reservation = await this.runBookingTransaction({
+      slot,
+      userId: staffUserId,
+      actorUserId: staffUserId,
+      type: 'TOURNAMENT',
+      source: 'CLUB_STAFF',
+      priceCents: 0,
+      paymentMethod: 'FREE',
+      participants: input.meta,
+      holdExpiresAt: null,
+      finalStatus: 'CONFIRMED',
+    });
+    return { reservationId: reservation.id };
+  }
+
+  /** Release tournament blocks: cancelled, which frees the courts (isActive trigger). */
+  async releaseBlocks(clubId: number, reservationIds: number[], staffUserId: number, reason: string) {
+    if (reservationIds.length === 0) return 0;
+    await this.prisma.$transaction(async (tx) => {
+      await tx.reservation.updateMany({
+        where: { id: { in: reservationIds }, clubId, status: { not: 'CANCELLED' } },
+        data: { status: 'CANCELLED', cancellationReason: reason },
+      });
+      for (const id of reservationIds) {
+        await this.audit(tx, staffUserId, 'reservation.cancelled', id, { reason });
+      }
+    });
+    this.events.emitAvailabilityChanged(clubId);
+    return reservationIds.length;
+  }
+
+  /** Tell live grids that a batch of blocks changed the club's availability. */
+  notifyAvailabilityChanged(clubId: number) {
+    this.events.emitAvailabilityChanged(clubId);
+  }
+
   // ── coach-hosted group session: reserve coach + court (spec §10) ──
   async createCoachBlockingReservation(args: {
     coachProfileId: number;
@@ -485,7 +542,7 @@ export class ReservationsService {
           startsAt: formatInZone(r.startsAt, tz),
           endsAt: formatInZone(r.endsAt, tz),
           resourceIds: r.resources.map((x) => x.resourceId),
-          customerName: r.type === 'BLOCK' ? null : (r.user?.name ?? null),
+          customerName: r.type === 'BLOCK' || r.type === 'TOURNAMENT' ? null : (r.user?.name ?? null),
           priceCents: r.priceCents,
           currency: r.currency,
           paymentMethod: r.paymentMethod,
@@ -498,7 +555,8 @@ export class ReservationsService {
                 capacity: r.groupSession.capacity,
               }
             : null,
-          blockReason: r.type === 'BLOCK' ? (participants?.reason ?? null) : null,
+          // A block's reason; a tournament block's tournament name.
+          blockReason: r.type === 'BLOCK' || r.type === 'TOURNAMENT' ? (participants?.reason ?? null) : null,
         };
       }),
       closures: [...closureByWindow.values()].map((c) => ({
@@ -1048,6 +1106,8 @@ export class ReservationsService {
     resourceIds: number[];
     enforceHours: boolean;
     allowMidnightCross?: boolean;
+    /** Club blocks may be set further ahead than players can book. */
+    ignoreAdvanceLimit?: boolean;
   }): Promise<ResolvedSlot> {
     const start = new Date(opts.startsAt);
     if (Number.isNaN(start.getTime())) {
@@ -1069,7 +1129,7 @@ export class ReservationsService {
 
     const now = new Date();
     if (start.getTime() <= now.getTime()) throw new AppException('policy_violation', { reason: 'in_past' });
-    if (start.getTime() - now.getTime() > this.env.MAX_ADVANCE_DAYS * 86_400_000) {
+    if (!opts.ignoreAdvanceLimit && start.getTime() - now.getTime() > this.env.MAX_ADVANCE_DAYS * 86_400_000) {
       throw new AppException('policy_violation', { reason: 'beyond_max_advance' });
     }
 

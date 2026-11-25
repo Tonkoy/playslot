@@ -202,7 +202,8 @@
     "closed": "Closed",
     "registered": "{n}/{cap} signed up",
     "withCoach": "with {name}",
-    "confirmBooking": "Confirm"
+    "confirmBooking": "Confirm",
+    "legendTournament": "Tournament"
   },
   "Home": {
     "eyebrow": "Sofia · tennis · padel",
@@ -547,6 +548,38 @@
     "emptyFiltered": "No upcoming tournaments in this category.",
     "unavailable": "We can't load the tournaments right now.",
     "openSite": "See them on Smile Cup"
+  },
+  "SmileCup": {
+    "title": "Smile Cup tournaments",
+    "check": "Check for tournaments",
+    "refresh": "Check again",
+    "intro": "Upcoming tournaments from smilecup.bg. Pick the hours and courts for each one and block them — nobody can book them. Existing bookings stay; only the free time around them is blocked.",
+    "unavailable": "Smile Cup is not responding right now. Try again in a moment.",
+    "showElsewhere": "Also show tournaments at other clubs ({count})",
+    "none": "No upcoming tournaments have been announced.",
+    "noneHere": "No upcoming tournaments at this club.",
+    "statusBlocked": "Blocked {from}–{to} · {courts, plural, one {# court} other {# courts}}",
+    "statusFree": "Not blocked",
+    "from": "From",
+    "to": "To",
+    "endBeforeStart": "The end must be after the start.",
+    "allCourts": "All courts",
+    "willBlock": "{hours} h will be blocked in total ({pieces, plural, one {# block} other {# blocks}}).",
+    "nothingFree": "No free time to block in this window.",
+    "noConflicts": "No bookings in this window.",
+    "conflictsIntro": "{count, plural, one {# booking stays} other {# bookings stay}} — contact the players if they need to move:",
+    "conflictBlock": "blocked by the club",
+    "unknownCustomer": "no name",
+    "preview": "Preview",
+    "block": "Block the courts",
+    "reblock": "Update the block",
+    "release": "Release the courts",
+    "releaseConfirm": "Yes, release",
+    "cancel": "Cancel",
+    "openCalendar": "Open in calendar",
+    "blocked": "{count, plural, one {# block created} other {# blocks created}}.",
+    "someFailed": "{count, plural, one {# block could not be created} other {# blocks could not be created}} — check the calendar.",
+    "released": "The courts are free again."
   },
   "Platform": {
     "title": "Platform admin",
@@ -965,7 +998,8 @@
     "no_past_booking": "You can review a club only after you've played there.",
     "not_attended": "You can only rate a session that took place.",
     "not_finished": "You can rate it once the session has ended.",
-    "ended": "That session has already ended."
+    "ended": "That session has already ended.",
+    "smilecup_unavailable": "Smile Cup is not responding right now. Try again in a moment."
   },
   "Enums": {
     "Sport": {

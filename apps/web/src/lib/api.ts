@@ -438,6 +438,70 @@ export function createManualBooking(
   return apiFetch(`/clubs/${clubId}/reservations`, { method: 'POST', body: JSON.stringify(input) });
 }
 
+// ── Smile Cup tournaments → blocked courts (club admin) ──
+export interface SmileCupTournamentRow {
+  id: string;
+  name: string;
+  url: string | null;
+  day: string;
+  levelName: string | null;
+  gender: string | null;
+  discipline: string | null;
+  venue: string | null;
+  city: string | null;
+  isFull: boolean;
+  atThisClub: boolean;
+  block: { reservationIds: number[]; startMin: number; endMin: number; courtIds: number[] } | null;
+}
+export interface SmileCupList {
+  slotIntervalMin: number;
+  courts: { id: number; name: string }[];
+  tournaments: SmileCupTournamentRow[];
+}
+export interface SmileCupWindow {
+  startMin: number;
+  endMin: number;
+  courtIds: number[];
+}
+export interface SmileCupPreview {
+  day: string;
+  freeMinutes: number;
+  segments: number;
+  conflicts: {
+    reservationId: number;
+    courtId: number;
+    courtName: string;
+    from: string;
+    to: string;
+    type: string;
+    status: string;
+    customerName: string | null;
+    customerPhone: string | null;
+  }[];
+}
+export function listSmileCupTournaments(clubId: number): Promise<SmileCupList> {
+  return apiFetch(`/clubs/${clubId}/smilecup/tournaments`);
+}
+export function previewSmileCupBlock(clubId: number, id: string, w: SmileCupWindow): Promise<SmileCupPreview> {
+  return apiFetch(`/clubs/${clubId}/smilecup/tournaments/${encodeURIComponent(id)}/preview`, {
+    method: 'POST',
+    body: JSON.stringify(w),
+  });
+}
+export function blockSmileCupTournament(
+  clubId: number,
+  id: string,
+  w: SmileCupWindow,
+): Promise<{ created: number; failed: { courtName: string; from: string; to: string }[]; conflicts: number }> {
+  return apiFetch(`/clubs/${clubId}/smilecup/tournaments/${encodeURIComponent(id)}/block`, {
+    method: 'POST',
+    body: JSON.stringify(w),
+  });
+}
+export function releaseSmileCupTournament(clubId: number, id: string): Promise<{ released: number }> {
+  return apiFetch(`/clubs/${clubId}/smilecup/tournaments/${encodeURIComponent(id)}/release`, { method: 'POST' });
+}
+
 export function createBlock(
   clubId: number,
   input: { startsAt: string; durationMin: number; resourceIds: number[]; reason?: string },

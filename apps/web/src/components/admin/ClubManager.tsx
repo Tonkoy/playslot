@@ -14,6 +14,7 @@ import { AdminStats } from './AdminStats';
 import { ClubExport } from './ClubExport';
 import { ClubFeedback } from './ClubFeedback';
 import { EventManager } from './EventManager';
+import { SmileCupImport } from './SmileCupImport';
 import { MembershipManager } from './MembershipManager';
 import { TeamManager } from './TeamManager';
 import { SkeletonRows } from '@/components/Skeleton';
@@ -345,6 +346,9 @@ export function ClubManager({ clubId }: { clubId: number }) {
 
       {/* ── Memberships (Phase 9) ── */}
       <MembershipManager clubId={clubId} currency={club?.currency ?? 'EUR'} />
+
+      {/* ── Smile Cup tournaments → blocked courts ── */}
+      <SmileCupImport clubId={clubId} />
 
       {/* ── Events & tournaments (Phase 9) ── */}
       <EventManager

@@ -12,10 +12,13 @@ import { PageHeader } from '@/components/PageHeader';
 
 export default async function CalendarPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; clubId: string }>;
+  searchParams: Promise<{ date?: string }>;
 }) {
   const { locale, clubId } = await params;
+  const { date } = await searchParams;
   setRequestLocale(locale);
   const t = await getTranslations('Calendar');
   const a = await getTranslations('Admin');
@@ -28,7 +31,7 @@ export default async function CalendarPage({
           ← {a('back')}
         </Link>
         <PageHeader title={t('title')} />
-        <ClubCalendar clubId={Number(clubId)} />
+        <ClubCalendar clubId={Number(clubId)} initialDate={date} />
       </main>
     </>
   );

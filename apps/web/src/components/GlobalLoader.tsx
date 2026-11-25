@@ -18,7 +18,7 @@ const SHOW_AFTER_MS = 400;
  * visitor the session check on every single navigation — and must never veil
  * a page that is otherwise ready.
  */
-const SILENT_QUERIES = new Set(['me', 'myStanding', 'pushConfig']);
+const SILENT_QUERIES = new Set(['me', 'myStanding', 'pushConfig', 'availabilitySummary']);
 /**
  * The loader hides only after the app has been completely idle this long.
  * A page often loads in steps — session, then profile, then the coach's clubs,

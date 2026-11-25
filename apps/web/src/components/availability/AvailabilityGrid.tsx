@@ -2,16 +2,26 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
+import { Fragment, useEffect, useMemo, useState } from 'react';
+import type { AvailabilityCourt, AvailabilitySlot } from '@playslot/contracts';
 import { DatePicker } from '@/components/DatePicker';
-import { useEffect, useMemo, useState } from 'react';
-import type { AvailabilitySlot } from '@playslot/contracts';
-import { Link, usePathname } from '@/i18n/navigation';
 import { Modal } from '@/components/Modal';
 import { useToast } from '@/components/Toast';
-import { STREAM_BASE, coachesForClub, createReservation, fetchAvailability, getMe } from '@/lib/api';
+import { Link, usePathname } from '@/i18n/navigation';
+import {
+  STREAM_BASE,
+  coachesForClub,
+  createReservation,
+  fetchAvailability,
+  fetchAvailabilitySummary,
+  getMe,
+} from '@/lib/api';
 import { enumLabel } from '@/lib/enums';
 import { errorMessage } from '@/lib/errors';
-import { SLOT_STYLE, stateTagStyle } from '@/lib/slotStates';
+import { SLOT_STYLE } from '@/lib/slotStates';
+
+/** Days shown in the strip above the grid. */
+const STRIP_DAYS = 7;
 
 function shiftDate(iso: string, days: number): string {
   const [y, m, d] = iso.split('-').map(Number);
@@ -27,8 +37,25 @@ function todayIso(): string {
   ).padStart(2, '0')}`;
 }
 
+/** A calendar day as a Date at UTC midnight — for formatting only, with `timeZone: 'UTC'`. */
+const asUtcDate = (iso: string) => new Date(`${iso}T00:00:00Z`);
+
 /** HH:mm from an ISO string carrying the club offset (local wall-clock time). */
 const hhmm = (iso: string) => iso.slice(11, 16);
+
+/** "18:00" + 90 → "19:30". */
+function addMinutes(time: string, minutes: number): string {
+  const [h, m] = time.split(':').map(Number);
+  const total = (h! * 60 + m! + minutes) % (24 * 60);
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+type Band = 'bandMorning' | 'bandAfternoon' | 'bandEvening';
+function bandOf(time: string): Band {
+  const hour = Number(time.slice(0, 2));
+  if (hour < 12) return 'bandMorning';
+  return hour < 17 ? 'bandAfternoon' : 'bandEvening';
+}
 
 interface SelectedSlot {
   resourceId: number;
@@ -55,11 +82,18 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
   );
   const [duration, setDuration] = useState(60);
   const [selected, setSelected] = useState<SelectedSlot | null>(null);
+  // Picking a slot only selects it (the bar at the bottom shows what was
+  // picked); the checkout dialog opens from that bar.
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [confirmedRef, setConfirmedRef] = useState<number | null>(null);
   const [coachId, setCoachId] = useState<number | null>(null);
   const [serviceId, setServiceId] = useState<number | null>(null);
   // Online payments are not live yet: clicking «pay online» only explains that.
   const [onlinePayNotice, setOnlinePayNotice] = useState(false);
+  // Hours already gone are folded into one line until asked for.
+  const [showPast, setShowPast] = useState(false);
+  // Phone list: the hour whose courts are unfolded.
+  const [openTime, setOpenTime] = useState<string | null>(null);
 
   const coaches = useQuery({
     queryKey: ['clubCoaches', clubId],
@@ -76,7 +110,43 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
     queryFn: () => fetchAvailability({ clubId, date, duration }),
   });
 
+  // The strip shows the week from today; a date picked outside it (calendar,
+  // or a link to a specific day) starts the strip at that date instead.
+  const today = todayIso();
+  const inThisWeek = date >= today && date <= shiftDate(today, STRIP_DAYS - 1);
+  const stripStart = inThisWeek ? today : date;
+  const stripDays = Array.from({ length: STRIP_DAYS }, (_, i) => shiftDate(stripStart, i));
+
+  // Free-slot counts under the days. Decoration: if it fails (or the API is
+  // older than this page) the strip simply shows no numbers.
+  const summary = useQuery({
+    queryKey: ['availabilitySummary', clubId, stripStart, duration],
+    queryFn: () => fetchAvailabilitySummary({ clubId, from: stripStart, days: STRIP_DAYS, duration }),
+    retry: false,
+    staleTime: 60_000,
+  });
+
   const me = useQuery({ queryKey: ['me'], queryFn: getMe, retry: false });
+
+  const clearSelection = () => {
+    setSelected(null);
+    setCheckoutOpen(false);
+    setCoachId(null);
+    setServiceId(null);
+  };
+
+  // A different day or length is a different set of slots: nothing picked on
+  // the old one can carry over.
+  const goToDate = (next: string) => {
+    clearSelection();
+    setShowPast(false);
+    setOpenTime(null);
+    setDate(next);
+  };
+  const changeDuration = (next: number) => {
+    clearSelection();
+    setDuration(next);
+  };
 
   // If the club doesn't offer the currently selected length (first load, or the
   // club changed its settings), snap to the shortest one it does offer.
@@ -85,6 +155,7 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
     const shortest = offered?.[0];
     if (shortest === undefined || offered!.includes(duration)) return;
     setSelected(null);
+    setCheckoutOpen(false);
     setDuration(shortest);
   }, [query.data?.bookingDurationsMin, duration]);
 
@@ -119,15 +190,15 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
         return;
       }
       setConfirmedRef(res.reservationId);
-      setSelected(null);
-      setCoachId(null);
-      setServiceId(null);
+      clearSelection();
       qc.invalidateQueries({ queryKey: ['availability', clubId] });
+      qc.invalidateQueries({ queryKey: ['availabilitySummary', clubId] });
       toast(tt('booked'));
     },
     onError: (e) => toast(errorMessage(e, te, tt('error')), 'error'),
   });
 
+  const loc = locale === 'bg' ? 'bg-BG' : 'en-GB';
   const money = useMemo(
     () =>
       new Intl.NumberFormat(locale === 'bg' ? 'bg-BG' : 'en-US', {
@@ -137,17 +208,45 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
       }),
     [locale, query.data?.currency],
   );
+  const price = (cents: number | null) => (cents == null ? null : money.format(cents / 100));
+  const weekdayShort = useMemo(() => new Intl.DateTimeFormat(loc, { weekday: 'short', timeZone: 'UTC' }), [loc]);
+  const dayLong = useMemo(
+    () => new Intl.DateTimeFormat(loc, { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }),
+    [loc],
+  );
 
-  // Build the time-row × court-column matrix.
-  const { rows, byKey } = useMemo(() => {
+  const courts = query.data?.courts ?? [];
+
+  // The time-row × court-column matrix, and which rows are entirely in the past.
+  const { byKey, pastTimes, liveTimes, freeToday, present } = useMemo(() => {
     const slots = query.data?.slots ?? [];
     const times = [...new Set(slots.map((s) => hhmm(s.start)))].sort();
     const map = new Map<string, AvailabilitySlot>();
-    for (const s of slots) map.set(`${s.resourceId}@${hhmm(s.start)}`, s);
-    return { rows: times, byKey: map };
+    const statesAt = new Map<string, Set<string>>();
+    for (const s of slots) {
+      const time = hhmm(s.start);
+      map.set(`${s.resourceId}@${time}`, s);
+      if (!statesAt.has(time)) statesAt.set(time, new Set());
+      statesAt.get(time)!.add(s.state);
+    }
+    const isPast = (time: string) => {
+      const states = statesAt.get(time)!;
+      return states.size === 1 && states.has('PAST');
+    };
+    return {
+      byKey: map,
+      pastTimes: times.filter(isPast),
+      liveTimes: times.filter((x) => !isPast(x)),
+      freeToday: slots.filter((s) => s.state === 'FREE').length,
+      present: new Set(slots.map((s) => s.state)),
+    };
   }, [query.data]);
 
-  const courts = query.data?.courts ?? [];
+  // A day that is entirely over has nothing to fold away: show it as it was.
+  const foldPast = pastTimes.length > 0 && liveTimes.length > 0;
+  const shownTimes = foldPast && !showPast ? liveTimes : [...pastTimes, ...liveTimes];
+  const hasRows = pastTimes.length + liveTimes.length > 0;
+
   // Booking-length options adapt to the club's slot time (30 → allow 30-min).
   // The club decides which booking lengths it offers (set with its scheduling
   // and working hours); players pick from exactly that list and nothing else.
@@ -155,79 +254,180 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
     ? query.data.bookingDurationsMin
     : [query.data?.slotIntervalMin ?? 60];
 
-  return (
-    <section aria-labelledby="grid-heading" style={{ marginTop: 8 }}>
-      {/* Controls */}
-      {/* Layout lives in globals.css (.avail-*): one row on desktop; on a phone
-          the date takes the full width and Today + duration share the next row. */}
-      <div
-        className="avail-controls"
-        style={{
-          marginBottom: 14,
-          background: 'var(--surface)',
-          border: '1px solid var(--line)',
-          borderRadius: 'var(--radius)',
-          padding: 16,
-        }}
-      >
-        <div className="avail-date">
-          <span style={labelText}>{t('date')}</span>
-          <div className="avail-date-row">
-            <button type="button" onClick={() => setDate(shiftDate(date, -1))} style={navBtn} aria-label={t('prevDay')}>
-              ‹
-            </button>
-            {/* The site's own calendar rather than the browser's date field,
-                which showed the date in the phone's format (11/25/2026). */}
-            <div className="avail-date-pick">
-              <DatePicker value={date} onChange={(v) => setDate(v || todayIso())} locale={locale} weekday />
-            </div>
-            <button type="button" onClick={() => setDate(shiftDate(date, 1))} style={navBtn} aria-label={t('nextDay')}>
-              ›
-            </button>
-          </div>
-        </div>
+  const freeCount = (day: string): number | null => {
+    if (day === date && query.data) return freeToday;
+    return summary.data?.days.find((d) => d.date === day)?.free ?? null;
+  };
 
-        <button
-          type="button"
-          className="avail-today"
-          onClick={() => setDate(todayIso())}
-          style={date === todayIso() ? todayBtnActive : todayBtn}
-        >
-          {t('today')}
-        </button>
+  const courtNote = (c: AvailabilityCourt) =>
+    [enumLabel(en, 'Surface', c.surface), c.isIndoor ? t('indoor') : t('outdoor')].filter(Boolean).join(' · ');
 
-        <div className="avail-duration">
-          <span style={labelText}>{t('duration')}</span>
-          <select
-            value={duration}
-            // The length of a booking is fixed once a slot is picked: the grid
-            // only showed free slots for the current duration, so changing it
-            // underneath a selection would submit a range the player never saw
-            // offered. Locked while a slot is selected, and any change clears
-            // the selection so the two can never disagree.
-            disabled={selected !== null}
-            onChange={(e) => {
-              setSelected(null);
-              setCoachId(null);
-              setServiceId(null);
-              setDuration(Number(e.target.value));
-            }}
-            style={{
-              ...dateInput,
-              cursor: selected !== null ? 'not-allowed' : 'pointer',
-              opacity: selected !== null ? 0.55 : 1,
-            }}
+  /** Cheapest free court at an hour — the list's "from" price and the grid's baseline. */
+  const cheapestAt = (time: string): number | null => {
+    const prices = courts
+      .map((c) => byKey.get(`${c.id}@${time}`))
+      .filter((s): s is AvailabilitySlot => !!s && s.state === 'FREE' && s.priceCents != null)
+      .map((s) => s.priceCents!);
+    return prices.length ? Math.min(...prices) : null;
+  };
+
+  const pick = (c: AvailabilityCourt, slot: AvailabilitySlot, time: string) => {
+    setCoachId(null);
+    setServiceId(null);
+    setCheckoutOpen(false);
+    setSelected({
+      resourceId: c.id,
+      start: slot.start,
+      courtName: c.name,
+      priceCents: slot.priceCents,
+      time,
+      coachIds: slot.coachIds ?? [],
+    });
+  };
+  const isPicked = (c: AvailabilityCourt, slot: AvailabilitySlot) =>
+    selected?.resourceId === c.id && selected?.start === slot.start;
+
+  /** One cell of the desktop grid. */
+  const gridCell = (c: AvailabilityCourt, time: string, cheapest: number | null) => {
+    const slot = byKey.get(`${c.id}@${time}`);
+    if (!slot) return <td key={c.id} aria-hidden />;
+    const label = st(slot.state);
+    if (SLOT_STYLE[slot.state].bookable) {
+      const picked = isPicked(c, slot);
+      const dearer = cheapest != null && slot.priceCents != null && slot.priceCents > cheapest;
+      return (
+        <td key={c.id}>
+          <button
+            type="button"
+            className={`slot slot-free${dearer ? ' is-hi' : ''}${picked ? ' is-selected' : ''}`}
+            aria-pressed={picked}
+            title={bk('bookThisSlot')}
+            onClick={() => pick(c, slot, time)}
           >
-            {durations.map((d) => (
-              <option key={d} value={d}>
-                {d} {t('minutes')}
-              </option>
-            ))}
-          </select>
+            <span className="avail-sr">
+              {c.name}, {time}, {label}{' '}
+            </span>
+            {picked ? '✓ ' : ''}
+            {price(slot.priceCents) ?? '✓'}
+          </button>
+        </td>
+      );
+    }
+    const kind =
+      slot.state === 'MINE'
+        ? 'slot-mine'
+        : slot.state === 'EVENT'
+          ? 'slot-event'
+          : slot.state === 'TOURNAMENT'
+            ? 'slot-tournament'
+            : slot.state === 'PAST'
+              ? 'slot-past'
+              : 'slot-taken';
+    // Taken and past cells carry no visible words — the hatch says it and the
+    // legend names it — but the label is still there for screen readers.
+    const visible = slot.state === 'MINE' ? t('mine') : slot.state === 'EVENT' || slot.state === 'TOURNAMENT' ? label : null;
+    return (
+      <td key={c.id}>
+        <div className={`slot ${kind}`} title={label}>
+          {visible ?? <span className="avail-sr">{label}</span>}
         </div>
+      </td>
+    );
+  };
+
+  const pastFold = foldPast && (
+    <div className="avail-past">
+      <span>{t('pastHours', { from: pastTimes[0]!, to: pastTimes[pastTimes.length - 1]! })}</span>
+      <button type="button" onClick={() => setShowPast((v) => !v)} aria-expanded={showPast}>
+        {showPast ? t('hidePast') : t('showPast')}
+      </button>
+    </div>
+  );
+
+  return (
+    <section aria-labelledby="grid-heading" style={{ marginTop: 8, paddingBottom: selected ? 84 : 0 }}>
+      {/* Only the states that occur on this day; hidden on a phone, where the
+          list spells every state out in words. */}
+      {query.isSuccess && hasRows && (
+        <div className="avail-legend">
+          <span>
+            <i className="avail-swatch" style={{ background: 'var(--green-soft-2)' }} />
+            {t('legendFree')}
+          </span>
+          {(present.has('RESERVED') || present.has('UNAVAILABLE')) && (
+            <span>
+              <i className="avail-swatch slot-taken" />
+              {st('RESERVED')}
+            </span>
+          )}
+          {present.has('MINE') && (
+            <span>
+              <i className="avail-swatch" style={{ background: 'var(--mine)' }} />
+              {t('mine')}
+            </span>
+          )}
+          {present.has('EVENT') && (
+            <span>
+              <i className="avail-swatch slot-event" style={{ border: '1px solid' }} />
+              {st('EVENT')}
+            </span>
+          )}
+          {present.has('TOURNAMENT') && (
+            <span>
+              <i className="avail-swatch slot-tournament" style={{ border: '1px solid' }} />
+              {st('TOURNAMENT')}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Day strip, calendar for any other date, booking length. */}
+      <div className="avail-bar">
+        <div className="avail-days" role="group" aria-label={t('days')}>
+          {!inThisWeek && (
+            <button type="button" className="avail-day" onClick={() => goToDate(today)}>
+              <small>&nbsp;</small>
+              <b style={{ fontSize: 14 }}>{t('today')}</b>
+              <em />
+            </button>
+          )}
+          {stripDays.map((day) => {
+            const free = freeCount(day);
+            return (
+              <button
+                key={day}
+                type="button"
+                className={`avail-day${day === date ? ' is-on' : ''}`}
+                aria-pressed={day === date}
+                onClick={() => goToDate(day)}
+              >
+                <small>{day === today ? t('todayShort') : weekdayShort.format(asUtcDate(day))}</small>
+                <b>{Number(day.slice(8, 10))}</b>
+                <em className={free === 0 ? 'is-none' : undefined}>{free == null ? '' : t('freeShort', { count: free })}</em>
+              </button>
+            );
+          })}
+          <DatePicker value={date} onChange={(v) => goToDate(v || today)} locale={locale} compact label={t('otherDate')} />
+        </div>
+
+        {durations.length > 1 && (
+          <div className="avail-seg" role="group" aria-label={t('duration')}>
+            {durations.map((d) => (
+              <button
+                key={d}
+                type="button"
+                className={d === duration ? 'is-on' : undefined}
+                aria-pressed={d === duration}
+                onClick={() => changeDuration(d)}
+              >
+                {d} {t('minutes')}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      <h2 id="grid-heading" className="sr-only" style={{ position: 'absolute', left: -9999 }}>
+      <h2 id="grid-heading" className="avail-sr">
         {t('heading')}
       </h2>
 
@@ -236,7 +436,7 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
       {query.isError && (
         <div role="alert" style={alertBox}>
           {t('error')}{' '}
-          <button type="button" onClick={() => query.refetch()} style={{ ...todayBtn, marginLeft: 8 }}>
+          <button type="button" onClick={() => query.refetch()} style={retryBtn}>
             {t('retry')}
           </button>
         </div>
@@ -244,126 +444,179 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
 
       {query.isSuccess && courts.length === 0 && <div style={emptyBox}>{t('noCourts')}</div>}
 
-      {query.isSuccess && courts.length > 0 && rows.length === 0 && (
-        <div style={emptyBox}>{t('noSlots')}</div>
-      )}
+      {query.isSuccess && courts.length > 0 && !hasRows && <div style={emptyBox}>{t('noSlots')}</div>}
 
-      {query.isSuccess && rows.length > 0 && (
-        <div style={{ overflowX: 'auto', border: '1px solid var(--line)', borderRadius: 'var(--radius)' }}>
-          <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 120 + courts.length * 116 }}>
+      {/* Desktop: hours down, courts across. */}
+      {query.isSuccess && hasRows && (
+        <div className="avail-table-wrap">
+          <table className="avail-table" style={{ minWidth: 72 + courts.length * 92 }}>
             <thead>
               <tr>
-                <th style={{ ...thStyle, textAlign: 'left', position: 'sticky', left: 0, background: 'var(--green-soft)', zIndex: 2 }}>
-                  {t('time')}
+                <th className="avail-time" style={{ background: 'var(--surface-2)' }}>
+                  <span className="avail-sr">{t('time')}</span>
                 </th>
                 {courts.map((c) => (
-                  <th key={c.id} style={thStyle}>
-                    <div style={{ fontWeight: 700 }}>{c.name}</div>
-                    <div className="mono" style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 500 }}>
-                      {[enumLabel(en, 'Surface', c.surface), c.isIndoor ? t('indoor') : t('outdoor')]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </div>
+                  <th key={c.id} scope="col">
+                    {c.name}
+                    <small>{courtNote(c)}</small>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {rows.map((time) => (
-                <tr key={time}>
-                  <th
-                    scope="row"
-                    className="mono"
-                    // Plain, not tinted: the hours are a label for the row, and a
-                    // coloured strip beside the slots read as one more slot state.
-                    style={{ ...timeCell, position: 'sticky', left: 0, background: 'var(--surface)', zIndex: 1 }}
-                  >
-                    {time}
-                  </th>
-                  {courts.map((c) => {
-                    const slot = byKey.get(`${c.id}@${time}`);
-                    if (!slot) return <td key={c.id} style={{ ...cell, background: 'var(--ground)' }} aria-hidden />;
-                    const s = SLOT_STYLE[slot.state];
-                    const isSelected =
-                      selected?.resourceId === c.id && selected?.start === slot.start;
-                    const inner = (
-                      <>
-                        {/* Solid, filled state tag — colour plus icon plus label. */}
-                        <span style={stateTagStyle(s)}>
-                          <span aria-hidden className="mono" style={{ fontWeight: 700 }}>
-                            {s.icon}
-                          </span>
-                          {st(slot.state)}
-                        </span>
-                        {s.bookable && slot.priceCents != null && (
-                          <span style={{ fontWeight: 700, fontSize: 14 }}>
-                            {money.format(slot.priceCents / 100)}
-                          </span>
-                        )}
-                      </>
-                    );
-                    const boxStyle: React.CSSProperties = {
-                      background: s.soft,
-                      border: '1px solid var(--line)',
-                      // A solid bar in the state's colour, so a column reads at a glance.
-                      borderLeft: `4px solid ${s.solid}`,
-                      borderRadius: 'var(--radius-sm)',
-                      padding: '8px 8px 8px 7px',
-                      minHeight: 52,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      gap: 4,
-                      width: '100%',
-                      textAlign: 'left',
-                      opacity: s.recessive ? 0.85 : 1,
-                    };
-                    return (
-                      <td key={c.id} style={cell}>
-                        {s.bookable ? (
-                          <button
-                            type="button"
-                            title={bk('bookThisSlot')}
-                            onClick={() => {
-                              setCoachId(null);
-                              setServiceId(null);
-                              setSelected({
-                                resourceId: c.id,
-                                start: slot.start,
-                                courtName: c.name,
-                                priceCents: slot.priceCents,
-                                time,
-                                coachIds: slot.coachIds ?? [],
-                              });
-                            }}
-                            style={{
-                              ...boxStyle,
-                              cursor: 'pointer',
-                              color: 'var(--ink)',
-                              ...(isSelected
-                                ? {
-                                    background: 'var(--free-soft)',
-                                    border: '2px solid var(--free)',
-                                    borderLeft: '6px solid var(--free)',
-                                    padding: '7px 7px 7px 5px',
-                                  }
-                                : {}),
-                            }}
-                          >
-                            {inner}
-                          </button>
-                        ) : (
-                          <div title={st(slot.state)} style={boxStyle}>
-                            {inner}
-                          </div>
-                        )}
-                      </td>
-                    );
-                  })}
+              {pastFold && (
+                <tr>
+                  <td colSpan={courts.length + 1} style={{ padding: '8px 8px 2px' }}>
+                    {pastFold}
+                  </td>
                 </tr>
-              ))}
+              )}
+              {shownTimes.map((time, i) => {
+                const band = bandOf(time);
+                const newBand = i === 0 || bandOf(shownTimes[i - 1]!) !== band;
+                const cheapest = cheapestAt(time);
+                return (
+                  <Fragment key={time}>
+                    {newBand && (
+                      <tr>
+                        <th colSpan={courts.length + 1} className="avail-band" scope="colgroup">
+                          {t(band)}
+                        </th>
+                      </tr>
+                    )}
+                    <tr>
+                      <th scope="row" className="avail-time mono">
+                        {time}
+                      </th>
+                      {courts.map((c) => gridCell(c, time, cheapest))}
+                    </tr>
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Phone: one row per hour — how many courts are free and from what
+          price; tapping an hour unfolds its courts. No sideways scrolling. */}
+      {query.isSuccess && hasRows && (
+        <div className="avail-list">
+          {pastFold && <div style={{ marginBottom: 8 }}>{pastFold}</div>}
+          {shownTimes.map((time) => {
+            const cells = courts
+              .map((c) => ({ c, slot: byKey.get(`${c.id}@${time}`) }))
+              .filter((x): x is { c: AvailabilityCourt; slot: AvailabilitySlot } => !!x.slot);
+            const free = cells.filter((x) => SLOT_STYLE[x.slot.state].bookable).length;
+            const mine = cells.some((x) => x.slot.state === 'MINE');
+            const special = cells.some((x) => x.slot.state === 'EVENT' || x.slot.state === 'TOURNAMENT');
+            const past = cells.every((x) => x.slot.state === 'PAST');
+            const cheapest = cheapestAt(time);
+            const open = openTime === time;
+            const info = (
+              <>
+                <span className="avail-hour-time mono">{time}</span>
+                <span className="avail-hour-info">
+                  {past ? st('PAST') : free > 0 ? t.rich('freeCourts', { count: free, b: (c) => <b>{c}</b> }) : t('noneFree')}
+                  {mine && <span className="avail-badge">{t('mine')}</span>}
+                </span>
+              </>
+            );
+            if (free === 0 && !mine && !special) {
+              return (
+                <div key={time} className="avail-hour is-full">
+                  <div className="avail-hour-top">{info}</div>
+                </div>
+              );
+            }
+            return (
+              <div key={time} className={`avail-hour${open ? ' is-open' : ''}${free === 0 ? ' is-full' : ''}`}>
+                <button
+                  type="button"
+                  className="avail-hour-top"
+                  aria-expanded={open}
+                  onClick={() => setOpenTime(open ? null : time)}
+                >
+                  {info}
+                  {cheapest != null && <span className="avail-hour-from">{t('fromPrice', { price: price(cheapest)! })}</span>}
+                  <span className="avail-hour-chev" aria-hidden>
+                    ›
+                  </span>
+                </button>
+                {open && (
+                  <div className="avail-courts">
+                    {cells.map(({ c, slot }) => {
+                      if (SLOT_STYLE[slot.state].bookable) {
+                        const picked = isPicked(c, slot);
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            className={`avail-court slot-free${picked ? ' is-selected' : ''}`}
+                            aria-pressed={picked}
+                            onClick={() => pick(c, slot, time)}
+                          >
+                            <span>
+                              {c.name}
+                              <small>{courtNote(c)}</small>
+                            </span>
+                            <span>{price(slot.priceCents) ?? '✓'}</span>
+                          </button>
+                        );
+                      }
+                      const kind =
+                        slot.state === 'MINE'
+                          ? 'slot-mine'
+                          : slot.state === 'EVENT'
+                            ? 'slot-event'
+                            : slot.state === 'TOURNAMENT'
+                              ? 'slot-tournament'
+                              : 'slot-taken';
+                      const note =
+                        slot.state === 'MINE'
+                          ? t('mine')
+                          : slot.state === 'RESERVED' || slot.state === 'UNAVAILABLE'
+                            ? t('taken')
+                            : st(slot.state);
+                      return (
+                        <div key={c.id} className={`avail-court ${kind}`}>
+                          <span>
+                            {c.name}
+                            <small>{note}</small>
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* What was picked, always in reach; the checkout opens from here. */}
+      {selected && !checkoutOpen && confirmedRef === null && (
+        <div className="avail-bookbar" role="region" aria-label={bk('title')}>
+          <div>
+            <div style={{ minWidth: 0 }}>
+              <b>
+                {selected.courtName} · {selected.time}–{addMinutes(selected.time, duration)}
+              </b>
+              <small>
+                {dayLong.format(asUtcDate(date))} · {duration} {t('minutes')}
+                {selected.priceCents != null ? ` · ${price(selected.priceCents)}` : ''}
+              </small>
+            </div>
+            <div className="avail-bookbar-actions">
+              <button type="button" className="avail-clear" onClick={clearSelection} aria-label={t('clearSelection')} title={t('clearSelection')}>
+                ×
+              </button>
+              <button type="button" className="avail-book" onClick={() => setCheckoutOpen(true)}>
+                {t('book')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -382,18 +635,17 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
 
       {/* Checkout modal for a selected free slot */}
       <Modal
-        open={!!selected && confirmedRef === null}
-        onClose={() => {
-          setSelected(null);
-          setCoachId(null);
-          setServiceId(null);
-        }}
+        open={checkoutOpen && !!selected && confirmedRef === null}
+        // Closing the dialog goes back to the bar with the slot still picked;
+        // «cancel» inside it is what drops the selection.
+        onClose={() => setCheckoutOpen(false)}
         title={bk('title')}
       >
         {selected && (
           <>
           <p className="mono" style={{ color: 'var(--ink-2)', fontSize: 13, marginBottom: 12 }}>
-            {selected.courtName} · {date} · {selected.time} · {duration} {t('minutes')}
+            {selected.courtName} · {dayLong.format(asUtcDate(date))} · {selected.time}–
+            {addMinutes(selected.time, duration)} · {duration} {t('minutes')}
             {selected.priceCents != null ? ` · ${money.format(selected.priceCents / 100)}` : ''}
           </p>
 
@@ -484,7 +736,7 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
                 >
                   {bk('payOnline')}
                 </button>
-                <button type="button" onClick={() => setSelected(null)} style={pillBtn}>
+                <button type="button" onClick={clearSelection} style={pillBtn}>
                   {bk('cancel')}
                 </button>
               </div>
@@ -542,29 +794,6 @@ function GridSkeleton() {
 }
 
 const labelText: React.CSSProperties = { fontWeight: 700, fontSize: 13, color: 'var(--ink)' };
-const navBtn: React.CSSProperties = {
-  minWidth: 46,
-  minHeight: 46,
-  flex: 'none',
-  border: '1px solid var(--line-2)',
-  background: 'var(--surface)',
-  color: 'var(--green-deep)',
-  borderRadius: 'var(--radius-sm)',
-  fontSize: 18,
-  cursor: 'pointer',
-};
-const todayBtn: React.CSSProperties = {
-  minHeight: 46,
-  padding: '0 18px',
-  border: '1px solid var(--line-2)',
-  background: 'var(--surface)',
-  color: 'var(--green-deep)',
-  borderRadius: 'var(--radius-sm)',
-  cursor: 'pointer',
-  fontSize: 14,
-  fontWeight: 700,
-};
-const todayBtnActive: React.CSSProperties = { ...todayBtn, background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', fontWeight: 800 };
 const dateInput: React.CSSProperties = {
   minHeight: 46,
   width: '100%',
@@ -576,24 +805,18 @@ const dateInput: React.CSSProperties = {
   borderRadius: 'var(--radius-sm)',
   fontFamily: 'inherit',
 };
-const thStyle: React.CSSProperties = {
-  padding: '10px 8px',
-  borderBottom: '1px solid var(--line)',
-  fontSize: 13,
-  textAlign: 'center',
-  background: 'var(--green-soft)',
+const retryBtn: React.CSSProperties = {
+  minHeight: 40,
+  marginLeft: 8,
+  padding: '0 16px',
+  border: '1px solid var(--line-2)',
+  background: 'var(--surface)',
   color: 'var(--green-deep)',
-  whiteSpace: 'nowrap',
+  borderRadius: 'var(--radius-sm)',
+  cursor: 'pointer',
+  fontSize: 14,
+  fontWeight: 700,
 };
-const timeCell: React.CSSProperties = {
-  padding: '8px 12px',
-  fontSize: 13,
-  color: 'var(--ink-2)',
-  borderBottom: '1px solid var(--line)',
-  textAlign: 'right',
-  whiteSpace: 'nowrap',
-};
-const cell: React.CSSProperties = { padding: 4, borderBottom: '1px solid var(--line)', verticalAlign: 'top' };
 const alertBox: React.CSSProperties = {
   background: 'var(--clay-soft)',
   color: 'var(--ink)',

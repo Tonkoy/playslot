@@ -32,6 +32,8 @@ export function DatePicker({
   min,
   placeholder,
   weekday = false,
+  compact = false,
+  label,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -40,6 +42,10 @@ export function DatePicker({
   placeholder?: string;
   /** Show the day of the week on the trigger ("ср, 25.11.2026 г."). */
   weekday?: boolean;
+  /** Icon-only trigger, for places where the date is already shown elsewhere. */
+  compact?: boolean;
+  /** Accessible name of the trigger; required when `compact` hides the text. */
+  label?: string;
 }) {
   const loc = locale === 'bg' ? 'bg-BG' : 'en-US';
   const today = new Date();
@@ -173,10 +179,21 @@ export function DatePicker({
 
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
-      <button ref={btnRef} type="button" onClick={() => setOpen((o) => !o)} aria-haspopup="dialog" aria-expanded={open} style={trigger}>
-        <span style={{ color: selected ? 'var(--ink)' : 'var(--ink-3)' }}>
-          {selected ? dfTrigger.format(selected) : (placeholder ?? '—')}
-        </span>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={label}
+        title={compact ? label : undefined}
+        style={compact ? { ...trigger, width: 48, height: '100%', minHeight: 46, padding: 0, justifyContent: 'center' } : trigger}
+      >
+        {!compact && (
+          <span style={{ color: selected ? 'var(--ink)' : 'var(--ink-3)' }}>
+            {selected ? dfTrigger.format(selected) : (placeholder ?? '—')}
+          </span>
+        )}
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--ink-3)" strokeWidth="1.4" aria-hidden>
           <rect x="2" y="3" width="12" height="11" rx="2" />
           <path d="M2 6h12M5 1.5v3M11 1.5v3" strokeLinecap="round" />

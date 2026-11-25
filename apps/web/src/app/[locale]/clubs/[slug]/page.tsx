@@ -9,7 +9,6 @@ import { JsonLd } from '@/components/JsonLd';
 import { Link } from '@/i18n/navigation';
 import { SiteHeader } from '@/components/SiteHeader';
 import { AvailabilityGrid } from '@/components/availability/AvailabilityGrid';
-import { SlotLegend } from '@/components/SlotLegend';
 import { EventsSection } from '@/components/EventsSection';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { MembershipPlansSection } from '@/components/MembershipPlansSection';
@@ -217,7 +216,6 @@ export default async function ClubProfilePage({
         <h2 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 700, margin: '16px 0 8px' }}>
           {t('availability')}
         </h2>
-        <SlotLegend />
         <AvailabilityGrid clubId={club.id} initialDate={date} />
 
         {coaches.length > 0 && (

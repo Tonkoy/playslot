@@ -164,47 +164,461 @@ select {
   }
 }
 
-/* Availability controls (date, Today, duration) above the booking grid. */
-.avail-controls {
+/*
+ * Availability on a club page: day strip, slot grid (desktop), hour list
+ * (phone) and the booking bar. Free is the quiet default — a tile with its
+ * price; what is taken is hatched, so the exceptions are what stands out.
+ */
+.avail-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.avail-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  align-items: flex-end;
+  gap: 6px 16px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--ink-2);
 }
-.avail-date,
-.avail-duration {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.avail-date-row {
-  display: flex;
+.avail-legend span {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
 }
-.avail-date-pick {
-  min-width: 200px;
+.avail-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex: none;
 }
-.avail-duration {
-  min-width: 120px;
+.avail-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 12px;
+  margin-bottom: 14px;
 }
+.avail-days {
+  display: flex;
+  gap: 6px;
+  flex: 1 1 320px;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 2px;
+  scrollbar-width: none;
+}
+.avail-days::-webkit-scrollbar {
+  display: none;
+}
+.avail-day {
+  flex: none;
+  min-width: 62px;
+  padding: 8px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+.avail-day small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.avail-day b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 17px;
+  line-height: 1.25;
+}
+.avail-day em {
+  display: block;
+  min-height: 15px;
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--green);
+}
+.avail-day em.is-none {
+  color: var(--ink-3);
+}
+.avail-day:hover {
+  border-color: var(--green);
+}
+.avail-day.is-on {
+  background: var(--green-deep);
+  border-color: var(--green-deep);
+  color: #fff;
+}
+.avail-day.is-on small {
+  color: #b9cfc4;
+}
+.avail-day.is-on em,
+.avail-day.is-on em.is-none {
+  color: var(--lime);
+}
+.avail-seg {
+  display: inline-flex;
+  align-self: center;
+  flex: none;
+  padding: 4px;
+  border-radius: var(--pill);
+  background: var(--surface-2);
+}
+.avail-seg button {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: var(--pill);
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.avail-seg button.is-on {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+
+.avail-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.avail-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.avail-table thead th {
+  padding: 10px 8px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  font-size: 13.5px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+.avail-table thead small {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+.avail-table td {
+  padding: 2px;
+}
+.avail-table tbody tr:first-child > * {
+  padding-top: 8px;
+}
+.avail-table tbody tr:last-child > * {
+  padding-bottom: 8px;
+}
+.avail-table td:last-child {
+  padding-right: 8px;
+}
+/* Plain, not tinted: the hours label the row, they are not one more state. */
+.avail-time {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  width: 64px;
+  padding: 0 10px 0 12px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: right;
+  white-space: nowrap;
+}
+.avail-band {
+  padding: 10px 12px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--ink-3);
+}
+.avail-past {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: var(--past-soft);
+  color: var(--ink-3);
+  font-size: 13px;
+}
+.avail-past button {
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--green);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 84px;
+  height: 40px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.slot-free {
+  background: var(--green-soft);
+  color: var(--green-deep);
+  cursor: pointer;
+}
+/* Dearer than the cheapest court at that hour: a shade deeper. */
+.slot-free.is-hi {
+  background: var(--green-soft-2);
+}
+.slot-free:hover {
+  border-color: var(--green);
+}
+.slot-free.is-selected {
+  background: var(--lime);
+  border: 2px solid var(--green-deep);
+}
+.slot-taken {
+  background: repeating-linear-gradient(135deg, #e6eae7 0 5px, #f3f5f3 5px 10px);
+  color: var(--ink-3);
+}
+.slot-mine {
+  background: var(--mine);
+  color: #fff;
+  font-size: 12.5px;
+}
+.slot-event {
+  background: var(--event-soft);
+  border-color: color-mix(in srgb, var(--event) 28%, transparent);
+  color: var(--event);
+  font-size: 12.5px;
+}
+.slot-tournament {
+  background: var(--tournament-soft);
+  border-color: color-mix(in srgb, var(--tournament) 28%, transparent);
+  color: var(--tournament);
+  font-size: 12.5px;
+}
+.slot-past {
+  background: var(--past-soft);
+}
+
+.avail-list {
+  display: none;
+}
+.avail-hour {
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.avail-hour.is-open {
+  border-color: var(--green-deep);
+  box-shadow: var(--shadow-sm);
+}
+.avail-hour.is-full {
+  background: var(--past-soft);
+}
+.avail-hour-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 50px;
+  padding: 10px 14px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+button.avail-hour-top {
+  cursor: pointer;
+}
+.avail-hour-time {
+  width: 52px;
+  flex: none;
+  font-size: 15px;
+  font-weight: 600;
+}
+.avail-hour-info {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.avail-hour-info b {
+  color: var(--green-deep);
+}
+.avail-hour.is-full .avail-hour-time,
+.avail-hour.is-full .avail-hour-info {
+  color: var(--ink-3);
+}
+.avail-hour-from {
+  font-size: 15px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.avail-hour-chev {
+  width: 14px;
+  flex: none;
+  color: var(--ink-3);
+  text-align: center;
+  transition: transform 150ms ease;
+}
+.avail-hour.is-open .avail-hour-chev {
+  transform: rotate(90deg);
+}
+.avail-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: var(--pill);
+  background: var(--mine);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.avail-courts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+.avail-court {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 54px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+}
+.avail-court small {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.avail-court.slot-taken small,
+.avail-court.slot-mine small {
+  color: inherit;
+}
+
+.avail-bookbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 150;
+  padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 -8px 30px rgba(18, 59, 44, 0.1);
+}
+.avail-bookbar > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  /* Lines up with the page column (its --maxw minus the 20px gutters). */
+  max-width: calc(var(--maxw) - 40px);
+  margin: 0 auto;
+}
+.avail-bookbar b {
+  display: block;
+  font-size: 15.5px;
+}
+.avail-bookbar small {
+  display: block;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.avail-bookbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+.avail-book {
+  min-height: 46px;
+  padding: 0 26px;
+  border: 0;
+  border-radius: var(--pill);
+  background: var(--lime);
+  color: var(--on-lime);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.avail-clear {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line-2);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
 @media (max-width: 640px) {
-  .avail-controls {
-    gap: 12px;
+  .avail-legend,
+  .avail-table-wrap {
+    display: none;
   }
-  /* Date: its own row, the picker filling everything between the arrows. */
-  .avail-date {
-    flex: 1 1 100%;
+  .avail-list {
+    display: block;
   }
-  .avail-date-pick {
+  .avail-days {
+    flex-basis: 0;
+  }
+  .avail-seg {
+    display: flex;
+    width: 100%;
+  }
+  .avail-seg button {
     flex: 1;
-    min-width: 0;
   }
-  /* Today + duration: the second row, split in half, edge to edge. */
-  .avail-today,
-  .avail-duration {
-    flex: 1 1 0;
-    min-width: 0;
+  .avail-bookbar {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .avail-book {
+    padding: 0 18px;
   }
 }
 

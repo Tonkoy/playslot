@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import {
   OFFERED_SPORTS,
   type AvailabilityQuery,
+  type AvailabilitySummaryQuery,
+  type AvailabilitySummaryResponse,
   type AvailabilityResponse,
   type AvailabilitySlot,
 } from '@playslot/contracts';
@@ -28,6 +30,14 @@ interface CoachAvail {
   busy: { start: Date; end: Date }[];
 }
 
+/** `YYYY-MM-DD` plus n calendar days (pure date arithmetic, no time zone involved). */
+function addDaysIso(iso: string, n: number): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(Date.UTC(y!, m! - 1, d!));
+  dt.setUTCDate(dt.getUTCDate() + n);
+  return dt.toISOString().slice(0, 10);
+}
+
 // Reservation statuses that occupy inventory for availability (spec §7).
 const OCCUPYING_STATUSES = ['CONFIRMED', 'PENDING_PAYMENT', 'PENDING_APPROVAL', 'HOLD'] as const;
 
@@ -37,6 +47,27 @@ export class AvailabilityService {
     private readonly prisma: PrismaService,
     private readonly memberships: MembershipsService,
   ) {}
+
+  /**
+   * Free-slot count per day for `days` days starting at `from`. Each day is
+   * the same computation as the grid itself, so the count can never disagree
+   * with what the grid shows for that day. Days run one after another on
+   * purpose: a burst of parallel day queries would take the whole connection
+   * pool for one page view.
+   */
+  async getSummary(query: AvailabilitySummaryQuery): Promise<AvailabilitySummaryResponse> {
+    const days: AvailabilitySummaryResponse['days'] = [];
+    for (let i = 0; i < query.days; i++) {
+      const date = addDaysIso(query.from, i);
+      const day = await this.getAvailability({
+        clubId: query.clubId,
+        date,
+        duration: query.duration,
+      });
+      days.push({ date, free: day.slots.filter((s) => s.state === 'FREE').length });
+    }
+    return { days };
+  }
 
   async getAvailability(query: AvailabilityQuery, userId?: number): Promise<AvailabilityResponse> {
     const club = await this.prisma.club.findFirst({

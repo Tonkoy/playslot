@@ -683,6 +683,27 @@ export async function fetchAvailability(params: {
   return (await res.json()) as AvailabilityResponse;
 }
 
+/** Free-slot counts for a run of days — the numbers under the grid's day strip. */
+export async function fetchAvailabilitySummary(params: {
+  clubId: number;
+  from: string;
+  days: number;
+  duration?: number;
+}): Promise<import('@playslot/contracts').AvailabilitySummaryResponse> {
+  const qs = new URLSearchParams({
+    clubId: String(params.clubId),
+    from: params.from,
+    days: String(params.days),
+    ...(params.duration ? { duration: String(params.duration) } : {}),
+  });
+  const res = await fetch(`${CLIENT_BASE}/api/availability/summary?${qs.toString()}`, {
+    credentials: 'include',
+    signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS),
+  });
+  if (!res.ok) throw new Error(`Availability summary failed (${res.status})`);
+  return (await res.json()) as import('@playslot/contracts').AvailabilitySummaryResponse;
+}
+
 // ── session feedback (player) + club view ──
 export function getMyFeedback(): Promise<import('@playslot/contracts').FeedbackItemDto[]> {
   return apiFetch('/me/feedback');

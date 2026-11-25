@@ -46,3 +46,21 @@ export interface AvailabilityResponse {
   courts: AvailabilityCourt[];
   slots: AvailabilitySlot[];
 }
+
+/** `GET /availability/summary` — free-slot counts for a run of days. */
+export const availabilitySummaryQuerySchema = z.object({
+  clubId: z.coerce.number().int().positive(),
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'from must be YYYY-MM-DD'),
+  days: z.coerce.number().int().min(1).max(14).default(7),
+  duration: z.coerce.number().int().min(15).max(240).optional(),
+});
+export type AvailabilitySummaryQuery = z.infer<typeof availabilitySummaryQuerySchema>;
+
+export interface AvailabilityDaySummary {
+  date: string; // YYYY-MM-DD, the club's calendar day
+  free: number; // bookable slots across all courts for the asked duration
+}
+
+export interface AvailabilitySummaryResponse {
+  days: AvailabilityDaySummary[];
+}

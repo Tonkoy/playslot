@@ -2019,3 +2019,64 @@ button.bk-coach.is-on .bk-coach-dot {
 .avail-badge.acal-badge-lesson {
   background: var(--lesson-fill);
 }
+
+/* ── Coach's week ("Моят график"): the calendar's grid with days across ── */
+.csch-lesson {
+  cursor: default;
+}
+.csch-lesson:hover {
+  filter: none;
+}
+.csch-open {
+  background: var(--green-soft);
+}
+.csch-open.is-over {
+  background: var(--past-soft);
+}
+.avail-table thead th.csch-today {
+  color: var(--green-deep);
+  box-shadow: inset 0 -3px 0 var(--lime);
+}
+.avail-table thead th.csch-today small {
+  color: var(--green);
+  font-weight: 700;
+}
+.avail-table thead th.csch-focus {
+  background: var(--green-soft);
+}
+.csch-daylabel {
+  min-width: 52px;
+  text-transform: capitalize;
+}
+.acal-block:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Coach profile: pick-many chips ── */
+.coach-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.coach-chip {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1.5px solid var(--line-2);
+  border-radius: var(--pill);
+  background: var(--surface);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.coach-chip:hover {
+  border-color: var(--green);
+}
+.coach-chip.is-on {
+  border-color: var(--green-deep);
+  background: var(--green-soft);
+  color: var(--green-deep);
+  font-weight: 700;
+}

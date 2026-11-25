@@ -17,7 +17,7 @@ export default async function CoachHubPage({ params }: { params: Promise<{ local
   return (
     <>
       <SiteHeader />
-      <main style={{ maxWidth: 880, margin: '0 auto', padding: '32px 20px 64px' }}>
+      <main style={{ maxWidth: 1040, margin: '0 auto', padding: '32px 20px 64px' }}>
         <PageHeader title={t('title')} subtitle={t('subtitle')} />
         <CoachHubClient />
       </main>

@@ -7,6 +7,7 @@ import { getMyCoachHours, updateMyCoachHours } from '@/lib/api';
 import { hhmmToMin, minToHHMM } from '@/lib/tz';
 import { useToast } from './Toast';
 import { BusyLabel } from '@/components/Spinner';
+import { Collapse } from './Collapse';
 
 const WEEK = [1, 2, 3, 4, 5, 6, 0]; // Monday … Sunday (weekday numbers, 0=Sun)
 type DayState = { working: boolean; startMin: number; endMin: number };
@@ -56,7 +57,7 @@ export function CoachHoursEditor() {
     setState((s) => ({ ...s, [w]: { ...s[w]!, ...patch } }));
 
   return (
-    <section style={card}>
+    <section className="acct-card">
       {/* The whole header is the toggle — title, current hours and a clear
           "Промени / Скрий" control — not a lone arrow in the corner. */}
       <button
@@ -116,16 +117,18 @@ export function CoachHoursEditor() {
         </span>
       </button>
 
-      {open && (
-        <div id="coach-hours-panel" style={{ marginTop: 16, display: 'grid', gap: 8 }}>
+      <Collapse open={open} id="coach-hours-panel">
+        <div className="acct-rows" style={{ paddingTop: 18 }}>
           {WEEK.map((w) => {
             const d = state[w];
             if (!d) return null;
             return (
-              <div key={w} style={row}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 150, cursor: 'pointer' }}>
+              <div key={w} className="acct-row" style={{ flexWrap: 'wrap', cursor: 'default', padding: '10px 0' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 170, cursor: 'pointer' }}>
                   <input
                     type="checkbox"
+                    role="switch"
+                    className="acct-switch"
                     checked={d.working}
                     onChange={(e) => set(w, { working: e.target.checked })}
                   />
@@ -137,14 +140,17 @@ export function CoachHoursEditor() {
                       type="time"
                       value={minToHHMM(d.startMin)}
                       onChange={(e) => set(w, { startMin: hhmmToMin(e.target.value) })}
-                      style={timeInput}
+                      className="acct-input"
+                      style={{ minHeight: 40 }}
                     />
                     <span style={{ color: 'var(--ink-3)' }}>–</span>
                     <input
                       type="time"
                       value={minToHHMM(d.endMin)}
                       onChange={(e) => set(w, { endMin: hhmmToMin(e.target.value) })}
-                      style={{ ...timeInput, borderColor: d.endMin <= d.startMin ? 'var(--clay)' : 'var(--line-2)' }}
+                      className="acct-input"
+                      aria-invalid={d.endMin <= d.startMin}
+                      style={{ minHeight: 40 }}
                     />
                   </div>
                 ) : (
@@ -154,29 +160,20 @@ export function CoachHoursEditor() {
             );
           })}
 
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 6 }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', paddingTop: 14 }}>
             <button
               type="button"
+              className="acct-btn is-primary"
               onClick={() => save.mutate()}
               disabled={save.isPending || invalid}
-              style={{
-                minHeight: 44,
-                padding: '0 20px',
-                background: 'var(--lime)',
-                color: 'var(--on-lime)',
-                border: 'none',
-                borderRadius: 'var(--pill)',
-                fontWeight: 700,
-                cursor: invalid ? 'not-allowed' : 'pointer',
-                opacity: invalid ? 0.5 : 1,
-              }}
+              style={{ opacity: invalid ? 0.5 : 1, cursor: invalid ? 'not-allowed' : 'pointer' }}
             >
               <BusyLabel busy={save.isPending}>{t('save')}</BusyLabel>
             </button>
             {invalid && <span style={{ color: 'var(--clay)', fontSize: 13 }}>{t('invalidRange')}</span>}
           </div>
         </div>
-      )}
+      </Collapse>
     </section>
   );
 }
@@ -195,27 +192,3 @@ function summarize(
     .join(' · ');
 }
 
-const card: React.CSSProperties = {
-  background: 'var(--surface)',
-  border: '1px solid var(--line)',
-  borderRadius: 'var(--radius)',
-  padding: 18,
-  boxShadow: 'var(--shadow-sm)',
-};
-const row: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 12,
-  flexWrap: 'wrap',
-  borderBottom: '1px solid var(--line)',
-  paddingBottom: 8,
-};
-const timeInput: React.CSSProperties = {
-  minHeight: 40,
-  padding: '0 10px',
-  border: '1px solid var(--line-2)',
-  background: 'var(--surface)',
-  color: 'var(--ink)',
-  borderRadius: 'var(--radius-sm)',
-  fontFamily: 'inherit',
-};

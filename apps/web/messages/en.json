@@ -477,6 +477,13 @@
     "priceDeleted": "Rule deleted"
   },
   "CoachSchedule": {
+    "until": "until {time}",
+    "notWorking": "Outside working hours",
+    "freeHour": "Free hour",
+    "legendLesson": "Lesson",
+    "legendOpen": "Free hour in working time",
+    "dayLessons": "{count, plural, =0 {none} one {# lesson} other {# lessons}}",
+    "dayOff": "day off",
     "title": "My schedule",
     "subtitle": "Your lessons for the week.",
     "coachesOnly": "This page is for coaches only.",
@@ -499,6 +506,15 @@
     "invalidRange": "End time must be after start."
   },
   "CoachProfile": {
+    "sectionRate": "Price and experience",
+    "sectionAudience": "Who I work with",
+    "photoHelp": "A link to a photo. Players see it when they pick a coach.",
+    "changePhoto": "Change photo",
+    "addPhoto": "Add a photo",
+    "removePhoto": "Remove",
+    "bioHelp": "A few sentences about your experience and how you work.",
+    "unsaved": "You have unsaved changes",
+    "discard": "Discard",
     "title": "Public profile",
     "preview": "Preview public page",
     "photoUrl": "Photo URL",
@@ -511,6 +527,11 @@
     "worksWith": "Works with"
   },
   "CoachHub": {
+    "schedule": "My schedule",
+    "publicPage": "My public page",
+    "account": "My account",
+    "roleCoach": "Coach",
+    "shortcuts": "Shortcuts",
     "title": "Coach profile",
     "subtitle": "Your public profile and group sessions.",
     "coachesOnly": "This page is for coaches only.",

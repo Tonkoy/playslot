@@ -2,18 +2,36 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { enumLabel } from '@/lib/enums';
 import { useEffect, useState } from 'react';
 import { COACH_LEVELS, WORKS_WITH } from '@playslot/contracts';
-import { Link } from '@/i18n/navigation';
 import { getMyCoachProfile, updateMyCoachProfile } from '@/lib/api';
-import { Avatar } from './Avatar';
-import { useToast } from './Toast';
+import { enumLabel } from '@/lib/enums';
 import { BusyLabel } from '@/components/Spinner';
+import { Avatar } from './Avatar';
+import { Collapse } from './Collapse';
+import { useToast } from './Toast';
 
 const LANGUAGES = ['bg', 'en'];
 
-/** The coach edits their public profile: photo, description and hourly rate. */
+interface Form {
+  photoUrl: string;
+  bio: string;
+  rate: number | '';
+  experience: number | '';
+  levels: string[];
+  languages: string[];
+  worksWith: string[];
+}
+const EMPTY: Form = { photoUrl: '', bio: '', rate: '', experience: '', levels: [], languages: [], worksWith: [] };
+/** Order of the chips a coach ticked does not make the profile "changed". */
+const fingerprint = (f: Form) =>
+  JSON.stringify({ ...f, levels: [...f.levels].sort(), languages: [...f.languages].sort(), worksWith: [...f.worksWith].sort() });
+
+/**
+ * The coach edits what players see of them: photo, a few words, price,
+ * experience and who they work with. Laid out like the account page — cards,
+ * and a save bar that appears only once something has changed.
+ */
 export function CoachProfileEditor({ name }: { name: string }) {
   const t = useTranslations('CoachProfile');
   const te = useTranslations('Enums');
@@ -24,212 +42,178 @@ export function CoachProfileEditor({ name }: { name: string }) {
   const toast = useToast();
 
   const profile = useQuery({ queryKey: ['coachProfile'], queryFn: getMyCoachProfile });
-  const [photoUrl, setPhotoUrl] = useState('');
-  const [bio, setBio] = useState('');
-  const [rate, setRate] = useState<number | ''>('');
-  const [experience, setExperience] = useState<number | ''>('');
-  const [levels, setLevels] = useState<string[]>([]);
-  const [languages, setLanguages] = useState<string[]>([]);
-  const [worksWith, setWorksWith] = useState<string[]>([]);
+  const [saved, setSaved] = useState<Form>(EMPTY);
+  const [form, setForm] = useState<Form>(EMPTY);
+  const [photoOpen, setPhotoOpen] = useState(false);
 
   useEffect(() => {
     if (!profile.data) return;
-    setPhotoUrl(profile.data.photoUrl ?? '');
-    setBio(profile.data.bio ?? '');
-    setRate(profile.data.hourlyRateCents != null ? profile.data.hourlyRateCents / 100 : '');
-    setExperience(profile.data.experienceYears ?? '');
-    setLevels(profile.data.levels ?? []);
-    setLanguages(profile.data.languages ?? []);
-    setWorksWith(profile.data.worksWith ?? []);
+    const next: Form = {
+      photoUrl: profile.data.photoUrl ?? '',
+      bio: profile.data.bio ?? '',
+      rate: profile.data.hourlyRateCents != null ? profile.data.hourlyRateCents / 100 : '',
+      experience: profile.data.experienceYears ?? '',
+      levels: profile.data.levels ?? [],
+      languages: profile.data.languages ?? [],
+      worksWith: profile.data.worksWith ?? [],
+    };
+    setSaved(next);
+    setForm(next);
   }, [profile.data]);
 
-  const toggle = (list: string[], set: (v: string[]) => void, value: string) =>
-    set(list.includes(value) ? list.filter((x) => x !== value) : [...list, value]);
+  const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm((f) => ({ ...f, [key]: value }));
+  const toggle = (key: 'levels' | 'languages' | 'worksWith', value: string) =>
+    setForm((f) => ({ ...f, [key]: f[key].includes(value) ? f[key].filter((x) => x !== value) : [...f[key], value] }));
+  const dirty = fingerprint(form) !== fingerprint(saved);
 
   const save = useMutation({
     mutationFn: () =>
       updateMyCoachProfile({
-        photoUrl: photoUrl.trim(),
-        bio: bio.trim(),
-        hourlyRateCents: rate === '' ? null : Math.round(Number(rate) * 100),
-        experienceYears: experience === '' ? null : Number(experience),
-        levels,
-        languages,
-        worksWith,
+        photoUrl: form.photoUrl.trim(),
+        bio: form.bio.trim(),
+        hourlyRateCents: form.rate === '' ? null : Math.round(Number(form.rate) * 100),
+        experienceYears: form.experience === '' ? null : Number(form.experience),
+        levels: form.levels,
+        languages: form.languages,
+        worksWith: form.worksWith,
       }),
     onSuccess: () => {
+      setSaved(form);
       qc.invalidateQueries({ queryKey: ['coachProfile'] });
       toast(tt('profileSaved'));
     },
     onError: (e) => toast(e instanceof Error ? e.message : tt('error'), 'error'),
   });
 
+  const chips = (key: 'levels' | 'languages' | 'worksWith', options: readonly string[], label: (v: string) => string, title: string) => (
+    <div>
+      <div className="acct-field" style={{ marginBottom: 8 }}>
+        {title}
+      </div>
+      <div className="coach-chips" role="group" aria-label={title}>
+        {options.map((o) => {
+          const on = form[key].includes(o);
+          return (
+            <button key={o} type="button" className={`coach-chip${on ? ' is-on' : ''}`} aria-pressed={on} onClick={() => toggle(key, o)}>
+              {on && <span aria-hidden>✓ </span>}
+              {label(o)}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   return (
-    <section style={card}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700 }}>{t('title')}</h2>
-        {profile.data && (
-          <Link href={`/coaches/${profile.data.coachProfileId}`} style={{ color: 'var(--teal)', fontSize: 14 }}>
-            {t('preview')} →
-          </Link>
-        )}
-      </div>
+    <form
+      className="acct-sections"
+      style={{ paddingBottom: dirty ? 84 : 0 }}
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (dirty) save.mutate();
+      }}
+    >
+      {/* ── what players see first ── */}
+      <section className="acct-card">
+        <h2 className="acct-h2">{t('title')}</h2>
 
-      <div style={{ display: 'flex', gap: 16, alignItems: 'center', margin: '14px 0' }}>
-        <Avatar name={name} photoUrl={photoUrl || null} size={72} />
-        <label style={{ ...fieldLabel, flex: 1 }}>
-          {t('photoUrl')}
-          <input
-            type="url"
-            value={photoUrl}
-            onChange={(e) => setPhotoUrl(e.target.value)}
-            placeholder="https://…"
-            style={fieldInput}
-          />
-        </label>
-      </div>
-
-      <label style={{ ...fieldLabel, marginBottom: 14 }}>
-        {t('bio')}
-        <textarea
-          value={bio}
-          onChange={(e) => setBio(e.target.value)}
-          rows={3}
-          style={{ ...fieldInput, minHeight: 76, padding: '8px 10px', resize: 'vertical' }}
-        />
-      </label>
-
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-        <label style={{ ...fieldLabel, maxWidth: 200 }}>
-          {t('hourlyRate')}
-          <input
-            type="number"
-            min={0}
-            step="0.01"
-            value={rate}
-            onChange={(e) => setRate(e.target.value === '' ? '' : Number(e.target.value))}
-            style={fieldInput}
-          />
-        </label>
-        <label style={{ ...fieldLabel, maxWidth: 200 }}>
-          {t('experienceYears')}
-          <input
-            type="number"
-            min={0}
-            max={80}
-            value={experience}
-            onChange={(e) => setExperience(e.target.value === '' ? '' : Number(e.target.value))}
-            style={fieldInput}
-          />
-        </label>
-      </div>
-
-      {/* works with (age groups) */}
-      <div style={{ marginTop: 16 }}>
-        <div style={{ ...fieldLabel, marginBottom: 8 }}>{t('worksWith')}</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {WORKS_WITH.map((g) => {
-            const on = worksWith.includes(g);
-            return (
-              <button key={g} type="button" onClick={() => toggle(worksWith, setWorksWith, g)} aria-pressed={on} style={chip(on)}>
-                {ag(g)}
+        <div className="acct-photo">
+          <Avatar name={name} photoUrl={form.photoUrl || null} size={64} />
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" className="acct-btn" onClick={() => setPhotoOpen((v) => !v)} aria-expanded={photoOpen}>
+              {form.photoUrl ? t('changePhoto') : t('addPhoto')}
+            </button>
+            {form.photoUrl && (
+              <button type="button" className="acct-btn is-quiet" onClick={() => set('photoUrl', '')}>
+                {t('removePhoto')}
               </button>
-            );
-          })}
+            )}
+          </div>
         </div>
-      </div>
+        <Collapse open={photoOpen}>
+          <label className="acct-field" style={{ paddingTop: 12 }}>
+            {t('photoUrl')}
+            <input
+              type="url"
+              value={form.photoUrl}
+              onChange={(e) => set('photoUrl', e.target.value)}
+              placeholder="https://…"
+              className="acct-input"
+            />
+            <span className="acct-help">{t('photoHelp')}</span>
+          </label>
+        </Collapse>
 
-      {/* levels */}
-      <div style={{ marginTop: 16 }}>
-        <div style={{ ...fieldLabel, marginBottom: 8 }}>{t('levels')}</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {COACH_LEVELS.map((l) => {
-            const on = levels.includes(l);
-            return (
-              <button
-                key={l}
-                type="button"
-                onClick={() => toggle(levels, setLevels, l)}
-                aria-pressed={on}
-                style={chip(on)}
-              >
-                {lv(l)}
+        <label className="acct-field" style={{ marginTop: 16 }}>
+          {t('bio')}
+          <textarea
+            value={form.bio}
+            onChange={(e) => set('bio', e.target.value)}
+            rows={4}
+            className="acct-input"
+            style={{ minHeight: 104, padding: '10px 12px', resize: 'vertical', lineHeight: 1.5 }}
+          />
+          <span className="acct-help">{t('bioHelp')}</span>
+        </label>
+      </section>
+
+      {/* ── price and experience ── */}
+      <section className="acct-card">
+        <h2 className="acct-h2">{t('sectionRate')}</h2>
+        <div className="acct-grid2" style={{ marginTop: 0 }}>
+          <label className="acct-field">
+            {t('hourlyRate')}
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              inputMode="decimal"
+              value={form.rate}
+              onChange={(e) => set('rate', e.target.value === '' ? '' : Number(e.target.value))}
+              className="acct-input"
+            />
+          </label>
+          <label className="acct-field">
+            {t('experienceYears')}
+            <input
+              type="number"
+              min={0}
+              max={80}
+              inputMode="numeric"
+              value={form.experience}
+              onChange={(e) => set('experience', e.target.value === '' ? '' : Number(e.target.value))}
+              className="acct-input"
+            />
+          </label>
+        </div>
+      </section>
+
+      {/* ── who the coach works with ── */}
+      <section className="acct-card">
+        <h2 className="acct-h2">{t('sectionAudience')}</h2>
+        <div style={{ display: 'grid', gap: 18 }}>
+          {chips('worksWith', WORKS_WITH, (v) => ag(v), t('worksWith'))}
+          {chips('levels', COACH_LEVELS, (v) => lv(v), t('levels'))}
+          {chips('languages', LANGUAGES, (v) => enumLabel(te, 'Language', v), t('languages'))}
+        </div>
+      </section>
+
+      {/* ── unsaved changes ── */}
+      {dirty && (
+        <div className="acct-savebar" role="region" aria-label={t('unsaved')}>
+          <div>
+            <span className="acct-savebar-text">{t('unsaved')}</span>
+            <span className="acct-savebar-actions">
+              <button type="button" className="acct-btn" onClick={() => setForm(saved)} disabled={save.isPending}>
+                {t('discard')}
               </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* languages */}
-      <div style={{ marginTop: 14 }}>
-        <div style={{ ...fieldLabel, marginBottom: 8 }}>{t('languages')}</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {LANGUAGES.map((l) => {
-            const on = languages.includes(l);
-            return (
-              <button
-                key={l}
-                type="button"
-                onClick={() => toggle(languages, setLanguages, l)}
-                aria-pressed={on}
-                className="mono"
-                style={chip(on)}
-              >
-                {enumLabel(te, 'Language', l)}
+              <button type="submit" className="acct-btn is-primary" disabled={save.isPending}>
+                <BusyLabel busy={save.isPending}>{t('save')}</BusyLabel>
               </button>
-            );
-          })}
+            </span>
+          </div>
         </div>
-      </div>
-
-      <div style={{ marginTop: 16 }}>
-        <button
-          type="button"
-          onClick={() => save.mutate()}
-          disabled={save.isPending}
-          style={{ minHeight: 44, padding: '0 20px', background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', borderRadius: 'var(--pill)', fontWeight: 700, cursor: 'pointer' }}
-        >
-          <BusyLabel busy={save.isPending}>{t('save')}</BusyLabel>
-        </button>
-      </div>
-    </section>
+      )}
+    </form>
   );
 }
-
-function chip(on: boolean): React.CSSProperties {
-  return {
-    minHeight: 40,
-    padding: '0 14px',
-    borderRadius: 999,
-    border: `1.5px solid ${on ? 'var(--green-deep)' : 'var(--line-2)'}`,
-    background: on ? 'var(--lime)' : 'var(--surface)',
-    color: on ? 'var(--on-lime)' : 'var(--ink-2)',
-    cursor: 'pointer',
-    fontSize: 14,
-    fontWeight: on ? 700 : 500,
-  };
-}
-
-const card: React.CSSProperties = {
-  background: 'var(--surface)',
-  border: '1px solid var(--line)',
-  borderRadius: 'var(--radius)',
-  padding: 20,
-  boxShadow: 'var(--shadow-sm)',
-};
-const fieldLabel: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 4,
-  fontSize: 12,
-  color: 'var(--ink-2)',
-};
-const fieldInput: React.CSSProperties = {
-  minHeight: 44,
-  padding: '0 10px',
-  border: '1px solid var(--line-2)',
-  background: 'var(--surface)',
-  color: 'var(--ink)',
-  borderRadius: 'var(--radius-sm)',
-  fontFamily: 'inherit',
-};

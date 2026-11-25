@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
-import { SPORTS } from '@playslot/contracts';
+import { OFFERED_SPORTS } from '@playslot/contracts';
 import { enumLabel } from '@/lib/enums';
 import { APP_NAME } from '@/lib/brand';
 import { Link, useRouter } from '@/i18n/navigation';
@@ -445,7 +445,7 @@ function CourtFields({
       <label style={fieldLabel}>
         {t('sport')}
         <select value={value.sport} onChange={(e) => onChange({ ...value, sport: e.target.value })} style={fieldInput}>
-          {SPORTS.map((s) => (
+          {OFFERED_SPORTS.map((s) => (
             <option key={s} value={s}>
               {enumLabel(te, 'Sport', s)}
             </option>

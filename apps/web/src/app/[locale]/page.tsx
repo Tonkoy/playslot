@@ -1,5 +1,5 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
-import { SPORTS } from '@playslot/contracts';
+import { OFFERED_SPORTS } from '@playslot/contracts';
 import { enumLabel } from '@/lib/enums';
 import { SiteHeader } from '@/components/SiteHeader';
 import { HeroSearchButton } from '@/components/HeroSearchButton';
@@ -151,7 +151,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 30, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12, color: 'var(--ink-3)', fontWeight: 600 }}>{t('popularSportsLabel')}</span>
-              {SPORTS.map((s) => (
+              {OFFERED_SPORTS.map((s) => (
                 <span
                   key={s}
                   style={{

@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { type SearchQuery, type SearchResponse, type SearchResultItem } from '@playslot/contracts';
+import {
+  OFFERED_SPORTS,
+  type SearchQuery,
+  type SearchResponse,
+  type SearchResultItem,
+} from '@playslot/contracts';
 import { AvailabilityService } from '../availability/availability.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -27,7 +32,9 @@ export class SearchService {
           some: {
             type: 'COURT',
             status: 'ACTIVE',
-            ...(query.sport ? { sport: query.sport } : {}),
+            // No sport picked still means "any sport we offer", never every
+            // sport in the enum.
+            sport: query.sport ?? { in: [...OFFERED_SPORTS] },
           },
         },
       },

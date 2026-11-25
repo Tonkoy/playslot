@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
-import { SPORTS } from '@playslot/contracts';
+import { OFFERED_SPORTS } from '@playslot/contracts';
 import { enumLabel } from '@/lib/enums';
 import { ClubThumb } from './ClubThumb';
 import { useSearchModal } from './SearchModalContext';
@@ -142,7 +142,7 @@ export function SearchClient() {
             <span style={labelText}>{t('sport')}</span>
             <select value={sport} onChange={(e) => setSport(e.target.value)} style={ctrl}>
               <option value="">{t('anySport')}</option>
-              {SPORTS.map((s) => (
+              {OFFERED_SPORTS.map((s) => (
                 <option key={s} value={s}>
                   {enumLabel(te, 'Sport', s)}
                 </option>

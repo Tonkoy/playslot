@@ -19,6 +19,16 @@ export const SPORTS = [
 ] as const;
 export type Sport = (typeof SPORTS)[number];
 
+/**
+ * The sports PlaySlot is open for right now. `SPORTS` stays the full mirror of
+ * the Prisma enum (so adding a sport later needs no migration); this list is
+ * what the product actually offers — sport pickers show it, the API accepts
+ * only these for new courts and search filters, and public search never
+ * returns courts of any other sport. To launch a sport, add it here.
+ */
+export const OFFERED_SPORTS = ['TENNIS', 'PADEL'] as const satisfies readonly Sport[];
+export type OfferedSport = (typeof OFFERED_SPORTS)[number];
+
 export const ROLES = ['PLAYER', 'COACH', 'CLUB_STAFF', 'CLUB_ADMIN', 'PLATFORM_ADMIN'] as const;
 export type Role = (typeof ROLES)[number];
 

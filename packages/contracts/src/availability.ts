@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import { SPORTS } from './enums';
+import { OFFERED_SPORTS } from './enums';
 import type { SlotState } from './enums';
 
 /** `GET /availability` query (spec §13). Params arrive as strings → coerced. */
 export const availabilityQuerySchema = z.object({
   clubId: z.coerce.number().int().positive(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD'),
-  sport: z.enum(SPORTS).optional(),
+  sport: z.enum(OFFERED_SPORTS).optional(),
   duration: z.coerce.number().int().min(15).max(240).optional(),
   coachRequired: z
     .union([z.boolean(), z.enum(['true', 'false'])])

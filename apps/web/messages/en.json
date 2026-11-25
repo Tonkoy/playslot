@@ -204,7 +204,7 @@
     "confirmBooking": "Confirm"
   },
   "Home": {
-    "eyebrow": "Sofia · tennis · and more sports",
+    "eyebrow": "Sofia · tennis · padel",
     "title": "Find a free court. Book it instantly.",
     "titleHighlight": "free court",
     "subtitle": "PlaySlot shows real availability across clubs, bundles a court and a coach into a single reservation, and makes double-booking impossible at the database layer.",
@@ -218,7 +218,7 @@
     "withCoachPrompt": "Want to play with a coach?",
     "primaryCta": "Find a court",
     "secondaryCta": "How it works",
-    "popularSportsLabel": "Popular sports",
+    "popularSportsLabel": "Sports",
     "howItWorksEyebrow": "How it works",
     "howItWorksTitle": "Three ways onto the court",
     "stepCourtOnlyTitle": "Court only",
@@ -653,7 +653,7 @@
     },
     "coaches": {
       "title": "Book a coach online",
-      "description": "Book a coach for tennis, padel and more. See free hours, prices and levels, and reserve court and coach in a single booking."
+      "description": "Book a coach for tennis and padel. See free hours, prices and levels, and reserve court and coach in a single booking."
     },
     "sessions": {
       "title": "Group sessions with a coach",

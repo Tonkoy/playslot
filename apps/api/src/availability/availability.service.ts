@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  OFFERED_SPORTS,
   type AvailabilityQuery,
   type AvailabilityResponse,
   type AvailabilitySlot,
@@ -58,7 +59,7 @@ export class AvailabilityService {
         clubId: query.clubId,
         type: 'COURT',
         status: 'ACTIVE',
-        ...(query.sport ? { sport: query.sport } : {}),
+        sport: query.sport ?? { in: [...OFFERED_SPORTS] },
       },
       include: { availabilityRules: true },
       orderBy: { name: 'asc' },

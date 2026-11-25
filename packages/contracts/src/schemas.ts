@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { SPORTS } from './enums';
+import { OFFERED_SPORTS } from './enums';
 
 /**
  * Shared request schemas (spec §13). Zod is the single validation source for API
@@ -188,7 +188,7 @@ export const surfaceEnum = z.enum([
 
 export const upsertCourtSchema = z.object({
   name: z.string().min(1).max(120),
-  sport: z.enum(SPORTS).default('TENNIS'),
+  sport: z.enum(OFFERED_SPORTS).default('TENNIS'),
   surface: surfaceEnum.optional(),
   isIndoor: z.boolean().optional(),
   hasLighting: z.boolean().optional(),

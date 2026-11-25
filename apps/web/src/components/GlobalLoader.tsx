@@ -5,8 +5,20 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import { useToast } from './Toast';
 
-/** Activity this short never shows the loader at all (cache hits, instant replies). */
-const SHOW_AFTER_MS = 150;
+/**
+ * A load that finishes within this never shows the loader at all. Most do: the
+ * page (with its skeletons) simply fills in. Showing the veil sooner meant
+ * every ordinary page went page → blurred → page again, the veil arriving just
+ * as the data did and then lingering for its minimum time.
+ */
+const SHOW_AFTER_MS = 400;
+/**
+ * Requests nobody is waiting on: the session check and the small account
+ * extras that sit in the layout. They run on every page — for a signed-out
+ * visitor the session check on every single navigation — and must never veil
+ * a page that is otherwise ready.
+ */
+const SILENT_QUERIES = new Set(['me', 'myStanding', 'pushConfig']);
 /**
  * The loader hides only after the app has been completely idle this long.
  * A page often loads in steps — session, then profile, then the coach's clubs,
@@ -34,8 +46,10 @@ const MAX_VISIBLE_MS = 10_000;
  * follow-up request, and leaves only when all of them have finished and
  * nothing new has started for a moment.
  *
- * What counts: first loads (a query with nothing to show yet) and writes.
- * What doesn't: refreshes of data already on screen — for example the club
+ * What counts: first loads (a query with nothing to show yet) that run long
+ * enough to be felt, and writes.
+ * What doesn't: the session check and layout extras (SILENT_QUERIES), and
+ * refreshes of data already on screen — for example the club
  * grid updating because someone else just booked. Blurring a page someone is
  * using, or an open dialog, for a refresh they didn't ask for is worse than
  * the refresh being silent.
@@ -54,7 +68,8 @@ export function GlobalLoader() {
     predicate: (q) =>
       q.state.status === 'pending' &&
       q.state.fetchStatus === 'fetching' &&
-      q.state.fetchFailureCount === 0,
+      q.state.fetchFailureCount === 0 &&
+      !SILENT_QUERIES.has(String(q.queryKey[0])),
   });
   const mutating = useIsMutating();
   const busy = loading + mutating > 0;

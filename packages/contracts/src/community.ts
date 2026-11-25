@@ -9,6 +9,9 @@ export interface FavoriteClub {
   slug: string;
   name: string;
   cityName: string;
+  /** The club's logo/photo and street address, for the favourites card. */
+  photoUrl?: string | null;
+  address?: string | null;
 }
 
 export const reviewInputSchema = z.object({

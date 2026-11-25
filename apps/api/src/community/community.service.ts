@@ -15,7 +15,11 @@ export class CommunityService {
   async listFavorites(userId: number): Promise<FavoriteClub[]> {
     const favs = await this.prisma.favorite.findMany({
       where: { userId },
-      select: { club: { select: { id: true, slug: true, name: true, city: { select: { name: true } } } } },
+      select: {
+        club: {
+          select: { id: true, slug: true, name: true, photoUrl: true, address: true, city: { select: { name: true } } },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
     return favs.map((f) => ({
@@ -23,6 +27,8 @@ export class CommunityService {
       slug: f.club.slug,
       name: f.club.name,
       cityName: f.club.city.name,
+      photoUrl: f.club.photoUrl,
+      address: f.club.address,
     }));
   }
 

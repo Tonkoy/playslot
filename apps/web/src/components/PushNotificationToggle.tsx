@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { getPushConfig, subscribePush, unsubscribePush } from '@/lib/api';
 import { useToast } from './Toast';
+import { BusyLabel } from '@/components/Spinner';
 
 /**
  * VAPID keys travel base64url; the browser wants raw bytes. Backed by an
@@ -144,12 +145,12 @@ export function PushNotificationToggle() {
 
       {status.action === 'enable' && (
         <button type="button" onClick={() => enable.mutate()} disabled={busy} style={primaryBtn}>
-          {busy ? '…' : t('enable')}
+          <BusyLabel busy={busy}>{t('enable')}</BusyLabel>
         </button>
       )}
       {status.action === 'disable' && (
         <button type="button" onClick={() => disable.mutate()} disabled={busy} style={secondaryBtn}>
-          {busy ? '…' : t('disable')}
+          <BusyLabel busy={busy}>{t('disable')}</BusyLabel>
         </button>
       )}
     </div>

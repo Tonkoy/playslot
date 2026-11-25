@@ -9,6 +9,7 @@ import { formatDateRange, formatInstant, hhmmToMin, minToHHMM } from '@/lib/tz';
 import { DatePicker } from '../DatePicker';
 import { useToast } from '../Toast';
 import { SkeletonRows } from '@/components/Skeleton';
+import { BusyLabel } from '@/components/Spinner';
 
 function todayIso(): string {
   const d = new Date();
@@ -172,7 +173,7 @@ export function ClosuresManager({ clubId, timezone }: { clubId: number; timezone
             disabled={!canCreate || create.isPending}
             style={{ minHeight: 44, padding: '0 20px', background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', borderRadius: 'var(--pill)', fontWeight: 700, cursor: canCreate ? 'pointer' : 'not-allowed', opacity: canCreate ? 1 : 0.5 }}
           >
-            {create.isPending ? '…' : t('add')}
+            <BusyLabel busy={create.isPending}>{t('add')}</BusyLabel>
           </button>
         </div>
       </div>

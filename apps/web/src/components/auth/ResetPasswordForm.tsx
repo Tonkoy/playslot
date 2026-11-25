@@ -8,6 +8,7 @@ import { errorMessage, fieldErrorsOf } from '@/lib/errors';
 import { FieldError } from '../FieldError';
 import { PasswordInput } from './PasswordInput';
 import { authLabel, authPrimaryBtn } from './styles';
+import { BusyLabel } from '@/components/Spinner';
 
 export function ResetPasswordForm({ token }: { token: string }) {
   const t = useTranslations('ResetPassword');
@@ -85,7 +86,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         </label>
         {error && <div role="alert" style={{ color: 'var(--clay)', fontSize: 14 }}>{error}</div>}
         <button type="submit" disabled={busy} style={authPrimaryBtn}>
-          {busy ? '…' : t('submit')}
+          <BusyLabel busy={busy}>{t('submit')}</BusyLabel>
         </button>
       </form>
       <p style={{ textAlign: 'center', marginTop: 16, fontSize: 14 }}>

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Link } from '@/i18n/navigation';
 import { requestPasswordReset } from '@/lib/api';
 import { authInput, authLabel, authPrimaryBtn } from './styles';
+import { BusyLabel } from '@/components/Spinner';
 
 export function ForgotPasswordForm() {
   const t = useTranslations('ForgotPassword');
@@ -34,7 +35,7 @@ export function ForgotPasswordForm() {
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required style={authInput} autoComplete="email" />
           </label>
           <button type="submit" disabled={busy} style={authPrimaryBtn}>
-            {busy ? '…' : t('submit')}
+            <BusyLabel busy={busy}>{t('submit')}</BusyLabel>
           </button>
         </form>
       )}

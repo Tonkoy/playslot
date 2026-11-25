@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { getMyCoachHours, updateMyCoachHours } from '@/lib/api';
 import { hhmmToMin, minToHHMM } from '@/lib/tz';
 import { useToast } from './Toast';
+import { BusyLabel } from '@/components/Spinner';
 
 const WEEK = [1, 2, 3, 4, 5, 6, 0]; // Monday … Sunday (weekday numbers, 0=Sun)
 type DayState = { working: boolean; startMin: number; endMin: number };
@@ -170,7 +171,7 @@ export function CoachHoursEditor() {
                 opacity: invalid ? 0.5 : 1,
               }}
             >
-              {save.isPending ? '…' : t('save')}
+              <BusyLabel busy={save.isPending}>{t('save')}</BusyLabel>
             </button>
             {invalid && <span style={{ color: 'var(--clay)', fontSize: 13 }}>{t('invalidRange')}</span>}
           </div>

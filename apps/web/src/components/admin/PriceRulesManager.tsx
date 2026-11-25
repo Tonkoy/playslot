@@ -14,6 +14,7 @@ import {
 } from '@/lib/api';
 import { useToast } from '../Toast';
 import { SkeletonRows } from '@/components/Skeleton';
+import { BusyLabel } from '@/components/Spinner';
 
 const EVERY_DAY = null;
 const MON_FRI = 0b0111110; // bits 1–5
@@ -359,7 +360,7 @@ export function PriceRulesManager({ clubId }: { clubId: number }) {
 
           <div style={{ display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap' }}>
             <button type="button" onClick={() => save.mutate(draft)} disabled={save.isPending} style={primaryBtn}>
-              {save.isPending ? '…' : t('save')}
+              <BusyLabel busy={save.isPending}>{t('save')}</BusyLabel>
             </button>
             <button type="button" onClick={() => setDraft(null)} style={smallBtn}>
               {t('cancel')}

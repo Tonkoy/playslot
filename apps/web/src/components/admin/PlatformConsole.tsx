@@ -17,6 +17,7 @@ import {
 import { enumLabel } from '@/lib/enums';
 import { AddMemberForm } from './AddMemberForm';
 import { SkeletonRows } from '@/components/Skeleton';
+import { BusyLabel } from '@/components/Spinner';
 
 /** Super-admin console: all clubs, create a club, assign club admins. */
 export function PlatformConsole() {
@@ -118,7 +119,7 @@ export function PlatformConsole() {
               disabled={newCity.trim().length < 2 || addCity.isPending}
               style={smallBtn}
             >
-              {addCity.isPending ? '…' : t('saveCity')}
+              <BusyLabel busy={addCity.isPending}>{t('saveCity')}</BusyLabel>
             </button>
             <button type="button" onClick={() => setAddingCity(false)} style={smallBtn}>
               {t('cancel')}
@@ -137,7 +138,7 @@ export function PlatformConsole() {
           </select>
         </label>
         <button type="submit" disabled={create.isPending || cityId === ''} style={primaryBtn}>
-          {create.isPending ? '…' : t('createClub')}
+          <BusyLabel busy={create.isPending}>{t('createClub')}</BusyLabel>
         </button>
       </form>
       {create.isError && <p style={{ color: 'var(--clay)', fontSize: 13, marginTop: 8 }}>{(create.error as Error).message}</p>}

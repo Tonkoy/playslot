@@ -19,6 +19,7 @@ import {
 import { enumLabel } from '@/lib/enums';
 import { errorMessage } from '@/lib/errors';
 import { SLOT_STYLE } from '@/lib/slotStates';
+import { BusyLabel } from '@/components/Spinner';
 
 /** Days shown in the strip above the grid. */
 const STRIP_DAYS = 7;
@@ -543,52 +544,59 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
                     ›
                   </span>
                 </button>
-                {open && (
-                  <div className="avail-courts">
-                    {cells.map(({ c, slot }) => {
-                      if (SLOT_STYLE[slot.state].bookable) {
-                        const picked = isPicked(c, slot);
+                {/* Always rendered so it can slide open and shut; `inert` keeps
+                    the folded tiles out of the tab order and screen readers. */}
+                <div className={`avail-fold${open ? ' is-open' : ''}`} inert={!open}>
+                  <div className="avail-fold-inner">
+                    <div className="avail-courts">
+                      {cells.map(({ c, slot }, i) => {
+                        // Tiles follow one another in when the hour opens.
+                        const stagger = { '--i': i } as React.CSSProperties;
+                        if (SLOT_STYLE[slot.state].bookable) {
+                          const picked = isPicked(c, slot);
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              className={`avail-court slot-free${picked ? ' is-selected' : ''}`}
+                              style={stagger}
+                              aria-pressed={picked}
+                              onClick={() => pick(c, slot, time)}
+                            >
+                              <span>
+                                {c.name}
+                                <small>{courtNote(c)}</small>
+                              </span>
+                              <span>{price(slot.priceCents) ?? '✓'}</span>
+                            </button>
+                          );
+                        }
+                        const kind =
+                          slot.state === 'MINE'
+                            ? 'slot-mine'
+                            : slot.state === 'EVENT'
+                              ? 'slot-event'
+                              : slot.state === 'TOURNAMENT'
+                                ? 'slot-tournament'
+                                : 'slot-taken';
+                        const note =
+                          slot.state === 'MINE'
+                            ? t('mine')
+                            : slot.state === 'RESERVED' || slot.state === 'UNAVAILABLE'
+                              ? t('taken')
+                              : st(slot.state);
                         return (
-                          <button
-                            key={c.id}
-                            type="button"
-                            className={`avail-court slot-free${picked ? ' is-selected' : ''}`}
-                            aria-pressed={picked}
-                            onClick={() => pick(c, slot, time)}
-                          >
+                          <div key={c.id} className={`avail-court ${kind}`} style={stagger}>
                             <span>
                               {c.name}
-                              <small>{courtNote(c)}</small>
+                              <small>{note}</small>
                             </span>
-                            <span>{price(slot.priceCents) ?? '✓'}</span>
-                          </button>
+                          </div>
                         );
-                      }
-                      const kind =
-                        slot.state === 'MINE'
-                          ? 'slot-mine'
-                          : slot.state === 'EVENT'
-                            ? 'slot-event'
-                            : slot.state === 'TOURNAMENT'
-                              ? 'slot-tournament'
-                              : 'slot-taken';
-                      const note =
-                        slot.state === 'MINE'
-                          ? t('mine')
-                          : slot.state === 'RESERVED' || slot.state === 'UNAVAILABLE'
-                            ? t('taken')
-                            : st(slot.state);
-                      return (
-                        <div key={c.id} className={`avail-court ${kind}`}>
-                          <span>
-                            {c.name}
-                            <small>{note}</small>
-                          </span>
-                        </div>
-                      );
-                    })}
+                      })}
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
@@ -722,7 +730,7 @@ export function AvailabilityGrid({ clubId, initialDate }: { clubId: number; init
                   onClick={() => book.mutate('ON_SITE')}
                   style={{ ...pillBtn, background: 'var(--lime)', color: 'var(--on-lime)', fontWeight: 700 }}
                 >
-                  {book.isPending ? '…' : bk('confirmOnSite')}
+                  <BusyLabel busy={book.isPending}>{bk('confirmOnSite')}</BusyLabel>
                 </button>
                 <button
                   type="button"

@@ -12,6 +12,7 @@ import {
 } from '@/lib/api';
 import { useToast } from '../Toast';
 import { SkeletonRows } from '@/components/Skeleton';
+import { BusyLabel } from '@/components/Spinner';
 
 type PlanDraft = { name: string; priceCents: number; durationDays: number; discountPercent: number };
 const EMPTY_PLAN: PlanDraft = { name: '', priceCents: 0, durationDays: 30, discountPercent: 10 };
@@ -154,7 +155,7 @@ export function MembershipManager({ clubId, currency }: { clubId: number; curren
             </select>
           </label>
           <button type="submit" disabled={grantMut.isPending} style={primaryBtn}>
-            {grantMut.isPending ? '…' : t('grant')}
+            <BusyLabel busy={grantMut.isPending}>{t('grant')}</BusyLabel>
           </button>
         </form>
         {grantMut.isSuccess && <p style={ok}>{t('granted')}</p>}
@@ -260,7 +261,7 @@ function PlanFields({
         />
       </label>
       <button type="submit" disabled={busy} style={primaryBtn}>
-        {busy ? '…' : submitLabel}
+        <BusyLabel busy={busy}>{submitLabel}</BusyLabel>
       </button>
       {onCancel && (
         <button type="button" onClick={onCancel} style={smallBtn}>

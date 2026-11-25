@@ -13,6 +13,7 @@ import {
 import { formatInstant, localHHMM } from '@/lib/tz';
 import { useToast } from './Toast';
 import { SkeletonRows } from '@/components/Skeleton';
+import { BusyLabel } from '@/components/Spinner';
 
 function tomorrow(): string {
   const d = new Date();
@@ -197,7 +198,7 @@ export function GroupSessionManager({ coachProfileId }: { coachProfileId: number
           disabled={!canCreate || create.isPending}
           style={{ minHeight: 44, padding: '0 20px', background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', borderRadius: 'var(--pill)', fontWeight: 700, cursor: canCreate ? 'pointer' : 'not-allowed', opacity: canCreate ? 1 : 0.5 }}
         >
-          {create.isPending ? '…' : t('createAndInvite')}
+          <BusyLabel busy={create.isPending}>{t('createAndInvite')}</BusyLabel>
         </button>
         <p style={{ color: 'var(--ink-3)', fontSize: 12, marginTop: 6 }}>{t('inviteNote')}</p>
       </div>

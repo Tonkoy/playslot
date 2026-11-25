@@ -10,6 +10,7 @@ import { FieldError } from '../FieldError';
 import { PasswordInput } from './PasswordInput';
 import { GoogleMark } from './GoogleMark';
 import { authInput, authLabel, authPrimaryBtn, googleBtn } from './styles';
+import { BusyLabel } from '@/components/Spinner';
 
 export function LoginForm({ locale, returnTo }: { locale: string; returnTo: string }) {
   const t = useTranslations('Login');
@@ -92,7 +93,7 @@ export function LoginForm({ locale, returnTo }: { locale: string; returnTo: stri
         )}
 
         <button type="submit" disabled={busy} style={authPrimaryBtn}>
-          {busy ? '…' : t('submit')}
+          <BusyLabel busy={busy}>{t('submit')}</BusyLabel>
         </button>
       </form>
 

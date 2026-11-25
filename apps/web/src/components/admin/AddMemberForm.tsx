@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import type { AddMemberInput, InviteResultDto } from '@playslot/contracts';
+import { BusyLabel } from '@/components/Spinner';
 
 /**
  * Add a person to a club by email — links an existing user or invites a new one.
@@ -55,7 +56,7 @@ export function AddMemberForm({
           </label>
         )}
         <button type="submit" disabled={mut.isPending} style={primaryBtn}>
-          {mut.isPending ? '…' : submitLabel}
+          <BusyLabel busy={mut.isPending}>{submitLabel}</BusyLabel>
         </button>
       </form>
 

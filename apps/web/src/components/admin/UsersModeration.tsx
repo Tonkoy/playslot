@@ -14,6 +14,7 @@ import { enumLabel } from '@/lib/enums';
 import { Modal } from '../Modal';
 import { useToast } from '../Toast';
 import { SkeletonRows } from '@/components/Skeleton';
+import { BusyLabel } from '@/components/Spinner';
 
 type Dialog =
   | { kind: 'suspend'; user: PlatformUserDto }
@@ -218,7 +219,7 @@ export function UsersModeration() {
                 {t('cancel')}
               </button>
               <button type="submit" style={warnBtnSolid} disabled={suspend.isPending}>
-                {suspend.isPending ? '…' : t('suspendConfirm')}
+                <BusyLabel busy={suspend.isPending}>{t('suspendConfirm')}</BusyLabel>
               </button>
             </div>
           </form>
@@ -287,7 +288,7 @@ export function UsersModeration() {
                 style={dangerBtnSolid}
                 disabled={remove.isPending || confirmText.trim().toLowerCase() !== dialog.user.email.toLowerCase()}
               >
-                {remove.isPending ? '…' : t('deleteConfirm')}
+                <BusyLabel busy={remove.isPending}>{t('deleteConfirm')}</BusyLabel>
               </button>
             </div>
           </form>

@@ -22,6 +22,7 @@ import {
 import { errorMessage } from '@/lib/errors';
 import { hhmmToMin, localHHMM, minToHHMM, zonedIso } from '@/lib/tz';
 import { SkeletonRows } from '@/components/Skeleton';
+import { BusyLabel } from '@/components/Spinner';
 
 const DAY_START = 7 * 60;
 const DAY_END = 22 * 60;
@@ -602,7 +603,7 @@ export function ClubCalendar({ clubId }: { clubId: number }) {
                 onClick={() => confirmMut.mutate(selection.entry.id)}
                 style={{ ...smallBtn, background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', fontWeight: 700 }}
               >
-                {confirmMut.isPending ? '…' : t('confirmBooking')}
+                <BusyLabel busy={confirmMut.isPending}>{t('confirmBooking')}</BusyLabel>
               </button>
             )}
             {selection.entry.type !== 'BLOCK' && (

@@ -9,6 +9,7 @@ import { Link } from '@/i18n/navigation';
 import { getMyCoachProfile, updateMyCoachProfile } from '@/lib/api';
 import { Avatar } from './Avatar';
 import { useToast } from './Toast';
+import { BusyLabel } from '@/components/Spinner';
 
 const LANGUAGES = ['bg', 'en'];
 
@@ -188,7 +189,7 @@ export function CoachProfileEditor({ name }: { name: string }) {
           disabled={save.isPending}
           style={{ minHeight: 44, padding: '0 20px', background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', borderRadius: 'var(--pill)', fontWeight: 700, cursor: 'pointer' }}
         >
-          {save.isPending ? '…' : t('save')}
+          <BusyLabel busy={save.isPending}>{t('save')}</BusyLabel>
         </button>
       </div>
     </section>

@@ -11,6 +11,7 @@ import { ClubThumb } from './ClubThumb';
 import { Modal } from './Modal';
 import { useToast } from './Toast';
 import { SkeletonRows } from '@/components/Skeleton';
+import { BusyLabel } from '@/components/Spinner';
 
 const CANCELLABLE = ['HOLD', 'PENDING_PAYMENT', 'PENDING_APPROVAL', 'CONFIRMED'];
 
@@ -188,7 +189,7 @@ export function MyBookings() {
                   fontWeight: 700,
                 }}
               >
-                {cancel.isPending ? '…' : t('confirmCancel')}
+                <BusyLabel busy={cancel.isPending}>{t('confirmCancel')}</BusyLabel>
               </button>
             </div>
           </div>

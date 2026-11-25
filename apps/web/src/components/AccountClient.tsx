@@ -7,6 +7,7 @@ import { Link, useRouter } from '@/i18n/navigation';
 import { getMe, getMyMemberships, logout } from '@/lib/api';
 import { AccountProfileEditor } from './AccountProfileEditor';
 import { Avatar } from './Avatar';
+import { BusyLabel } from '@/components/Spinner';
 
 const ROLE_KEYS: Record<string, string> = {
   PLATFORM_ADMIN: 'rolePlatformAdmin',
@@ -92,7 +93,7 @@ export function AccountClient() {
             cursor: 'pointer',
           }}
         >
-          {logoutMut.isPending ? '…' : t('logout')}
+          <BusyLabel busy={logoutMut.isPending}>{t('logout')}</BusyLabel>
         </button>
       </section>
 

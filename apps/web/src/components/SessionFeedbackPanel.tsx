@@ -8,6 +8,7 @@ import { getMe, getMyFeedback, submitFeedback } from '@/lib/api';
 import { Modal } from './Modal';
 import { StarInput, Stars } from './Stars';
 import { useToast } from './Toast';
+import { BusyLabel } from '@/components/Spinner';
 
 /**
  * "How was it?" — past court bookings, lessons and group trainings the player
@@ -144,7 +145,7 @@ export function SessionFeedbackPanel() {
                 {t('cancel')}
               </button>
               <button type="submit" disabled={save.isPending} style={primaryBtn}>
-                {save.isPending ? '…' : t('submit')}
+                <BusyLabel busy={save.isPending}>{t('submit')}</BusyLabel>
               </button>
             </div>
           </form>

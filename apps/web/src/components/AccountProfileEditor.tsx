@@ -8,6 +8,7 @@ import { getMyUserProfile, updateMyUserProfile } from '@/lib/api';
 import { Avatar } from './Avatar';
 import { PushNotificationToggle } from './PushNotificationToggle';
 import { useToast } from './Toast';
+import { BusyLabel } from '@/components/Spinner';
 
 /** A user's own account settings: name, avatar, bio, notification + newsletter prefs. */
 export function AccountProfileEditor() {
@@ -160,7 +161,7 @@ export function AccountProfileEditor() {
           disabled={save.isPending}
           style={{ minHeight: 44, padding: '0 20px', background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', borderRadius: 'var(--pill)', fontWeight: 700, cursor: 'pointer' }}
         >
-          {save.isPending ? '…' : t('save')}
+          <BusyLabel busy={save.isPending}>{t('save')}</BusyLabel>
         </button>
       </div>
     </section>

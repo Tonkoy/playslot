@@ -7,6 +7,7 @@ import type { UpsertEventInput } from '@playslot/contracts';
 import { adminCreateEvent, listEvents } from '@/lib/api';
 import { formatInstant, zonedIso } from '@/lib/tz';
 import { SkeletonRows } from '@/components/Skeleton';
+import { BusyLabel } from '@/components/Spinner';
 
 type EventDraft = {
   type: 'EVENT' | 'TOURNAMENT';
@@ -180,7 +181,7 @@ export function EventManager({
               />
             </label>
             <button type="submit" disabled={createMut.isPending} style={primaryBtn}>
-              {createMut.isPending ? '…' : t('add')}
+              <BusyLabel busy={createMut.isPending}>{t('add')}</BusyLabel>
             </button>
           </div>
         </form>

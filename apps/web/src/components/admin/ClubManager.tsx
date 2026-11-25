@@ -29,6 +29,7 @@ import {
   getMyClubs,
   platformGetClub,
 } from '@/lib/api';
+import { BusyLabel } from '@/components/Spinner';
 
 const SURFACES = ['CLAY', 'HARD', 'GRASS', 'CARPET', 'ARTIFICIAL_GRASS', 'PARQUET', 'OTHER'];
 const EMPTY: CourtInput = { name: '', sport: 'TENNIS', surface: 'HARD', isIndoor: false, hasLighting: false };
@@ -487,7 +488,7 @@ function CourtFields({
         disabled={busy}
         style={{ ...smallBtn, background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', fontWeight: 700 }}
       >
-        {busy ? '…' : submitLabel}
+        <BusyLabel busy={busy}>{submitLabel}</BusyLabel>
       </button>
       {onCancel && (
         <button type="button" onClick={onCancel} style={smallBtn}>

@@ -269,6 +269,7 @@
     "afternoon": "Afternoon (12:00–17:00)",
     "evening": "Evening (17:00–22:00)",
     "findCourt": "Find a court",
+    "searching": "Searching…",
     "optionalTag": "optional",
     "anyDate": "Any date"
   },

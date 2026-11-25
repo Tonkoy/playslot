@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { hashKey, keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { OFFERED_SPORTS } from '@playslot/contracts';
@@ -10,6 +10,8 @@ import { useSearchModal } from './SearchModalContext';
 import { Link } from '@/i18n/navigation';
 import { getCities, searchAvailability } from '@/lib/api';
 import { DatePicker } from './DatePicker';
+import { Spinner } from './Spinner';
+import { useMinDuration } from '@/lib/useMinDuration';
 import { SkeletonRows } from '@/components/Skeleton';
 
 function todayIso(): string {
@@ -62,17 +64,28 @@ export function SearchClient() {
   const query = useQuery({
     queryKey: ['search', applied],
     queryFn: () => searchAvailability(applied),
+    // A new search keeps the previous results on screen (dimmed) until the
+    // new ones arrive, instead of collapsing the list to a skeleton.
+    placeholderData: keepPreviousData,
   });
+  // The button shows it is working for at least a moment, so a fast answer
+  // still reads as "searched" rather than "nothing happened".
+  const searching = useMinDuration(query.isFetching, 450);
 
   const submit = () => {
     const win = TIME_PRESETS[time];
-    setApplied({
+    const next: Applied = {
       date: date || todayIso(),
       cityId: cityId === '' ? undefined : cityId,
       sport: sport || undefined,
       startMin: win?.[0],
       endMin: win?.[1],
-    });
+    };
+    // The same search again is a refresh: without this, the cached answer was
+    // reused and the button looked like it did nothing.
+    // (Compared the way React Query compares keys: field order does not matter.)
+    if (hashKey([next]) === hashKey([applied])) void query.refetch();
+    else setApplied(next);
   };
 
   const money = (cents: number, ccy: string) =>
@@ -174,7 +187,12 @@ export function SearchClient() {
 
         <button
           type="submit"
+          aria-busy={searching}
           style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
             width: '100%',
             minHeight: 48,
             marginTop: 14,
@@ -187,12 +205,16 @@ export function SearchClient() {
             cursor: 'pointer',
           }}
         >
-          {t('findCourt')}
+          {searching && <Spinner size={16} />}
+          {searching ? t('searching') : t('findCourt')}
         </button>
       </form>
 
       {/* ── results ── */}
-      <div style={{ marginTop: 20 }}>
+      <div
+        aria-busy={searching}
+        style={{ marginTop: 20, opacity: searching && !query.isLoading ? 0.5 : 1, transition: 'opacity 150ms ease' }}
+      >
         {query.isLoading && <SkeletonRows />}
         {query.isSuccess && results.length === 0 && <p style={{ color: 'var(--ink-2)' }}>{t('empty')}</p>}
 

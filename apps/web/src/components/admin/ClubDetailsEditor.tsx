@@ -9,6 +9,7 @@ import { useState } from 'react';
 import type { ClubPublic } from '@/lib/api';
 import { adminUpdateClubProfile } from '@/lib/api';
 import { useToast } from '../Toast';
+import { BusyLabel } from '@/components/Spinner';
 
 /** Club-admin editor for the public club profile (name, contact, photo, about, rules). */
 export function ClubDetailsEditor({ clubId, club }: { clubId: number; club: ClubPublic }) {
@@ -88,7 +89,7 @@ export function ClubDetailsEditor({ clubId, club }: { clubId: number; club: Club
           disabled={save.isPending}
           style={{ minHeight: 44, padding: '0 20px', background: 'var(--lime)', color: 'var(--on-lime)', border: 'none', borderRadius: 'var(--pill)', fontWeight: 700, cursor: 'pointer' }}
         >
-          {save.isPending ? '…' : t('save')}
+          <BusyLabel busy={save.isPending}>{t('save')}</BusyLabel>
         </button>
       </div>
     </section>

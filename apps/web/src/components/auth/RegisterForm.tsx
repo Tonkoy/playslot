@@ -12,6 +12,7 @@ import { SuccessMark } from '../SuccessMark';
 import { PasswordInput } from './PasswordInput';
 import { GoogleMark } from './GoogleMark';
 import { authInput, authLabel, authPrimaryBtn, googleBtn } from './styles';
+import { BusyLabel } from '@/components/Spinner';
 
 export function RegisterForm() {
   const t = useTranslations('Register');
@@ -148,7 +149,7 @@ export function RegisterForm() {
           </div>
         )}
         <button type="submit" disabled={busy || !terms} style={authPrimaryBtn}>
-          {busy ? '…' : t('submit')}
+          <BusyLabel busy={busy}>{t('submit')}</BusyLabel>
         </button>
       </form>
 

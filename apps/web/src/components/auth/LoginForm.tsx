@@ -86,11 +86,21 @@ export function LoginForm({ locale, returnTo }: { locale: string; returnTo: stri
         {t('google')}
       </a>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16, fontSize: 14 }}>
-        <Link href="/register" style={{ color: 'var(--teal)' }}>
+      {/* Wraps onto two lines on a phone instead of the links touching. */}
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          justifyContent: 'space-between',
+          gap: '4px 24px',
+          marginTop: 20,
+          fontSize: 14,
+        }}
+      >
+        <Link href="/register" style={{ color: 'var(--teal)', padding: '8px 0' }}>
           {t('signUp')}
         </Link>
-        <Link href="/forgot-password" style={{ color: 'var(--ink-3)' }}>
+        <Link href="/forgot-password" style={{ color: 'var(--ink-3)', padding: '8px 0' }}>
           {t('forgot')}
         </Link>
       </div>

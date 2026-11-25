@@ -22,6 +22,7 @@ import { SLOT_STYLE } from '@/lib/slotStates';
 import { AddToCalendar } from '@/components/AddToCalendar';
 import { BusyLabel } from '@/components/Spinner';
 import { CoachPicker } from './CoachPicker';
+import { useMounted } from '@/lib/useMounted';
 
 /** Days shown in the strip above the grid. */
 const STRIP_DAYS = 7;
@@ -86,6 +87,8 @@ export function AvailabilityGrid({
   const en = useTranslations('Enums');
   const toast = useToast();
   const locale = useLocale();
+  // Drawn around today, which only the browser knows for sure.
+  const mounted = useMounted();
   const pathname = usePathname();
   const qc = useQueryClient();
   const [date, setDate] = useState(
@@ -481,6 +484,8 @@ export function AvailabilityGrid({
   // Past rows are always in the page when folded away, so they can animate
   // open and shut; `inert` keeps them out of reach while hidden.
   const rowTimes = foldPast ? [...pastTimes, ...liveTimes] : shownTimes;
+
+  if (!mounted) return <GridSkeleton />;
 
   return (
     <section aria-labelledby="grid-heading" style={{ marginTop: 8, paddingBottom: selected ? 84 : 0 }}>

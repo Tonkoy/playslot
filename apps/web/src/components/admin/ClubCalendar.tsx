@@ -7,6 +7,7 @@ import type { CalendarEntry } from '@playslot/contracts';
 import { DatePicker } from '@/components/DatePicker';
 import { Modal } from '@/components/Modal';
 import { useToast } from '@/components/Toast';
+import { useMounted } from '@/lib/useMounted';
 import { Combobox, Select } from '@/components/Picker';
 import { CustomerPicker } from './CustomerPicker';
 import {
@@ -117,6 +118,8 @@ export function ClubCalendar({ clubId, initialDate }: { clubId: number; initialD
   const locale = useLocale();
   const toast = useToast();
   const qc = useQueryClient();
+  // Drawn around today and now, which only the browser knows for sure.
+  const mounted = useMounted();
   // A link can open a given day (?date=YYYY-MM-DD), e.g. from the Smile Cup list.
   const [date, setDate] = useState(
     initialDate && /^\d{4}-\d{2}-\d{2}$/.test(initialDate) ? initialDate : todayIso(),
@@ -573,6 +576,8 @@ export function ClubCalendar({ clubId, initialDate }: { clubId: number; initialD
     { kind: 'PENDING_PAYMENT', label: st('PENDING_PAYMENT') },
     { kind: 'BLOCK', label: t('legendBlocked') },
   ];
+
+  if (!mounted) return <SkeletonRows />;
 
   return (
     <div>

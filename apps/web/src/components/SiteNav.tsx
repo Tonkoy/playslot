@@ -88,15 +88,17 @@ export function SiteNav() {
     { href: '/me/coach', label: t('coachHub'), show: isCoach, late: lateItem(isCoach) },
     { href: '/me/schedule', label: t('schedule'), show: isCoach, late: lateItem(isCoach) },
     { href: '/me/bookings', label: t('bookings'), show: signedIn, late: lateItem(signedIn) },
-    { href: '/me/favorites', label: t('favorites'), show: signedIn, late: lateItem(signedIn) },
   ].filter((i) => i.show);
+  // Lives in the account menu on desktop (and in the one list on a phone), not
+  // in the main bar: it is a personal shortcut, not a section of the site.
+  const favorites: NavItem = { href: '/me/favorites', label: t('favorites'), show: signedIn };
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   // Plain vertical list — used in the mobile dropdown panel.
   const mobileLinks = (
     <>
-      {navItems.map((item) => (
+      {[...navItems, ...(signedIn ? [favorites] : [])].map((item) => (
         <Link key={item.href} href={item.href} style={linkStyle} onClick={close}>
           {item.label}
         </Link>
@@ -246,6 +248,11 @@ export function SiteNav() {
               {signedIn && (
                 <Link href="/me" role="menuitem" style={menuItem} onClick={() => setMenuOpen(false)}>
                   {t('account')}
+                </Link>
+              )}
+              {signedIn && (
+                <Link href={favorites.href} role="menuitem" style={menuItem} onClick={() => setMenuOpen(false)}>
+                  {favorites.label}
                 </Link>
               )}
 

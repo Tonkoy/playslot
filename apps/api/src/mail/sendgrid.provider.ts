@@ -13,6 +13,15 @@ const TEMPLATE_ENV: Record<MailTemplateKey, keyof ServerEnv> = {
 };
 
 /**
+ * Click tracking swaps every link for a redirect through a SendGrid host. In a
+ * "confirm your email" or "reset your password" message that is exactly what a
+ * phishing mail looks like — the text says playslot.bg, the link goes elsewhere
+ * — and spam filters score it that way. These are transactional emails; nobody
+ * needs their clicks counted, so links go out as written.
+ */
+const NO_LINK_REWRITING = { click_tracking: { enable: false, enable_text: false } };
+
+/**
  * SendGrid adapter (spec §19): POSTs to the v3 Mail Send API. Shares the
  * MAIL_FROM address with the Resend adapter. SendGrid returns 202 on success;
  * any non-2xx is surfaced as `email_send_failed:<status>`.
@@ -36,6 +45,7 @@ export class SendGridMailProvider implements MailProvider {
     const body = templateId
       ? {
           from: parseFrom(this.env.MAIL_FROM),
+          tracking_settings: NO_LINK_REWRITING,
           template_id: templateId,
           personalizations: [
             {
@@ -48,6 +58,7 @@ export class SendGridMailProvider implements MailProvider {
         }
       : {
           from: parseFrom(this.env.MAIL_FROM),
+          tracking_settings: NO_LINK_REWRITING,
           personalizations: [{ to: [{ email: input.to }] }],
           subject: input.subject,
           // SendGrid requires content entries in increasing MIME precedence:

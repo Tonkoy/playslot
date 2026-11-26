@@ -3,13 +3,14 @@
 /* eslint-disable @next/next/no-img-element -- club logos live on each club's own host; see ClubThumb */
 import dynamic from 'next/dynamic';
 import { useLocale, useTranslations } from 'next-intl';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { ClubPublic } from '@/lib/api';
 import { Link } from '@/i18n/navigation';
 import { CourtMark } from '@/components/ClubThumb';
+import { CloseIcon } from '@/components/CloseIcon';
 import type { MapPin } from './ClubsMap';
 
-// Leaflet needs the browser: the map is drawn there only, the list on the server too.
+// The map needs the browser (WebGL): it is drawn there only, the list on the server too.
 const ClubsMap = dynamic(() => import('./ClubsMap').then((m) => m.ClubsMap), {
   ssr: false,
   loading: () => <div className="cmap cmap-loading" aria-hidden />,
@@ -34,7 +35,8 @@ type Locate = 'idle' | 'asking' | 'denied' | 'unavailable';
 /**
  * The clubs on a map and in a list, side by side (stacked on a phone): search
  * by name or address, narrow to a city, or sort by distance from where you
- * are. Tapping a card shows it on the map; tapping a pin points out its card.
+ * are. Choosing a club — its pin, or "on the map" in its row — raises the pin
+ * and lays the club's card over the bottom of the map.
  */
 export function ClubsExplorer({ clubs }: { clubs: ClubPublic[] }) {
   const t = useTranslations('Clubs');
@@ -51,6 +53,7 @@ export function ClubsExplorer({ clubs }: { clubs: ClubPublic[] }) {
   const [locate, setLocate] = useState<Locate>('idle');
   const [hoverId, setHoverId] = useState<number | null>(null);
   const [openId, setOpenId] = useState<number | null>(null);
+  const mapBox = useRef<HTMLDivElement>(null);
 
   const cities = useMemo(() => {
     const byId = new Map<number, { id: number; name: string; n: number }>();
@@ -78,9 +81,18 @@ export function ClubsExplorer({ clubs }: { clubs: ClubPublic[] }) {
       shown
         .map((x) => x.club)
         .filter(hasPin)
-        .map((c) => ({ id: c.id, lat: c.lat, lng: c.lng, name: c.name, address: `${c.address}, ${c.city.name}`, href: `/${locale}/clubs/${c.slug}` })),
-    [shown, locale],
+        .map((c) => ({ id: c.id, lat: c.lat, lng: c.lng, name: c.name, logoUrl: c.photoUrl })),
+    [shown],
   );
+  // The chosen club, while it is still among the ones shown.
+  const chosen = shown.find((x) => x.club.id === openId && hasPin(x.club)) ?? null;
+
+  const showOnMap = (id: number) => {
+    setOpenId(id);
+    // On a phone the map is above the list: go up to it.
+    const box = mapBox.current;
+    if (box && box.getBoundingClientRect().top < 0) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const findMe = () => {
     if (!('geolocation' in navigator)) return setLocate('unavailable');
@@ -159,21 +171,58 @@ export function ClubsExplorer({ clubs }: { clubs: ClubPublic[] }) {
 
       <div className="cexp-layout">
         {/* the map */}
-        <div className="cexp-map">
+        <div className="cexp-map" ref={mapBox}>
           <ClubsMap
             pins={pins}
             activeId={hoverId}
-            openId={openId}
-            onSelect={(id) => {
-              setOpenId(id);
-              document.getElementById(`club-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }}
+            openId={chosen ? chosen.club.id : null}
+            onSelect={setOpenId}
             me={me}
-            labels={{ open: t('viewClub'), directions: t('directions'), you: t('you'), region: t('mapLabel') }}
-          />
-          {shown.length > 0 && pins.length < shown.length && (
-            <p className="cexp-map-note">{t('notOnMap', { n: shown.length - pins.length })}</p>
-          )}
+            locating={locate === 'asking'}
+            onLocate={me ? () => setMe(null) : findMe}
+            locale={locale}
+            note={shown.length > 0 && pins.length < shown.length ? t('notOnMap', { n: shown.length - pins.length }) : null}
+            labels={{
+              region: t('mapLabel'),
+              zoomIn: t('zoomIn'),
+              zoomOut: t('zoomOut'),
+              fitAll: t('fitAll'),
+              locate: me ? t('nearMeOn') : t('nearMe'),
+              you: t('you'),
+              unavailable: t('mapUnavailable'),
+              gestureTouch: t('gestureTouch'),
+              gestureCtrl: t('gestureCtrl'),
+              gestureCmd: t('gestureCmd'),
+            }}
+          >
+            {chosen && (
+              <div className="cmap-card" key={chosen.club.id}>
+                <Link href={`/clubs/${chosen.club.slug}`} className="cmap-card-thumb" tabIndex={-1} aria-hidden>
+                  {chosen.club.photoUrl ? <img src={chosen.club.photoUrl} alt="" /> : <CourtMark />}
+                </Link>
+                <div className="cmap-card-info">
+                  <Link href={`/clubs/${chosen.club.slug}`} className="cmap-card-name">
+                    {chosen.club.name}
+                  </Link>
+                  <span className="cmap-card-addr">
+                    {chosen.distance != null && <b>{distanceLabel(chosen.distance)} · </b>}
+                    {chosen.club.address}
+                  </span>
+                  <span className="cmap-card-actions">
+                    <Link href={`/clubs/${chosen.club.slug}`} className="cmap-card-go">
+                      {t('viewClub')} →
+                    </Link>
+                    <a className="cmap-card-dir" href={mapsSearch(chosen.club)} target="_blank" rel="noopener">
+                      {t('directions')} ↗
+                    </a>
+                  </span>
+                </div>
+                <button type="button" className="cmap-card-close" onClick={() => setOpenId(null)} aria-label={t('closeCard')}>
+                  <CloseIcon />
+                </button>
+              </div>
+            )}
+          </ClubsMap>
         </div>
 
         {/* the list */}
@@ -184,7 +233,7 @@ export function ClubsExplorer({ clubs }: { clubs: ClubPublic[] }) {
             <article
               key={c.id}
               id={`club-${c.id}`}
-              className={`cexp-card${openId === c.id ? ' is-on' : ''}`}
+              className={`cexp-card${chosen?.club.id === c.id ? ' is-on' : ''}`}
               onMouseEnter={() => setHoverId(c.id)}
               onMouseLeave={() => setHoverId((h) => (h === c.id ? null : h))}
             >
@@ -201,7 +250,7 @@ export function ClubsExplorer({ clubs }: { clubs: ClubPublic[] }) {
                 <span className="cexp-meta">
                   {distance != null && <b>{distanceLabel(distance)}</b>}
                   {hasPin(c) ? (
-                    <button type="button" className="cexp-link" onClick={() => setOpenId(c.id)}>
+                    <button type="button" className="cexp-link" onClick={() => showOnMap(c.id)}>
                       {t('showOnMap')}
                     </button>
                   ) : (

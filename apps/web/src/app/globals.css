@@ -2502,7 +2502,7 @@ button.bk-coach.is-on .bk-coach-dot {
 }
 .cexp-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  grid-template-columns: minmax(300px, 420px) minmax(0, 1fr);
   gap: 20px;
   align-items: start;
 }
@@ -2510,24 +2510,7 @@ button.bk-coach.is-on .bk-coach-dot {
   order: 2;
   position: sticky;
   top: 92px;
-}
-.cmap {
-  height: calc(100vh - 130px);
-  min-height: 420px;
-  max-height: 760px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  overflow: hidden;
-  background: var(--surface-2);
-  z-index: 0;
-}
-.cmap-loading {
-  background: repeating-linear-gradient(135deg, var(--surface-2) 0 12px, #edf1ee 12px 24px);
-}
-.cexp-map-note {
-  margin-top: 8px;
-  font-size: 13px;
-  color: var(--ink-3);
+  scroll-margin-top: 84px;
 }
 .cexp-list {
   order: 1;
@@ -2647,73 +2630,398 @@ button.bk-coach.is-on .bk-coach-dot {
   text-decoration: none;
   white-space: nowrap;
 }
-/* pins */
-.cmap-icon {
-  background: none;
+
+/*
+ * The map. Its colours are in lib/mapStyle.ts; everything laid over it — pins,
+ * buttons, the chosen club's card, the credits — is ours and drawn here.
+ */
+.cmap {
+  position: relative;
+  height: calc(100vh - 124px);
+  min-height: 460px;
+  max-height: 820px;
+  border-radius: 24px;
+  overflow: hidden;
+  background: #f1f4ee;
+  box-shadow:
+    inset 0 0 0 1px var(--line-2),
+    var(--shadow-sm);
+  isolation: isolate;
+}
+/* (two classes: MapLibre's own sheet sets position and font on the same element) */
+.cmap .cmap-canvas {
+  position: absolute;
+  inset: 0;
+  font: inherit;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.cmap.is-ready .cmap-canvas {
+  opacity: 1;
+}
+/* the hairline frame, above the canvas */
+.cmap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgba(18, 59, 44, 0.12);
+  pointer-events: none;
+  z-index: 5;
+}
+.cmap-loading,
+.cmap.is-loading {
+  background:
+    linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.7) 50%, transparent 70%) 0 0 / 200% 100%,
+    #f1f4ee;
+  animation: cmap-sheen 1.4s linear infinite;
+}
+@keyframes cmap-sheen {
+  to {
+    background-position:
+      -200% 0,
+      0 0;
+  }
+}
+.cmap-failed {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 24px;
+  color: var(--ink-2);
+  font-size: 14.5px;
+  text-align: center;
+}
+.cmap .maplibregl-canvas {
+  outline: none;
+}
+.cmap .maplibregl-cooperative-gesture-screen {
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  background: rgba(18, 59, 44, 0.55);
+  z-index: 6;
+}
+
+/* pins: the club's logo and name on a pill, a stem down to the spot */
+.cmap-mk {
+  cursor: pointer;
+}
+.cmap-pin {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 220px;
+  margin-bottom: 8px;
+  padding: 4px 14px 4px 4px;
   border: 0;
+  border-radius: var(--pill);
+  background: #fff;
+  color: var(--green-deep);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 800;
+  line-height: 1.15;
+  white-space: nowrap;
+  box-shadow:
+    0 0 0 1px rgba(18, 59, 44, 0.14),
+    0 6px 16px rgba(18, 59, 44, 0.22);
+  cursor: pointer;
+  transform-origin: 50% calc(100% + 8px);
+  transition:
+    transform 0.16s ease,
+    background-color 0.16s ease,
+    color 0.16s ease;
 }
-.cmap-pin svg {
-  display: block;
-  filter: drop-shadow(0 2px 3px rgba(18, 59, 44, 0.35));
-  transition: transform 0.15s ease;
-  transform-origin: 50% 100%;
+.cmap-pin::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 0 0 3px 0;
+  background: inherit;
+  box-shadow: 1px 1px 0 rgba(18, 59, 44, 0.14);
+  transform: translateX(-50%) rotate(45deg);
 }
-.cmap-pin path {
-  fill: var(--green-deep);
-  stroke: #fff;
-  stroke-width: 1.5;
+.cmap-pin-logo {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  overflow: hidden;
 }
-.cmap-pin circle {
-  fill: var(--lime);
+.cmap-pin-logo img {
+  width: 100%;
+  height: 100%;
+  padding: 4px;
+  object-fit: contain;
+  box-sizing: border-box;
 }
-.cmap-pin.is-active svg {
-  transform: scale(1.25);
+.cmap-pin-name {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.cmap-pin.is-active path {
-  fill: var(--clay);
+.cmap-mk.is-hover .cmap-pin {
+  transform: scale(1.06);
 }
-.cmap-pin.is-active circle {
-  fill: #fff;
+.cmap-mk.is-on .cmap-pin {
+  background: var(--green-deep);
+  color: var(--lime);
+  transform: scale(1.1);
+}
+.cmap-pin:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--green) 45%, transparent);
+  outline-offset: 2px;
+}
+/* far out, a pin is its logo only; the chosen one keeps its name */
+.cmap.is-far .cmap-mk:not(.is-on) .cmap-pin {
+  padding: 4px;
+}
+.cmap.is-far .cmap-mk:not(.is-on) .cmap-pin-name {
+  display: none;
 }
 .cmap-me {
-  display: block;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border: 3px solid #fff;
   border-radius: 50%;
   background: var(--mine);
-  box-shadow: 0 0 0 6px color-mix(in srgb, var(--mine) 25%, transparent);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--mine) 45%, transparent);
+  animation: cmap-pulse 2s ease-out infinite;
 }
-.cmap .leaflet-popup-content-wrapper {
-  border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(18, 59, 44, 0.18);
+@keyframes cmap-pulse {
+  to {
+    box-shadow: 0 0 0 16px transparent;
+  }
 }
-.cmap .leaflet-popup-content {
-  margin: 12px 14px;
-  font: inherit;
-}
-.cmap-pop {
+
+/* our own buttons, top right */
+.cmap-ctrl {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 4;
   display: grid;
-  gap: 4px;
-  min-width: 180px;
+  gap: 8px;
 }
-.cmap-pop b {
-  font-size: 15px;
-  color: var(--ink);
+.cmap-zoom {
+  display: grid;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow:
+    0 0 0 1px rgba(18, 59, 44, 0.12),
+    0 4px 12px rgba(18, 59, 44, 0.14);
+  overflow: hidden;
 }
-.cmap-pop span {
-  font-size: 13px;
+.cmap-zoom button,
+.cmap-btn {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  background: #fff;
+  color: var(--green-deep);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.cmap-zoom button + button {
+  box-shadow: inset 0 1px 0 var(--line);
+}
+.cmap-btn {
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 1px rgba(18, 59, 44, 0.12),
+    0 4px 12px rgba(18, 59, 44, 0.14);
+}
+.cmap-zoom button:hover,
+.cmap-btn:hover {
+  background: var(--green-soft);
+}
+.cmap-btn.is-on {
+  background: var(--green-deep);
+  color: var(--lime);
+}
+.cmap-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.cmap-note {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 4;
+  max-width: calc(100% - 84px);
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: var(--pill);
+  background: rgba(255, 255, 255, 0.94);
   color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 0 0 1px rgba(18, 59, 44, 0.1);
 }
-.cmap-pop-links {
-  display: flex;
+.cmap-credit {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  z-index: 3;
+  margin: 0;
+  padding: 2px 8px;
+  border-radius: var(--pill);
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--ink-3);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+.cmap-credit a {
+  color: inherit;
+  text-decoration: none;
+}
+.cmap-credit a:hover {
+  text-decoration: underline;
+}
+
+/* the chosen club, laid over the bottom of the map */
+.cmap-card {
+  position: absolute;
+  left: 50%;
+  bottom: 34px;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
   gap: 14px;
-  margin-top: 4px;
+  align-items: center;
+  width: min(460px, calc(100% - 28px));
+  padding: 12px 44px 12px 12px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow:
+    0 0 0 1px rgba(18, 59, 44, 0.1),
+    0 18px 40px rgba(18, 59, 44, 0.22);
+  transform: translateX(-50%);
+  animation: cmap-card-in 0.22s ease both;
 }
-.cmap .cmap-pop a {
+@keyframes cmap-card-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+}
+.cmap-card-thumb {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.cmap-card-thumb img {
+  max-width: 100%;
+  max-height: 100%;
+  padding: 6px;
+  object-fit: contain;
+  box-sizing: border-box;
+}
+.cmap-card-thumb svg {
+  width: 52px;
+  height: auto;
+}
+.cmap-card-info {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.cmap-card-name {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+}
+.cmap-card-addr {
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cmap-card-addr b {
+  color: var(--green-deep);
+}
+.cmap-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin-top: 5px;
+}
+.cmap-card-go {
+  padding: 8px 14px;
+  border-radius: var(--pill);
+  background: var(--lime);
+  color: var(--on-lime);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.cmap-card-go:hover {
+  background: var(--lime-deep);
+}
+.cmap-card-dir {
   color: var(--green);
+  font-size: 13px;
   font-weight: 700;
   text-decoration: none;
+  white-space: nowrap;
+}
+.cmap-card-dir:hover {
+  text-decoration: underline;
+}
+.cmap-card-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.cmap-card-close:hover {
+  background: var(--line);
+  color: var(--ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cmap-loading,
+  .cmap.is-loading,
+  .cmap-me,
+  .cmap-card {
+    animation: none;
+  }
+  .cmap-pin,
+  .cmap .cmap-canvas {
+    transition: none;
+  }
 }
 @media (max-width: 900px) {
   .cexp-layout {
@@ -2725,9 +3033,10 @@ button.bk-coach.is-on .bk-coach-dot {
     position: static;
   }
   .cmap {
-    height: 46vh;
-    min-height: 280px;
-    max-height: 420px;
+    height: 58vh;
+    min-height: 340px;
+    max-height: 520px;
+    border-radius: 20px;
   }
   .cexp-list {
     order: 1;
@@ -2747,6 +3056,17 @@ button.bk-coach.is-on .bk-coach-dot {
     text-align: center;
   }
 }
+@media (max-width: 560px) {
+  .cmap-card {
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 10px;
+    bottom: 30px;
+  }
+  .cmap-card-thumb {
+    width: 56px;
+    height: 56px;
+  }
+}
 
 /* Club admin: where the club is */
 .clp {
@@ -2764,13 +3084,35 @@ button.bk-coach.is-on .bk-coach-dot {
   justify-content: space-between;
   gap: 10px;
 }
-.clp-map {
-  height: 300px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
+.clp-frame {
+  position: relative;
+  height: 320px;
+  border-radius: 16px;
   overflow: hidden;
+  background: #f1f4ee;
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  isolation: isolate;
+}
+.clp-frame .clp-map {
+  position: absolute;
+  inset: 0;
+  font: inherit;
+}
+.clp-map .maplibregl-canvas-container.maplibregl-interactive {
   cursor: crosshair;
-  z-index: 0;
+}
+.clp-map .maplibregl-canvas {
+  outline: none;
+}
+.clp-pin {
+  cursor: grab;
+  filter: drop-shadow(0 3px 4px rgba(18, 59, 44, 0.35));
+}
+.clp-pin:active {
+  cursor: grabbing;
+}
+.clp-pin svg {
+  display: block;
 }
 
 /* Coach hub: "open a group training" — the main action, at the top of the side column. */

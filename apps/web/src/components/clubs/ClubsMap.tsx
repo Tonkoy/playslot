@@ -33,7 +33,15 @@ const NEAREST = 3;
 /** Below this zoom the pins fold to their logo, so a whole city of them stays readable. */
 const FAR_ZOOM = 11.2;
 
-/** A club's pin: its logo and its name on a pill, with a stem down to the spot. */
+/** The drop of a club's pin; its point is the bottom centre of the 44×56 box. */
+const DROP_SVG =
+  '<svg class="cmap-pin-drop" viewBox="0 0 44 56" width="44" height="56" aria-hidden="true"><path d="M22 54.5C22 54.5 4.5 35.5 4.5 21.5a17.5 17.5 0 0 1 35 0C39.5 35.5 22 54.5 22 54.5Z"/></svg>';
+
+/**
+ * A club's pin: PlaySlot's green drop with the club's logo in it and the
+ * club's name on a tag beside it. The drop alone is the marker's box, so its
+ * point sits exactly on the spot whatever the length of the name.
+ */
 function pinElement(p: MapPin, onPick: () => void): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'cmap-mk';
@@ -41,6 +49,7 @@ function pinElement(p: MapPin, onPick: () => void): HTMLElement {
   btn.type = 'button';
   btn.className = 'cmap-pin';
   btn.setAttribute('aria-label', p.name);
+  btn.innerHTML = DROP_SVG;
   const logo = document.createElement('span');
   logo.className = 'cmap-pin-logo';
   if (p.logoUrl) {
@@ -130,9 +139,9 @@ export function ClubsMap({
     else if (points.length === 1) m.easeTo({ center: points[0]!, zoom: 14, duration });
     else {
       const bounds = points.reduce((b, p) => b.extend(p), new lib.LngLatBounds(points[0]!, points[0]!));
-      // The named pins are wide and tall: leave them room at the sides and under the corner note.
-      const side = Math.min(110, Math.round(m.getContainer().clientWidth * 0.2));
-      m.fitBounds(bounds, { padding: { top: 120, bottom: 60, left: side, right: side }, maxZoom: 14.5, duration });
+      // Room for the drops above their spots and for the name tags to their right.
+      const right = Math.min(190, Math.round(m.getContainer().clientWidth * 0.34));
+      m.fitBounds(bounds, { padding: { top: 120, bottom: 50, left: 50, right }, maxZoom: 14.5, duration });
     }
   }
 
@@ -249,13 +258,18 @@ export function ClubsMap({
   // eslint-disable-next-line react-hooks/exhaustive-deps -- syncActive reads the latest props
   useEffect(() => syncActive(), [activeId, openId]);
 
-  // Bring the chosen club into view, a little above centre: its card covers the bottom.
+  // Bring the chosen club into view.
   useEffect(() => {
     if (openId == null) return;
     const mk = markers.current.get(openId);
     const m = map.current;
     if (!mk || !m) return;
-    m.easeTo({ center: mk.getLngLat(), zoom: Math.max(m.getZoom(), 13.5), offset: [0, -50], duration: 500 });
+    // Left of centre, so its name tag fits beside it; and clear of the card, which
+    // covers the bottom — on a short (phone) map that leaves the middle band only.
+    const box = m.getContainer();
+    const dx = -Math.min(90, Math.round(box.clientWidth * 0.2));
+    const dy = box.clientHeight < 560 ? 15 : -50;
+    m.easeTo({ center: mk.getLngLat(), zoom: Math.max(m.getZoom(), 13.5), offset: [dx, dy], duration: 500 });
   }, [openId]);
 
   const zoomBy = (d: number) => map.current?.easeTo({ zoom: map.current.getZoom() + d, duration: 250 });

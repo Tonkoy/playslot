@@ -49,6 +49,8 @@ export interface ClubPublic {
   address: string;
   lat: number | null;
   lng: number | null;
+  /** Set by the clubs page when the position was looked up from the address, not pinned by the club. */
+  pinApprox?: boolean;
   timezone: string;
   currency: string;
   description: string | null;

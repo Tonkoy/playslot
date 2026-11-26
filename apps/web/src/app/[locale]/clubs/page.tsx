@@ -6,6 +6,7 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { PageHeader } from '@/components/PageHeader';
 import { ClubsExplorer } from '@/components/clubs/ClubsExplorer';
 import { getClubs } from '@/lib/api';
+import { withApproxPins } from '@/lib/geocode.server';
 
 export async function generateMetadata({
   params,
@@ -27,7 +28,8 @@ export default async function ClubsPage({ params }: { params: Promise<{ locale: 
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations('Clubs');
-  const clubs = (await getClubs()) ?? [];
+  // Every club is on the map: those without a pin of their own get one from their address.
+  const clubs = await withApproxPins((await getClubs()) ?? []);
 
   return (
     <>

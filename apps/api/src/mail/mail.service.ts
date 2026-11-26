@@ -887,11 +887,11 @@ export class MailService {
       locale === 'en'
         ? {
             subject: `Group session cancelled — ${info.title}`,
-            body: `“${info.title}” at ${info.clubName} on ${info.when} was cancelled by the coach.`,
+            body: `“${info.title}” at ${info.clubName} on ${info.when} was called off by its organiser.`,
           }
         : {
             subject: `Отменена групова сесия — ${info.title}`,
-            body: `„${info.title}“ в ${info.clubName} на ${info.when} беше отменена от треньора.`,
+            body: `„${info.title}“ в ${info.clubName} на ${info.when} беше отменена от организатора.`,
           };
     const l = (bg: string, en: string) => (locale === 'en' ? en : bg);
     await this.send({
@@ -911,6 +911,39 @@ export class MailService {
         ],
         ctaLabel: l('Виж други тренировки', 'See other sessions'),
         ctaUrl: this.webLink(locale, 'sessions'),
+      }),
+    });
+  }
+
+  /**
+   * Something happened around a session people sign up for — someone joined,
+   * asked to, left, was let in… The words come ready from `gameNotice`
+   * (group-sessions/game-copy.ts), the same ones the push carries.
+   */
+  async sendGameNotice(
+    to: string,
+    notice: { subject: string; heading: string; intro: string; status: string; tone: 'good' | 'warn' | 'plain'; ctaLabel: string },
+    info: { title: string; clubName: string; when: string; path: string },
+    locale: ApiLocale = DEFAULT_LOCALE,
+  ): Promise<void> {
+    const l = (bg: string, en: string) => (locale === 'en' ? en : bg);
+    await this.send({
+      to,
+      subject: notice.subject,
+      text: `${notice.heading}\n${notice.intro}`,
+      html: emailShell(`<p><strong>${esc(notice.heading)}</strong></p><p>${esc(notice.intro)}</p>`),
+      template: this.notice({
+        tone: notice.tone,
+        status: notice.status,
+        heading: notice.heading,
+        intro: notice.intro,
+        details: [
+          { label: l('Какво', 'What'), value: info.title },
+          { label: l('Клуб', 'Club'), value: info.clubName },
+          { label: l('Кога', 'When'), value: info.when },
+        ],
+        ctaLabel: notice.ctaLabel,
+        ctaUrl: this.webLink(locale, info.path),
       }),
     });
   }
@@ -1105,6 +1138,9 @@ const ROLE_LABEL: Record<ApiLocale, Record<string, string>> = {
 function button(href: string, label: string): string {
   return `<p><a href="${href}" style="display:inline-block;background:#14181b;color:#c7f000;padding:12px 20px;border-radius:9px;text-decoration:none;font-weight:700">${label}</a></p>`;
 }
+
+/** For putting people's own words (a title, a name) into the plain HTML fallback. */
+const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
 function emailShell(inner: string): string {
   return `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;color:#14181b"><h2>PlaySlot</h2>${inner}</div>`;

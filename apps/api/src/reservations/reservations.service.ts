@@ -32,6 +32,7 @@ import { MailService } from '../mail/mail.service';
 import { applyDiscount, MembershipsService } from '../memberships/memberships.service';
 import { PaymentsService } from '../payments/payments.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { GameNotifier } from '../group-sessions/game-notifier';
 import { PushService } from '../push/push.service';
 import { HoldQueueService } from './hold-queue.service';
 import { type BookingPushKind, coachBookingPush, staffBookingPush } from './push-copy';
@@ -95,6 +96,7 @@ export class ReservationsService {
     private readonly payments: PaymentsService,
     private readonly memberships: MembershipsService,
     private readonly push: PushService,
+    private readonly games: GameNotifier,
   ) {}
 
   // ── player self-booking (spec §8) ──
@@ -455,6 +457,8 @@ export class ReservationsService {
       if (existing.type !== 'BLOCK' && opts.notify !== false) {
         const previousWhen = formatInZone(existing.startsAt, slot.timezone, 'yyyy-MM-dd HH:mm');
         await this.afterNotifying(this.sendRescheduleEmails(reservationId, previousWhen, staffUserId));
+        // A game or training held on this booking moves with it; its players are told.
+        void this.games.bookingMoved(reservationId, existing.startsAt);
       }
       return { id: updated.id, startsAt: updated.startsAt.toISOString(), priceCents };
     } catch (e) {
@@ -555,7 +559,9 @@ export class ReservationsService {
           },
           user: { select: { name: true } },
           payment: { select: { status: true } },
-          groupSession: { select: { title: true, capacity: true, _count: { select: { registrations: true } } } },
+          groupSession: {
+            select: { title: true, capacity: true, _count: { select: { registrations: { where: { status: 'CONFIRMED' } } } } },
+          },
         },
       }),
       // Closures are resource exceptions, not reservations — without these the
@@ -821,6 +827,8 @@ export class ReservationsService {
 
     // Notify all parties (customer with refund; club staff + any coach). Best-effort.
     await this.afterNotifying(this.sendCancellationEmails(reservationId, refundCents, userId));
+    // A game or training held on this booking is off with it; its players are told.
+    void this.games.bookingCancelled(reservationId);
 
     return { status: 'CANCELLED' as const, refundCents, refundStatus };
   }
@@ -1213,7 +1221,11 @@ export class ReservationsService {
     const rows = await this.prisma.reservation.findMany({
       where: { userId },
       orderBy: { startsAt: 'desc' },
-      include: { resources: { select: { resourceId: true } }, club: { select: { name: true, photoUrl: true } } },
+      include: {
+        resources: { select: { resourceId: true } },
+        club: { select: { name: true, photoUrl: true } },
+        groupSession: { select: { id: true, cancelledAt: true } },
+      },
       take: 100,
     });
     return rows.map((r) => this.toSummary(r));
@@ -1526,6 +1538,7 @@ export class ReservationsService {
     paymentMethod: string;
     resources: { resourceId: number }[];
     club?: { name: string; photoUrl?: string | null };
+    groupSession?: { id: number; cancelledAt: Date | null } | null;
   }): ReservationSummary {
     return {
       id: r.id,
@@ -1540,6 +1553,7 @@ export class ReservationsService {
       currency: r.currency,
       paymentMethod: r.paymentMethod,
       resourceIds: r.resources.map((x) => x.resourceId),
+      groupSessionId: r.groupSession && !r.groupSession.cancelledAt ? r.groupSession.id : null,
     };
   }
 

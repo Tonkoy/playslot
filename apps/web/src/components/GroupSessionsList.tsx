@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
+import { useEffect } from 'react';
 import type { GroupSessionDto } from '@playslot/contracts';
 import { Link, useRouter } from '@/i18n/navigation';
 import { getMe, listGroupSessions, registerGroupSession, unregisterGroupSession } from '@/lib/api';
@@ -12,9 +13,27 @@ import { SessionManage } from './GroupSessionManager';
 import { useToast } from './Toast';
 
 /**
- * Upcoming coach-hosted group trainings. A player joins or gives up their
- * place with one tap; the coach who runs a training sees how it is filling up
- * and a way to manage it instead. Optionally scoped to a club and/or a coach.
+ * What a session says about itself, whichever server answered: one that does
+ * not know about players' games yet (for the minutes between the site and the
+ * API being updated) sends only the coach's fields.
+ */
+function view(s: GroupSessionDto) {
+  return {
+    organizerName: s.organizerName ?? s.coachName,
+    organizerPhotoUrl: s.organizerPhotoUrl ?? s.coachPhotoUrl,
+    kind: s.kind ?? 'TRAINING',
+    joinMode: s.joinMode ?? 'OPEN',
+    costSplit: s.costSplit ?? 'FEE',
+    pending: s.pending ?? false,
+  };
+}
+
+/**
+ * Upcoming sessions people can sign up for: coaches' group trainings, and the
+ * games players open on courts they booked. A player joins (or asks to, where
+ * the organiser lets people in) and gives up their place with one tap; the
+ * organiser sees how it is filling up and manages it right here instead.
+ * Optionally scoped to a club and/or a coach.
  */
 export function GroupSessionsList({
   clubId,
@@ -28,6 +47,7 @@ export function GroupSessionsList({
   heading?: string;
 }) {
   const t = useTranslations('GroupSessions');
+  const tg = useTranslations('Games');
   const tt = useTranslations('Toasts');
   const te = useTranslations('Errors');
   const lv = useTranslations('Levels');
@@ -47,22 +67,35 @@ export function GroupSessionsList({
 
   const reg = useMutation({
     mutationFn: (id: number) => registerGroupSession(id),
-    onSuccess: () => {
+    onSuccess: (res) => {
       refresh();
-      toast(t('joined'));
+      toast(res.status === 'PENDING' ? tg('requestSent') : t('joined'));
     },
     onError,
   });
   const unreg = useMutation({
     mutationFn: (id: number) => unregisterGroupSession(id),
-    onSuccess: () => {
+    onSuccess: (_r, id) => {
       refresh();
-      toast(t('left'));
+      toast((sessions.data ?? []).find((x) => x.id === id)?.pending ? tg('withdrawn') : t('left'));
     },
     onError,
   });
 
   const items = (sessions.data ?? []).filter((s) => !coachProfileId || s.coachProfileId === coachProfileId);
+
+  // A notification or "see the game" leads to one session: bring it into view.
+  const count = items.length;
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!count || !id.startsWith('gs-')) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ block: 'center' });
+    el.classList.add('is-target');
+    const off = window.setTimeout(() => el.classList.remove('is-target'), 2400);
+    return () => window.clearTimeout(off);
+  }, [count]);
   if (sessions.isSuccess && items.length === 0) {
     // On the page of its own an empty list says so; inside another page it just isn't there.
     return heading === '' ? <p className="gs-empty">{t('none')}</p> : null;
@@ -81,10 +114,12 @@ export function GroupSessionsList({
       {h && <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 12 }}>{h}</h2>}
       <div className="gs-list">
         {items.map((s) => {
+          const v = view(s);
           const full = s.spotsLeft <= 0 && !s.registered;
           const busy = (reg.isPending && reg.variables === s.id) || (unreg.isPending && unreg.variables === s.id);
+          const byPlayer = s.coachProfileId == null;
           return (
-            <article key={s.id} className={`gs-card${s.mine ? ' is-mine' : ''}${s.registered ? ' is-in' : ''}`}>
+            <article key={s.id} id={`gs-${s.id}`} className={`gs-card${s.mine ? ' is-mine' : ''}${s.registered ? ' is-in' : ''}`}>
               {/* when */}
               <div className="gs-date">
                 <small>{part(s.startsAt, { weekday: 'short' })}</small>
@@ -96,17 +131,25 @@ export function GroupSessionsList({
               {/* what and with whom */}
               <div className="gs-body">
                 <div className="gs-tags">
+                  <span className={`gs-tag is-kind${v.kind === 'SPARRING' ? ' is-sparring' : ''}`}>{tg(`kind.${v.kind}`)}</span>
                   <span className="gs-tag is-level">{s.level ? lv(s.level) : t('levelAll')}</span>
-                  {s.mine && <span className="gs-tag is-mine">{t('yourSession')}</span>}
+                  {s.mine && <span className="gs-tag is-mine">{byPlayer ? tg('yourGame') : t('yourSession')}</span>}
                   {s.registered && <span className="gs-tag is-in">✓ {t('youAreIn')}</span>}
+                  {v.pending && <span className="gs-tag is-waiting">{tg('awaitingAnswer')}</span>}
                 </div>
                 <h3 className="gs-title">{s.title}</h3>
                 <div className="gs-coach">
-                  <Avatar name={s.coachName} photoUrl={s.coachPhotoUrl} size={40} />
+                  <Avatar name={v.organizerName} photoUrl={v.organizerPhotoUrl} size={40} />
                   <span>
-                    <Link href={`/coaches/${s.coachProfileId}`} className="gs-coach-name">
-                      {s.coachName}
-                    </Link>
+                    {byPlayer ? (
+                      <span className="gs-coach-name">
+                        {v.organizerName} <em className="gs-role">{tg('byPlayer')}</em>
+                      </span>
+                    ) : (
+                      <Link href={`/coaches/${s.coachProfileId}`} className="gs-coach-name">
+                        {v.organizerName} <em className="gs-role">{tg('byCoach')}</em>
+                      </Link>
+                    )}
                     <small>
                       {[s.clubName, s.courtName].filter(Boolean).join(' · ')} · {time(s.startsAt)}–{time(s.endsAt)}
                     </small>
@@ -117,7 +160,10 @@ export function GroupSessionsList({
 
               {/* places, price, action */}
               <div className="gs-side">
-                <div className="gs-price">{s.priceCents > 0 ? money(s.priceCents, s.currency) : t('free')}</div>
+                <div className="gs-price">
+                  {s.priceCents > 0 ? `${v.costSplit === 'SHARED' ? '≈ ' : ''}${money(s.priceCents, s.currency)}` : t('free')}
+                  {v.costSplit !== 'FEE' && <small>{tg(`priceNote.${v.costSplit}`)}</small>}
+                </div>
                 <div className="gs-meter" aria-hidden>
                   <i style={{ width: `${Math.min(100, (s.registeredCount / s.capacity) * 100)}%` }} />
                 </div>
@@ -128,9 +174,9 @@ export function GroupSessionsList({
                       ? t('full')
                       : t('spotsLeft', { n: s.spotsLeft })}
                 </div>
-                {s.mine ? null : s.registered ? (
+                {s.mine ? null : s.registered || v.pending ? (
                   <button type="button" className="gs-btn is-outline" disabled={busy} onClick={() => unreg.mutate(s.id)}>
-                    <BusyLabel busy={busy}>{t('leave')}</BusyLabel>
+                    <BusyLabel busy={busy}>{v.pending ? tg('withdraw') : t('leave')}</BusyLabel>
                   </button>
                 ) : (
                   <button
@@ -139,12 +185,14 @@ export function GroupSessionsList({
                     disabled={busy || full}
                     onClick={() => (me.isSuccess ? reg.mutate(s.id) : router.push('/login?returnTo=/sessions'))}
                   >
-                    <BusyLabel busy={busy}>{me.isSuccess ? t('join') : t('signInToJoin')}</BusyLabel>
+                    <BusyLabel busy={busy}>
+                      {!me.isSuccess ? t('signInToJoin') : v.joinMode === 'APPROVAL' ? tg('askToJoin') : t('join')}
+                    </BusyLabel>
                   </button>
                 )}
               </div>
 
-              {/* The coach manages their own training right here. */}
+              {/* The organiser manages their own session right here. */}
               {s.mine && (
                 <div className="gs-manage">
                   <SessionManage session={s} align="end" />

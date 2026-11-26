@@ -616,8 +616,23 @@ export function updateGroupSession(
 ): Promise<GroupSessionDto> {
   return apiFetch(`/group-sessions/${id}`, { method: 'PATCH', body: JSON.stringify(input) });
 }
-export function registerGroupSession(id: number): Promise<{ ok: true; spotsLeft: number }> {
+/** A player opens a court they booked to other players. */
+export function openGame(input: import('@playslot/contracts').OpenGameInput): Promise<GroupSessionDto> {
+  return apiFetch('/group-sessions/from-reservation', { method: 'POST', body: JSON.stringify(input) });
+}
+/** `status` is 'PENDING' where the organiser lets people in (absent from an older server: a place at once). */
+export function registerGroupSession(
+  id: number,
+): Promise<{ ok: true; spotsLeft: number; status?: 'CONFIRMED' | 'PENDING' }> {
   return apiFetch(`/group-sessions/${id}/register`, { method: 'POST' });
+}
+/** The organiser lets in someone who asked to join. */
+export function approveGroupRegistration(id: number, userId: number): Promise<GroupSessionDto> {
+  return apiFetch(`/group-sessions/${id}/registrations/${userId}/approve`, { method: 'POST' });
+}
+/** The organiser declines a request, or takes someone off the list. */
+export function declineGroupRegistration(id: number, userId: number): Promise<GroupSessionDto> {
+  return apiFetch(`/group-sessions/${id}/registrations/${userId}`, { method: 'DELETE' });
 }
 export function unregisterGroupSession(id: number): Promise<{ ok: true }> {
   return apiFetch(`/group-sessions/${id}/register`, { method: 'DELETE' });

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { isAppLocale } from '@/i18n/routing';
 import { pageMetadata } from '@/lib/seo';
+import { Link } from '@/i18n/navigation';
 import { GroupSessionsList } from '@/components/GroupSessionsList';
 import { SiteHeader } from '@/components/SiteHeader';
 
@@ -25,6 +26,7 @@ export default async function SessionsPage({ params }: { params: Promise<{ local
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations('GroupSessions');
+  const tg = await getTranslations('Games');
 
   return (
     <>
@@ -32,6 +34,21 @@ export default async function SessionsPage({ params }: { params: Promise<{ local
       <main style={{ maxWidth: 'var(--maxw)', margin: '0 auto', padding: '32px 20px 64px' }}>
         <h1 style={{ fontSize: 'clamp(26px, 5vw, 40px)', fontWeight: 800 }}>{t('pageTitle')}</h1>
         <p style={{ color: 'var(--ink-2)', margin: '8px 0 0' }}>{t('pageSubtitle')}</p>
+        {/* How a player starts one of their own. */}
+        <aside className="gs-howto">
+          <span>
+            <b>{tg('howtoTitle')}</b>
+            <small>{tg('howtoBody')}</small>
+          </span>
+          <span className="gs-howto-links">
+            <Link href="/clubs" className="acct-btn is-primary">
+              {tg('howtoBook')}
+            </Link>
+            <Link href="/me/bookings" className="acct-btn">
+              {tg('howtoMine')}
+            </Link>
+          </span>
+        </aside>
         <GroupSessionsList heading="" />
       </main>
     </>

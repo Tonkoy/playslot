@@ -71,6 +71,9 @@ export const KNOWN_REASONS = [
   'not_confirmed',
   'not_awaiting_approval',
   'not_reschedulable',
+  'not_a_court_booking',
+  'already_open',
+  'own_session',
 ] as const;
 export type KnownReason = (typeof KNOWN_REASONS)[number];
 

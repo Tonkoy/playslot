@@ -580,7 +580,78 @@
     "coachesOnly": "This page is for coaches only.",
     "backToAccount": "Back to account"
   },
+  "Games": {
+    "invite": "Invite players",
+    "seeGame": "See the game",
+    "openTitle": "Open the court to other players",
+    "openSubmit": "Open the game",
+    "openedTitle": "The game is open",
+    "openedBody": "It shows under “Sessions” and anyone can sign up. You will know as soon as someone does.",
+    "openedBodyApproval": "It shows under “Sessions”. Whoever wants in sends you a request — you decide who plays.",
+    "editTitle": "Edit the game",
+    "kindLabel": "What you are organising",
+    "kind": {
+      "SPARRING": "Sparring",
+      "TRAINING": "Training"
+    },
+    "kindHelp": {
+      "SPARRING": "Points or sets with a partner.",
+      "TRAINING": "Drills and play among players, no coach."
+    },
+    "titleLabel": "Title (optional)",
+    "places": "Places for other players",
+    "placesHelp": "Not counting you. One is enough for singles sparring.",
+    "joinLabel": "How people get in",
+    "join": {
+      "OPEN": "At once",
+      "APPROVAL": "With approval"
+    },
+    "joinHelp": {
+      "OPEN": "Whoever signs up has a place.",
+      "APPROVAL": "You get a request and decide who plays."
+    },
+    "costLabel": "Who pays for the court",
+    "cost": {
+      "SHARED": "We split it",
+      "ORGANIZER": "I pay"
+    },
+    "costHelp": {
+      "SHARED": "{price} each, if there are {n} of you.",
+      "SHAREDplain": "Equally among everyone who plays.",
+      "ORGANIZER": "You pay {price}; it is free for the others.",
+      "ORGANIZERplain": "It is free for the others."
+    },
+    "moneyNote": "The court is paid at the club, as with any booking. PlaySlot takes no money from the players — you settle between yourselves.",
+    "descriptionLabel": "A note to the players (optional)",
+    "descriptionHint": "E.g. “Best of two sets, bring balls.”",
+    "timeIsBookings": "The day and hour are your booking's. For another time, move the booking or make a new one.",
+    "yourGame": "Your game",
+    "byPlayer": "player",
+    "byCoach": "coach",
+    "priceNote": {
+      "SHARED": "each · the court is split",
+      "ORGANIZER": "the organiser pays for the court"
+    },
+    "askToJoin": "Ask for a place",
+    "requestSent": "Request sent — the organiser will answer you",
+    "awaitingAnswer": "Awaiting approval",
+    "withdraw": "Withdraw the request",
+    "withdrawn": "Request withdrawn",
+    "howtoTitle": "Looking for someone to play with?",
+    "howtoBody": "Book a court and open it to other players from “My bookings” — for sparring or a training.",
+    "howtoBook": "Book a court",
+    "howtoMine": "My bookings"
+  },
   "GroupSessions": {
+    "waitingCount": "{n, plural, one {# waiting} other {# waiting}}",
+    "asksToJoin": "asks to join",
+    "hasPlace": "has a place",
+    "approve": "Approve",
+    "decline": "Decline",
+    "remove": "Remove",
+    "approvedToast": "The player is approved and has been told",
+    "removedToast": "The player is off the list and has been told",
+    "cancelConfirmGame": "Call the game off? Everyone signed up is told. The court booking stays yours.",
     "level": "Who it is for",
     "levelAll": "All levels",
     "edit": "Edit",
@@ -604,16 +675,16 @@
     "yourSession": "Your session",
     "youAreIn": "You are in",
     "manage": "Manage",
-    "joined": "You are signed up",
+    "joined": "You are in",
     "left": "Your place was given up",
-    "none": "There are no open group sessions right now.",
+    "none": "There are no open trainings or games right now.",
     "title": "Group sessions",
-    "pageTitle": "Group sessions",
-    "pageSubtitle": "Open coaching sessions you can join.",
+    "pageTitle": "Trainings and games",
+    "pageSubtitle": "Group trainings with a coach and games opened by players. Sign up with one tap.",
     "badge": "Group",
     "free": "Free",
     "full": "Full",
-    "spotsLeft": "{n} spots left",
+    "spotsLeft": "{n, plural, one {# place left} other {# places left}}",
     "join": "Join",
     "leave": "Cancel spot",
     "signInToJoin": "Sign in to join",
@@ -923,6 +994,8 @@
     "PENDING_APPROVAL": "Awaiting confirmation"
   },
   "PushNotifications": {
+    "nudgeGameTitle": "Notifications about the game on this device",
+    "nudgeGameHelp": "Know at once when someone signs up, asks for a place or drops out — even with the site closed.",
     "title": "Browser notifications",
     "help": "An alert when a slot is booked, cancelled or moved — for club teams and coaches. Works with the site closed.",
     "nudgeClubTitle": "Booking notifications on this device",
@@ -1139,6 +1212,9 @@
     "footnote": "Revenue is counted on the day played, for confirmed, completed and no-show bookings plus group-training sign-ups. A lesson's price includes the court and is credited to the coach in full."
   },
   "Errors": {
+    "not_a_court_booking": "Only a court booking can be opened to other players.",
+    "already_open": "This booking is already open to other players.",
+    "own_session": "You organise this one — no need to sign up.",
     "below_registered": "Capacity cannot be lower than the number signed up.",
     "not_a_coach": "This is for coaches only.",
     "not_started": "That hour has not started yet.",

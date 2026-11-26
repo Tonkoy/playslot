@@ -171,6 +171,7 @@ model User {
   membershipSubscriptions Membership[]
   eventRegistrations EventRegistration[]
   groupSessionRegistrations GroupSessionRegistration[]
+  organizedSessions         GroupSession[]             @relation("GroupSessionOrganizer")
   sessionFeedback SessionFeedback[]
 
   createdAt DateTime @default(now())
@@ -469,30 +470,45 @@ model CoachProfile {
 
 // A coach-hosted open group session (spec §10/§22): backed by a real reservation
 // that blocks the coach + a court, with capacity-limited player registration.
+/// Something people sign up for on a reserved court: a coach's group training,
+/// or a game a player opens to others on a court they booked.
 model GroupSession {
-  id             Int       @id @default(autoincrement())
-  coachProfileId Int
-  clubId         Int
+  id              Int  @id @default(autoincrement())
+  /// The coach who runs it; null when a player organises it.
+  coachProfileId  Int?
+  /// Who runs it and manages the sign-ups: the coach's user, or the player.
+  organizerUserId Int
+  clubId          Int
   reservationId  Int       @unique
   title          String
   description    String?
   /// Player level it is meant for (COACH_LEVELS); null = every level.
   level          String?
+  /// 'TRAINING' | 'SPARRING' (GROUP_SESSION_KINDS).
+  kind           String    @default("TRAINING")
+  /// 'OPEN' = a place is taken at once; 'APPROVAL' = the organiser lets people in.
+  joinMode       String    @default("OPEN")
+  /// What priceCents is: 'FEE' = the coach's price per player; 'SHARED' = each
+  /// player's share of the court; 'ORGANIZER' = the organiser pays, others play free.
+  costSplit      String    @default("FEE")
   startsAt       DateTime // UTC
   endsAt         DateTime
+  /// Places for people signing up (the organiser is not counted).
   capacity       Int
   priceCents     Int       @default(0)
   currency       String    @default("EUR")
   cancelledAt    DateTime?
   createdAt      DateTime  @default(now())
 
-  coach         CoachProfile               @relation(fields: [coachProfileId], references: [id], onDelete: Cascade)
+  coach         CoachProfile?              @relation(fields: [coachProfileId], references: [id], onDelete: Cascade)
+  organizer     User                       @relation("GroupSessionOrganizer", fields: [organizerUserId], references: [id], onDelete: Cascade)
   club          Club                       @relation(fields: [clubId], references: [id])
   reservation   Reservation                @relation(fields: [reservationId], references: [id], onDelete: Cascade)
   registrations GroupSessionRegistration[]
   feedback      SessionFeedback[]
 
   @@index([coachProfileId])
+  @@index([organizerUserId])
   @@index([clubId])
   @@index([startsAt])
 }
@@ -528,6 +544,8 @@ model GroupSessionRegistration {
   id             Int      @id @default(autoincrement())
   groupSessionId Int
   userId         Int
+  /// 'CONFIRMED' = has a place; 'PENDING' = asked, waiting for the organiser.
+  status         String   @default("CONFIRMED")
   createdAt      DateTime @default(now())
 
   session GroupSession @relation(fields: [groupSessionId], references: [id], onDelete: Cascade)

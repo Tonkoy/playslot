@@ -3,10 +3,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
-import { COACH_LEVELS, type GroupSessionDto } from '@playslot/contracts';
+import { COACH_LEVELS, type GroupSessionDto, type GroupSessionKind, type JoinMode } from '@playslot/contracts';
 import {
+  approveGroupRegistration,
   cancelGroupSession,
   createGroupSession,
+  declineGroupRegistration,
   getCoachAvailability,
   getCoachById,
   getMyGroupSessions,
@@ -16,8 +18,10 @@ import { errorMessage } from '@/lib/errors';
 import { localHHMM } from '@/lib/tz';
 import { SkeletonRows } from '@/components/Skeleton';
 import { BusyLabel } from '@/components/Spinner';
+import { Avatar } from './Avatar';
 import { Collapse } from './Collapse';
 import { Modal } from './Modal';
+import { ChoiceCards } from './ChoiceCards';
 import { useToast } from './Toast';
 
 function tomorrow(): string {
@@ -26,10 +30,10 @@ function tomorrow(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-type Level = (typeof COACH_LEVELS)[number] | null;
+export type Level = (typeof COACH_LEVELS)[number] | null;
 
 /** "Who is it for": every level, or one of them. */
-function LevelPicker({ value, onChange }: { value: Level; onChange: (v: Level) => void }) {
+export function LevelPicker({ value, onChange }: { value: Level; onChange: (v: Level) => void }) {
   const t = useTranslations('GroupSessions');
   const lv = useTranslations('Levels');
   const options: { value: Level; label: string }[] = [
@@ -164,9 +168,10 @@ function useSessionTools() {
 }
 
 /**
- * What the coach can do with one of their trainings, wherever it is shown:
- * see who signed up, edit it (including a new day and hour), cancel it. The
- * lists and the cancel question open in place, under the buttons.
+ * What the organiser — a coach, or the player who opened a game — can do with
+ * a session of theirs, wherever it is shown: see who signed up, let in or turn
+ * away those who asked to join, edit it, call it off. The list and the cancel
+ * question open in place, under the buttons.
  */
 export function SessionManage({
   session,
@@ -179,7 +184,11 @@ export function SessionManage({
   const t = useTranslations('GroupSessions');
   const locale = useLocale();
   const { toast, tt, refresh, onError } = useSessionTools();
-  const [peopleOpen, setPeopleOpen] = useState(false);
+  const lv = useTranslations('Levels');
+  const byPlayer = session.coachProfileId == null;
+  const waiting = session.pendingCount ?? 0;
+  // Someone waiting for an answer is the reason to look: start with the list open.
+  const [peopleOpen, setPeopleOpen] = useState(waiting > 0);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [editing, setEditing] = useState(false);
 
@@ -189,6 +198,16 @@ export function SessionManage({
       refresh();
       setConfirmCancel(false);
       toast(tt('sessionCancelled'));
+    },
+    onError,
+  });
+
+  const answer = useMutation({
+    mutationFn: (a: { userId: number; let: boolean }) =>
+      a.let ? approveGroupRegistration(session.id, a.userId) : declineGroupRegistration(session.id, a.userId),
+    onSuccess: (_s, a) => {
+      refresh();
+      toast(a.let ? t('approvedToast') : t('removedToast'));
     },
     onError,
   });
@@ -206,6 +225,7 @@ export function SessionManage({
       <div className="gsm-actions" style={align === 'end' ? { justifyContent: 'flex-end' } : undefined}>
         <button type="button" className="acct-btn" aria-expanded={peopleOpen} onClick={() => setPeopleOpen((v) => !v)}>
           {t('participants', { n: session.registeredCount })}
+          {waiting > 0 && <span className="gsm-waiting">{t('waitingCount', { n: waiting })}</span>}
         </button>
         {live && (
           <>
@@ -224,18 +244,49 @@ export function SessionManage({
           {people.length === 0 ? (
             <p className="acct-help">{t('noParticipants')}</p>
           ) : (
-            <ol>
-              {people.map((p) => (
-                <li key={p.userId}>{p.name}</li>
-              ))}
-            </ol>
+            <ul className="gsm-plist">
+              {people.map((p) => {
+                const busy = answer.isPending && answer.variables?.userId === p.userId;
+                return (
+                  <li key={p.userId} className={p.status === 'PENDING' ? 'is-waiting' : undefined}>
+                    <Avatar name={p.name} photoUrl={p.photoUrl} size={36} />
+                    <span className="gsm-pname">
+                      <b>{p.name}</b>
+                      <small>
+                        {[p.level && lv.has(p.level) ? lv(p.level) : null, p.status === 'PENDING' ? t('asksToJoin') : null]
+                          .filter(Boolean)
+                          .join(' · ') || t('hasPlace')}
+                      </small>
+                    </span>
+                    {live && (
+                      <span className="gsm-pacts">
+                        {p.status === 'PENDING' && (
+                          <button
+                            type="button"
+                            className="acct-btn is-primary"
+                            disabled={busy || session.spotsLeft <= 0}
+                            title={session.spotsLeft <= 0 ? t('full') : undefined}
+                            onClick={() => answer.mutate({ userId: p.userId, let: true })}
+                          >
+                            {t('approve')}
+                          </button>
+                        )}
+                        <button type="button" className="acct-btn is-quiet" disabled={busy} onClick={() => answer.mutate({ userId: p.userId, let: false })}>
+                          {p.status === 'PENDING' ? t('decline') : t('remove')}
+                        </button>
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
       </Collapse>
 
       <Collapse open={confirmCancel}>
         <div className="gsm-confirm" role="alert">
-          <span>{t('cancelConfirm')}</span>
+          <span>{byPlayer ? t('cancelConfirmGame') : t('cancelConfirm')}</span>
           <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button type="button" className="acct-btn is-danger" disabled={cancel.isPending} onClick={() => cancel.mutate()}>
               <BusyLabel busy={cancel.isPending}>{t('cancelYes')}</BusyLabel>
@@ -250,7 +301,6 @@ export function SessionManage({
       {editing && (
         <EditSession
           session={session}
-          coachProfileId={session.coachProfileId}
           when={when}
           onClose={() => setEditing(false)}
           onSaved={(moved) => {
@@ -502,21 +552,29 @@ export function GroupSessionManager({
   );
 }
 
-/** Edit one of the coach's sessions: its words, level, size and price — and, on request, its day and hour. */
+/**
+ * Edit a session. A coach's training: its words, level, size and price — and,
+ * on request, its day and hour. A player's game: its words, level, size, how
+ * people get in and who pays for the court; its day and hour are its booking's.
+ */
 function EditSession({
   session,
-  coachProfileId,
   when,
   onClose,
   onSaved,
 }: {
   session: GroupSessionDto;
-  coachProfileId: number;
   when: string;
   onClose: () => void;
   onSaved: (moved: boolean) => void;
 }) {
   const t = useTranslations('GroupSessions');
+  const tgm = useTranslations('Games');
+  const coachProfileId = session.coachProfileId;
+  const byPlayer = coachProfileId == null;
+  const [kind, setKind] = useState<GroupSessionKind>(session.kind ?? 'TRAINING');
+  const [joinMode, setJoinMode] = useState<JoinMode>(session.joinMode ?? 'OPEN');
+  const [costSplit, setCostSplit] = useState<'ORGANIZER' | 'SHARED'>(session.costSplit === 'ORGANIZER' ? 'ORGANIZER' : 'SHARED');
   const tt = useTranslations('Toasts');
   const te = useTranslations('Errors');
   const toast = useToast();
@@ -557,7 +615,7 @@ function EditSession({
         description: description.trim() || null,
         level,
         capacity,
-        priceCents: price,
+        ...(byPlayer ? { kind, joinMode, costSplit } : { priceCents: price }),
         ...(willMove ? { slot: { courtId: courtId!, startsAt: start!, durationMin } } : {}),
       }),
     onSuccess: () => onSaved(willMove),
@@ -565,7 +623,7 @@ function EditSession({
   });
 
   return (
-    <Modal open onClose={onClose} title={t('editTitle')}>
+    <Modal open onClose={onClose} title={byPlayer ? tgm('editTitle') : t('editTitle')}>
       <div style={{ display: 'grid', gap: 16 }}>
         <label className="acct-field">
           {t('sessionTitle')}
@@ -579,7 +637,7 @@ function EditSession({
             {t('capacity')}
             <input
               type="number"
-              min={Math.max(2, session.registeredCount)}
+              min={Math.max(byPlayer ? 1 : 2, session.registeredCount)}
               max={50}
               value={capacity}
               onChange={(e) => setCapacity(Number(e.target.value))}
@@ -588,18 +646,52 @@ function EditSession({
             />
             {tooSmall && <span className="acct-help is-error">{te('below_registered')}</span>}
           </label>
-          <label className="acct-field">
-            {t('pricePerPlayer')}
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              value={price / 100}
-              onChange={(e) => setPrice(Math.round(Number(e.target.value) * 100))}
-              className="acct-input"
-            />
-          </label>
+          {!byPlayer && (
+            <label className="acct-field">
+              {t('pricePerPlayer')}
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={price / 100}
+                onChange={(e) => setPrice(Math.round(Number(e.target.value) * 100))}
+                className="acct-input"
+              />
+            </label>
+          )}
         </div>
+
+        {byPlayer && (
+          <>
+            <ChoiceCards
+              label={tgm('kindLabel')}
+              value={kind}
+              onChange={setKind}
+              options={[
+                { value: 'SPARRING', title: tgm('kind.SPARRING'), help: tgm('kindHelp.SPARRING') },
+                { value: 'TRAINING', title: tgm('kind.TRAINING'), help: tgm('kindHelp.TRAINING') },
+              ]}
+            />
+            <ChoiceCards
+              label={tgm('joinLabel')}
+              value={joinMode}
+              onChange={setJoinMode}
+              options={[
+                { value: 'OPEN', title: tgm('join.OPEN'), help: tgm('joinHelp.OPEN') },
+                { value: 'APPROVAL', title: tgm('join.APPROVAL'), help: tgm('joinHelp.APPROVAL') },
+              ]}
+            />
+            <ChoiceCards
+              label={tgm('costLabel')}
+              value={costSplit}
+              onChange={setCostSplit}
+              options={[
+                { value: 'SHARED', title: tgm('cost.SHARED'), help: tgm('costHelp.SHAREDplain') },
+                { value: 'ORGANIZER', title: tgm('cost.ORGANIZER'), help: tgm('costHelp.ORGANIZERplain') },
+              ]}
+            />
+          </>
+        )}
 
         <label className="acct-field">
           {t('sessionDescription')}
@@ -629,19 +721,22 @@ function EditSession({
                 {when}
               </span>
             </span>
-            <button
-              type="button"
-              className="acct-btn"
-              aria-expanded={moving}
-              onClick={() => setMoving((v) => !v)}
-            >
-              {moving ? t('keepSlot') : t('changeSlot')}
-            </button>
+            {coachProfileId != null && (
+              <button
+                type="button"
+                className="acct-btn"
+                aria-expanded={moving}
+                onClick={() => setMoving((v) => !v)}
+              >
+                {moving ? t('keepSlot') : t('changeSlot')}
+              </button>
+            )}
           </div>
-          <Collapse open={moving}>
+          {byPlayer && <p className="acct-help" style={{ marginTop: 8 }}>{tgm('timeIsBookings')}</p>}
+          <Collapse open={moving && coachProfileId != null}>
             <div style={{ paddingTop: 14 }}>
               <SlotPicker
-                coachProfileId={coachProfileId}
+                coachProfileId={coachProfileId ?? 0}
                 clubId={session.clubId}
                 date={date}
                 durationMin={durationMin}

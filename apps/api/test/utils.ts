@@ -128,6 +128,7 @@ export class FakeMail {
     this.groupInvites.push({ to, title: info.title });
   }
   async sendGroupSessionMoved(_to: string, _info: { title: string }, _locale?: ApiLocale) {}
+  async sendGameNotice(_to: string, _notice: { subject: string }, _info: { title: string }, _locale?: ApiLocale) {}
   async sendGroupSessionCancelled(to: string, info: { title: string }, _locale?: ApiLocale) {
     this.groupCancellations.push({ to, title: info.title });
   }

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import type { ReservationSummary } from '@playslot/contracts';
-import { useRouter } from '@/i18n/navigation';
+import { Link, useRouter } from '@/i18n/navigation';
 import { cancelMyReservation, getMe, getMyReservations } from '@/lib/api';
 import { enumLabel } from '@/lib/enums';
 import { ClubThumb } from './ClubThumb';
@@ -14,6 +14,7 @@ import { SkeletonRows } from '@/components/Skeleton';
 import { BusyLabel } from '@/components/Spinner';
 import { BookingsCalendar } from './BookingsCalendar';
 import { AddToCalendar } from './AddToCalendar';
+import { OpenGameButton } from './OpenGame';
 
 type View = 'list' | 'calendar';
 const VIEW_KEY = 'playslot.bookingsView';
@@ -22,6 +23,7 @@ const CANCELLABLE = ['HOLD', 'PENDING_PAYMENT', 'PENDING_APPROVAL', 'CONFIRMED']
 
 export function MyBookings() {
   const t = useTranslations('MyBookings');
+  const tg = useTranslations('Games');
   const tt = useTranslations('Toasts');
   const st = useTranslations('ReservationStatus');
   const te = useTranslations('Enums');
@@ -129,11 +131,9 @@ export function MyBookings() {
       >
         {st.has(r.status) ? st(r.status) : r.status}
       </span>
-      {/* Upcoming and still on: add it to the phone's calendar, or cancel it.
-          A booking that has already started cannot be cancelled from here.
-          The two actions stay together when the row wraps on a phone. */}
+      {/* Upcoming and still on: one tap into the phone's own calendar. */}
       {CANCELLABLE.includes(r.status) && new Date(r.startsAt).getTime() > now && (
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ marginLeft: 'auto' }}>
           <AddToCalendar
             reservationId={r.id}
             title={`${enumLabel(te, 'ReservationType', r.type)} · ${r.clubName ?? ''}`}
@@ -142,22 +142,42 @@ export function MyBookings() {
             endsAt={r.endsAt}
             compact
           />
-          <button
-            type="button"
-            onClick={() => setPending(r)}
-            style={{
-              minHeight: 40,
-              padding: '0 14px',
-              border: '1px solid var(--clay)',
-              color: 'var(--clay)',
-              background: 'var(--surface)',
-              borderRadius: 'var(--pill)',
-              cursor: 'pointer',
+        </span>
+      )}
+      {/* A confirmed court ahead can be opened to other players — or already is. */}
+      {r.type === 'COURT' && r.status === 'CONFIRMED' && new Date(r.startsAt).getTime() > now &&
+        (r.groupSessionId ? (
+          <Link href={`/sessions#gs-${r.groupSessionId}`} className="bk-game is-open">
+            {tg('seeGame')}
+          </Link>
+        ) : (
+          <OpenGameButton
+            className="bk-game"
+            booking={{
+              id: r.id,
+              priceCents: r.priceCents,
+              currency: r.currency,
+              summary: `${dtf.format(new Date(r.startsAt))} · ${r.clubName ?? ''}`,
             }}
-          >
-            {t('cancel')}
-          </button>
-        </div>
+          />
+        ))}
+      {/* A booking that has already started cannot be cancelled from here. */}
+      {CANCELLABLE.includes(r.status) && new Date(r.startsAt).getTime() > now && (
+        <button
+          type="button"
+          onClick={() => setPending(r)}
+          style={{
+            minHeight: 40,
+            padding: '0 14px',
+            border: '1px solid var(--clay)',
+            color: 'var(--clay)',
+            background: 'var(--surface)',
+            borderRadius: 'var(--pill)',
+            cursor: 'pointer',
+          }}
+        >
+          {t('cancel')}
+        </button>
       )}
     </div>
   );

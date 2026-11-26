@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { AdminStatsDto, CoachStatDto, DailyStatDto, StatsQuery } from '@playslot/contracts';
 import { formatInZone, zonedTimeToUtc } from '@playslot/domain';
 import { AppException } from '../common/app-exception';
+import { OWN_PURCHASE } from '../common/reservation-filters';
 import { PrismaService } from '../prisma/prisma.service';
 
 const TZ = 'Europe/Sofia';
@@ -67,7 +68,7 @@ export class StatsService {
           ...clubWhere,
           type: { in: ['COURT', 'LESSON'] },
           // The coach's own backing booking for a group training is not a sale.
-          groupSession: null,
+          ...OWN_PURCHASE,
           startsAt: { gte: winStart, lt: winEnd },
         },
         select: {
@@ -81,13 +82,15 @@ export class StatsService {
         },
       }),
       this.prisma.groupSession.findMany({
-        where: { ...clubWhere, cancelledAt: null, startsAt: { gte: winStart, lt: winEnd } },
+        // Coaches' trainings only: in a player's game the price is a share of
+        // the court, which is already counted as that player's booking.
+        where: { ...clubWhere, coachProfileId: { not: null }, cancelledAt: null, startsAt: { gte: winStart, lt: winEnd } },
         select: {
           coachProfileId: true,
           startsAt: true,
           endsAt: true,
           priceCents: true,
-          registrations: { select: { userId: true } },
+          registrations: { where: { status: 'CONFIRMED' }, select: { userId: true } },
         },
       }),
       clubId
@@ -162,7 +165,7 @@ export class StatsService {
       daily.get(localDay(g.startsAt))!.bookings += g.registrations.length;
       g.registrations.forEach((x) => active.add(x.userId));
       // A group with no one signed up didn't happen as a training.
-      if (g.registrations.length > 0) {
+      if (g.registrations.length > 0 && g.coachProfileId != null) {
         const c = coach(g.coachProfileId);
         c.minutes += (g.endsAt.getTime() - g.startsAt.getTime()) / 60_000;
         c.revenueCents += cents;
@@ -236,7 +239,7 @@ export class StatsService {
     } else {
       const firsts = await this.prisma.reservation.groupBy({
         by: ['userId'],
-        where: { clubId: a.clubId, type: { in: ['COURT', 'LESSON'] }, groupSession: null },
+        where: { clubId: a.clubId, type: { in: ['COURT', 'LESSON'] }, ...OWN_PURCHASE },
         _min: { createdAt: true },
       });
       joined = firsts.map((f) => f._min.createdAt).filter((d): d is Date => d !== null && d >= lo && d < hi);

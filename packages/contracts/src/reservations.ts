@@ -133,4 +133,6 @@ export interface ReservationSummary {
   currency: string;
   paymentMethod: string;
   resourceIds: number[];
+  /** The game the owner opened to other players on this booking, if any (and not called off). */
+  groupSessionId?: number | null;
 }

@@ -22,6 +22,13 @@ function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
 
 type Support = 'checking' | 'supported' | 'unsupported';
 
+/** What each prompt says: who it is for decides what they would be told about. */
+const NUDGE = {
+  club: { title: 'nudgeClubTitle', help: 'nudgeClubHelp' },
+  coach: { title: 'nudgeCoachTitle', help: 'nudgeCoachHelp' },
+  game: { title: 'nudgeGameTitle', help: 'nudgeGameHelp' },
+} as const;
+
 /**
  * Browser push permission for this device. Push is per-browser, not per
  * account, so the state here describes the browser you're reading it in.
@@ -36,7 +43,7 @@ export function PushNotificationToggle({
    * that role gets notified about, and disappears once this device is set up
    * (or when there is nothing the person can do about it here).
    */
-  nudge?: 'club' | 'coach';
+  nudge?: 'club' | 'coach' | 'game';
 } = {}) {
   const t = useTranslations('PushNotifications');
   const tt = useTranslations('Toasts');
@@ -143,9 +150,9 @@ export function PushNotificationToggle({
   // As a prompt: only while there is a step to take — allow it here, or (on an
   // iPhone that hasn't installed the app yet) learn that installing comes first.
   if (nudge && status.action !== 'enable' && !(support === 'unsupported')) return null;
-  const heading = nudge === 'club' ? t('nudgeClubTitle') : nudge === 'coach' ? t('nudgeCoachTitle') : t('title');
+  const heading = nudge ? t(NUDGE[nudge].title) : t('title');
   const text =
-    nudge && status.action === 'enable' ? t(nudge === 'club' ? 'nudgeClubHelp' : 'nudgeCoachHelp') : status.text;
+    nudge && status.action === 'enable' ? t(NUDGE[nudge].help) : status.text;
 
   return (
     // `plain`: no box of its own, for use as one row in a list of settings.

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { ClubFeedbackDto, FeedbackInput, FeedbackItemDto } from '@playslot/contracts';
+import { OWN_PURCHASE } from '../common/reservation-filters';
 import { AppException } from '../common/app-exception';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -30,7 +31,7 @@ export class FeedbackService {
           status: { in: [...ATTENDED] },
           endsAt: { lt: now, gte: since },
           // A group training's backing reservation belongs to the coach.
-          groupSession: null,
+          ...OWN_PURCHASE,
         },
         include: {
           club: { select: { name: true } },
@@ -48,6 +49,8 @@ export class FeedbackService {
       this.prisma.groupSessionRegistration.findMany({
         where: {
           userId,
+          // Someone who only asked to join did not attend.
+          status: 'CONFIRMED',
           session: { cancelledAt: null, endsAt: { lt: now, gte: since } },
         },
         include: {
@@ -95,7 +98,7 @@ export class FeedbackService {
           type: 'GROUP',
           title: g.session.title,
           coachProfileId: g.session.coachProfileId,
-          coachName: g.session.coach.user.name,
+          coachName: g.session.coach?.user.name ?? null,
           startsAt: g.session.startsAt.toISOString(),
           endsAt: g.session.endsAt.toISOString(),
           myRating: fb?.rating ?? null,
@@ -112,7 +115,7 @@ export class FeedbackService {
 
     if (input.kind === 'reservation') {
       const r = await this.prisma.reservation.findFirst({
-        where: { id: input.id, userId, type: { in: ['COURT', 'LESSON'] }, groupSession: null },
+        where: { id: input.id, userId, type: { in: ['COURT', 'LESSON'] }, ...OWN_PURCHASE },
         include: { resources: { select: { resource: { select: { type: true, coachProfileId: true } } } } },
       });
       if (!r) throw new AppException('not_found');
@@ -131,7 +134,7 @@ export class FeedbackService {
       where: { groupSessionId_userId: { groupSessionId: input.id, userId } },
       include: { session: true },
     });
-    if (!reg) throw new AppException('not_found');
+    if (!reg || reg.status !== 'CONFIRMED') throw new AppException('not_found');
     this.assertRateable(reg.session.endsAt, now, reg.session.cancelledAt === null);
 
     await this.prisma.sessionFeedback.upsert({

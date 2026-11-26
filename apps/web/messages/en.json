@@ -307,6 +307,8 @@
     "feedbackTitle": "What players say"
   },
   "Booking": {
+    "platformAdminBooks": "As the platform admin you do not book as a player. Add a booking for someone from the club's calendar.",
+    "openClubCalendar": "Open the club's calendar",
     "noCoachHelp": "Court only",
     "priceFrom": "from {price}",
     "withCoachQuestion": "With a coach?",
@@ -769,6 +771,12 @@
     "released": "The courts are free again."
   },
   "Platform": {
+    "adminIs": "admin: {name}",
+    "noAdmin": "no admin",
+    "setAdmin": "Name an admin",
+    "changeAdmin": "Change the admin",
+    "setAdminNote": "A club has one admin, who runs it and adds its coaches and staff.",
+    "changeAdminNote": "A club has one admin. {name} will lose access to the club; the account stays, as a regular player's.",
     "title": "Platform admin",
     "subtitle": "Create clubs and assign club administrators across the whole system.",
     "clubName": "Club name",
@@ -1212,6 +1220,8 @@
     "footnote": "Revenue is counted on the day played, for confirmed, completed and no-show bookings plus group-training sign-ups. A lesson's price includes the court and is credited to the coach in full."
   },
   "Errors": {
+    "not_a_player": "The platform admin does not book or sign up as a player.",
+    "already_platform_admin": "That is a platform admin — they manage every club and cannot be one club's admin.",
     "not_a_court_booking": "Only a court booking can be opened to other players.",
     "already_open": "This booking is already open to other players.",
     "own_session": "You organise this one — no need to sign up.",

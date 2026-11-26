@@ -19,7 +19,7 @@ import { AddMemberForm } from './AddMemberForm';
 import { SkeletonRows } from '@/components/Skeleton';
 import { BusyLabel } from '@/components/Spinner';
 
-/** Super-admin console: all clubs, create a club, assign club admins. */
+/** Super-admin console: all clubs, create a club, name each club's one admin. */
 export function PlatformConsole() {
   const t = useTranslations('Platform');
   const qc = useQueryClient();
@@ -195,7 +195,8 @@ function ClubRow({
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <span style={{ fontWeight: 700 }}>{c.name}</span>
         <span className="mono" style={{ fontSize: 12, color: 'var(--ink-3)' }}>
-          {c.city} · {enumLabel(te, 'ClubStatus', c.status)} · {t('adminsCount', { n: c.adminCount })} ·{' '}
+          {c.city} · {enumLabel(te, 'ClubStatus', c.status)} ·{' '}
+          {c.admin ? t('adminIs', { name: c.admin.name }) : <span style={{ color: 'var(--clay)' }}>{t('noAdmin')}</span>} ·{' '}
           {t('coachesCount', { n: c.coachCount })}
         </span>
         {c.isFeatured && (
@@ -222,8 +223,8 @@ function ClubRow({
           <button type="button" onClick={() => onStatus(!active)} style={smallBtn}>
             {active ? t('suspend') : t('activate')}
           </button>
-          <button type="button" onClick={onToggle} style={smallBtn}>
-            {t('addAdmin')}
+          <button type="button" onClick={onToggle} style={smallBtn} aria-expanded={expanded}>
+            {c.admin ? t('changeAdmin') : t('setAdmin')}
           </button>
         </span>
       </div>
@@ -231,7 +232,8 @@ function ClubRow({
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--line)' }}>
           <AddMemberForm
             onSubmit={(input) => platformAddAdmin(c.id, input)}
-            submitLabel={t('addAdmin')}
+            submitLabel={c.admin ? t('changeAdmin') : t('setAdmin')}
+            note={c.admin ? t('changeAdminNote', { name: c.admin.name }) : t('setAdminNote')}
             onDone={onAdminAdded}
           />
         </div>

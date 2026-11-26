@@ -738,6 +738,17 @@ export function AvailabilityGrid({
                 {bk('logIn')}
               </Link>
             </div>
+          ) : me.data.user.roles.includes('PLATFORM_ADMIN') ? (
+            // Not a player: a booking for someone goes in through the club's calendar.
+            <div>
+              <p style={{ color: 'var(--ink-2)', marginBottom: 10 }}>{bk('platformAdminBooks')}</p>
+              <Link
+                href={`/admin/clubs/${clubId}/calendar?date=${date}`}
+                style={{ ...pillBtn, background: 'var(--green-deep)', color: 'var(--lime)' }}
+              >
+                {bk('openClubCalendar')}
+              </Link>
+            </div>
           ) : !me.data.user.emailVerified ? (
             <p style={{ color: 'var(--clay)' }}>{bk('verifyRequired')}</p>
           ) : (

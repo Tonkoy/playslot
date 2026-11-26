@@ -15,7 +15,7 @@ type Row = Record<string, unknown> & { id: number };
 
 function world() {
   const future = new Date(Date.now() + 2 * 86_400_000);
-  const users: Row[] = [1, 2, 3, 4].map((id) => ({ id, name: `Player ${id}`, avatarUrl: null, playerProfile: { level: 'intermediate' }, locale: 'bg' }));
+  const users: Row[] = [1, 2, 3, 4].map((id) => ({ id, name: `Player ${id}`, avatarUrl: null, playerProfile: { level: 'intermediate' }, locale: 'bg', roles: [] as { role: string }[] }));
   const reservations: Row[] = [
     { id: 10, userId: 1, clubId: 5, type: 'COURT', status: 'CONFIRMED', startsAt: future, endsAt: new Date(future.getTime() + 3_600_000), priceCents: 3000, currency: 'EUR' },
     { id: 11, userId: 1, clubId: 5, type: 'COURT', status: 'PENDING_APPROVAL', startsAt: future, endsAt: future, priceCents: 3000, currency: 'EUR' },

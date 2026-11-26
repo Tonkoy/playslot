@@ -618,7 +618,10 @@ export class ClubsService {
         status: true,
         isFeatured: true,
         city: { select: { name: true } },
-        members: { where: { role: Role.CLUB_ADMIN, status: 'ACTIVE' }, select: { id: true } },
+        members: {
+          where: { role: Role.CLUB_ADMIN, status: 'ACTIVE' },
+          select: { user: { select: { id: true, name: true, email: true } } },
+        },
       },
     });
     const coachCounts = await this.prisma.coachClub.groupBy({ by: ['clubId'], _count: { _all: true } });
@@ -630,6 +633,7 @@ export class ClubsService {
       city: c.city.name,
       status: c.status,
       adminCount: c.members.length,
+      admin: c.members[0] ? { userId: c.members[0].user.id, name: c.members[0].user.name, email: c.members[0].user.email } : null,
       coachCount: coachMap.get(c.id) ?? 0,
       isFeatured: c.isFeatured,
     }));
@@ -724,21 +728,61 @@ export class ClubsService {
       city: club.city.name,
       status: club.status,
       adminCount: 0,
+      admin: null,
       coachCount: 0,
       isFeatured: false,
     };
   }
 
+  /**
+   * The platform admin names the club's admin. A club has exactly one: naming
+   * someone else replaces whoever it was, and the previous admin loses access
+   * to the club (their account stays, as a player's). The database holds the
+   * same rule (a trigger, migration 20261127090000_one_club_admin).
+   *
+   * A platform admin is not named: they manage every club already.
+   */
   async addClubAdmin(clubId: number, input: AddMemberInput, actorUserId: number): Promise<InviteResultDto> {
     const club = await this.requireClub(clubId);
-    const { userId, name, created } = await this.ensureUser(input, Role.CLUB_ADMIN);
-    await this.prisma.clubMember.upsert({
-      where: { clubId_userId_role: { clubId, userId, role: Role.CLUB_ADMIN } },
-      create: { clubId, userId, role: Role.CLUB_ADMIN, status: 'ACTIVE' },
-      update: { status: 'ACTIVE' },
+    const target = await this.prisma.user.findUnique({
+      where: { email: input.email.toLowerCase() },
+      select: { roles: { where: { role: Role.PLATFORM_ADMIN }, select: { role: true } } },
     });
-    await this.audit(actorUserId, 'club.admin_added', 'Club', clubId, null, { userId });
+    if (target && target.roles.length > 0) {
+      throw new AppException('policy_violation', { reason: 'already_platform_admin' });
+    }
+
+    const { userId, name, created } = await this.ensureUser(input, Role.CLUB_ADMIN);
+    const replaced = await this.prisma.$transaction(async (tx) => {
+      const previous = await tx.clubMember.findMany({
+        where: { clubId, role: Role.CLUB_ADMIN, userId: { not: userId } },
+        select: { userId: true },
+      });
+      // Out with the old first: the database allows one active admin per club.
+      await tx.clubMember.deleteMany({ where: { clubId, role: Role.CLUB_ADMIN, userId: { not: userId } } });
+      await tx.clubMember.upsert({
+        where: { clubId_userId_role: { clubId, userId, role: Role.CLUB_ADMIN } },
+        create: { clubId, userId, role: Role.CLUB_ADMIN, status: 'ACTIVE' },
+        update: { status: 'ACTIVE' },
+      });
+      for (const p of previous) await this.demoteFormerAdmin(tx, p.userId);
+      return previous.map((p) => p.userId);
+    });
+    await this.audit(actorUserId, replaced.length ? 'club.admin_replaced' : 'club.admin_added', 'Club', clubId, { adminUserIds: replaced }, { userId });
     return this.inviteResult(userId, input.email, name, 'CLUB_ADMIN', created, club.name);
+  }
+
+  /**
+   * Someone who is no longer this club's admin: without another club to run
+   * they lose the club-admin role, and an account left with no role at all
+   * becomes a player's, so it still works for booking a court.
+   */
+  private async demoteFormerAdmin(tx: Prisma.TransactionClient, userId: number): Promise<void> {
+    const stillAdmin = await tx.clubMember.count({ where: { userId, role: Role.CLUB_ADMIN, status: 'ACTIVE' } });
+    if (stillAdmin > 0) return;
+    await tx.userRole.deleteMany({ where: { userId, role: Role.CLUB_ADMIN } });
+    const left = await tx.userRole.count({ where: { userId } });
+    if (left === 0) await tx.userRole.create({ data: { userId, role: Role.PLAYER } });
   }
 
   // ── club admin: team (coaches + staff) ──

@@ -35,6 +35,8 @@ export interface PlatformClubDto {
   city: string;
   status: string;
   adminCount: number;
+  /** The club's admin — a club has one (or none yet). */
+  admin: { userId: number; name: string; email: string } | null;
   coachCount: number;
   isFeatured: boolean;
 }

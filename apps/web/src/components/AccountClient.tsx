@@ -61,11 +61,13 @@ export function AccountClient() {
   const user = me.data!.user;
   const isStaff = user.roles.some((r) => r === 'CLUB_ADMIN' || r === 'CLUB_STAFF' || r === 'PLATFORM_ADMIN');
   const isCoach = user.roles.includes('COACH');
+  // The platform admin runs the platform; they do not book on it.
+  const isPlatform = user.roles.includes('PLATFORM_ADMIN');
   const activeMemberships = (memberships.data ?? []).filter((m) => m.active);
 
   const links: { href: string; label: string; icon: keyof typeof ICONS }[] = [
-    ...(isCoach ? [] : ([{ href: '/me/bookings', label: t('myBookings'), icon: 'bookings' }] as const)),
-    { href: '/me/favorites', label: t('myFavorites'), icon: 'favorites' },
+    ...(isCoach || isPlatform ? [] : ([{ href: '/me/bookings', label: t('myBookings'), icon: 'bookings' }] as const)),
+    ...(isPlatform ? [] : ([{ href: '/me/favorites', label: t('myFavorites'), icon: 'favorites' }] as const)),
     ...(isCoach
       ? ([
           { href: '/me/coach', label: t('coachProfile'), icon: 'coach' },

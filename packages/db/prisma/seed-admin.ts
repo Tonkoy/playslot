@@ -3,10 +3,10 @@
  *
  *   ADMIN_PASSWORD='…' pnpm --filter @playslot/db seed:admin
  *
- * Creates (or updates) one identity and makes it:
- *  - PLATFORM_ADMIN — sees every club, user and booking in the platform console;
- *  - CLUB_ADMIN of every ACTIVE club — so the club consoles are reachable too,
- *    including clubs added later (re-run this script after adding one).
+ * Creates (or updates) one identity and makes it PLATFORM_ADMIN: it sees and
+ * manages every club, user and booking. It is not made a member of any club —
+ * the platform admin needs none, and each club has its own single club admin —
+ * and it is not a player (the PLAYER role is taken away).
  *
  * The password never lives in the repo: it comes from ADMIN_PASSWORD, and is
  * stored only as an argon2 hash. Without ADMIN_PASSWORD an existing account
@@ -50,14 +50,11 @@ async function main() {
     data: [{ userId: user.id, role: Role.PLATFORM_ADMIN }],
     skipDuplicates: true,
   });
+  // Not a player, and not a club's admin (a club has one, named in the platform console).
+  await prisma.userRole.deleteMany({ where: { userId: user.id, role: { in: [Role.PLAYER, Role.CLUB_ADMIN] } } });
+  await prisma.clubMember.deleteMany({ where: { userId: user.id, role: Role.CLUB_ADMIN } });
 
-  const clubs = await prisma.club.findMany({ where: { status: 'ACTIVE' }, select: { id: true, name: true } });
-  await prisma.clubMember.createMany({
-    data: clubs.map((c) => ({ clubId: c.id, userId: user.id, role: Role.CLUB_ADMIN })),
-    skipDuplicates: true,
-  });
-
-  console.log(`${EMAIL} is PLATFORM_ADMIN and CLUB_ADMIN of ${clubs.length} club(s): ${clubs.map((c) => c.name).join(', ')}`);
+  console.log(`${EMAIL} is PLATFORM_ADMIN.`);
   console.log(passwordHash ? 'Password set from ADMIN_PASSWORD.' : 'No ADMIN_PASSWORD given — use "forgot password" to set one.');
 }
 

@@ -74,6 +74,8 @@ export const KNOWN_REASONS = [
   'not_a_court_booking',
   'already_open',
   'own_session',
+  'not_a_player',
+  'already_platform_admin',
 ] as const;
 export type KnownReason = (typeof KNOWN_REASONS)[number];
 

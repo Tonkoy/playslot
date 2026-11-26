@@ -57,6 +57,8 @@ export function GroupSessionsList({
   const toast = useToast();
 
   const me = useQuery({ queryKey: ['me'], queryFn: getMe, retry: false });
+  // The platform admin does not play: they see the list, without joining.
+  const isPlatform = me.data?.user.roles.includes('PLATFORM_ADMIN') ?? false;
   const sessions = useQuery({
     // Who is asking changes the answer ("am I in?", "is it mine?").
     queryKey: ['groupSessions', clubId ?? 'all', me.data?.user.id ?? null],
@@ -174,7 +176,7 @@ export function GroupSessionsList({
                       ? t('full')
                       : t('spotsLeft', { n: s.spotsLeft })}
                 </div>
-                {s.mine ? null : s.registered || v.pending ? (
+                {s.mine || isPlatform ? null : s.registered || v.pending ? (
                   <button type="button" className="gs-btn is-outline" disabled={busy} onClick={() => unreg.mutate(s.id)}>
                     <BusyLabel busy={busy}>{v.pending ? tg('withdraw') : t('leave')}</BusyLabel>
                   </button>

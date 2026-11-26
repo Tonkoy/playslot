@@ -43,10 +43,13 @@ export function AdminHome() {
         </div>
       )}
 
-      <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>{t('yourClubs')}</h2>
+      {/* The platform admin manages every club above; "your clubs" is for a club's own people. */}
+      {!(isPlatform && clubs.isSuccess && clubs.data.length === 0) && (
+        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>{t('yourClubs')}</h2>
+      )}
 
       {clubs.isLoading && <SkeletonRows />}
-      {clubs.isSuccess && clubs.data.length === 0 && (
+      {clubs.isSuccess && clubs.data.length === 0 && !isPlatform && (
         <p style={{ color: 'var(--ink-2)' }}>{t('noClubs')}</p>
       )}
       {clubs.isSuccess && clubs.data.length > 0 && (

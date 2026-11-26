@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import type { AddMemberInput, InviteResultDto } from '@playslot/contracts';
+import { errorMessage } from '@/lib/errors';
 import { BusyLabel } from '@/components/Spinner';
 
 /**
@@ -16,13 +17,18 @@ export function AddMemberForm({
   submitLabel,
   withName = true,
   onDone,
+  note,
 }: {
   onSubmit: (input: AddMemberInput) => Promise<InviteResultDto>;
   submitLabel: string;
   withName?: boolean;
   onDone?: () => void;
+  /** Said under the form before it is sent (e.g. what happens to who is there now). */
+  note?: string;
 }) {
   const t = useTranslations('Team');
+  const te = useTranslations('Errors');
+  const tt = useTranslations('Toasts');
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [copied, setCopied] = useState(false);
@@ -60,7 +66,8 @@ export function AddMemberForm({
         </button>
       </form>
 
-      {mut.isError && <p style={{ color: 'var(--clay)', fontSize: 13, marginTop: 8 }}>{(mut.error as Error).message}</p>}
+      {note && !mut.isSuccess && <p style={{ color: 'var(--ink-3)', fontSize: 13, marginTop: 8 }}>{note}</p>}
+      {mut.isError && <p style={{ color: 'var(--clay)', fontSize: 13, marginTop: 8 }}>{errorMessage(mut.error, te, tt('error'))}</p>}
 
       {mut.isSuccess && (
         <div style={{ marginTop: 10, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 12 }}>

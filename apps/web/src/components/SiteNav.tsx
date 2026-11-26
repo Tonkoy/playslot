@@ -49,8 +49,12 @@ export function SiteNav() {
   // links arrive a moment later and are faded in, not popped in.
   const sessionAtFirstRender = useRef(me.isSuccess);
   const lateItem = (show: boolean) => show && !sessionAtFirstRender.current;
-  const isStaff = me.data?.user.roles.some((r) => r === 'CLUB_ADMIN' || r === 'CLUB_STAFF') ?? false;
-  const isCoach = me.data?.user.roles.includes('COACH') ?? false;
+  const roles = me.data?.user.roles ?? [];
+  const isPlatform = roles.includes('PLATFORM_ADMIN');
+  const isStaff = isPlatform || roles.some((r) => r === 'CLUB_ADMIN' || r === 'CLUB_STAFF');
+  const isCoach = roles.includes('COACH');
+  // Bookings and favourites are a player's: neither a coach's work nor the platform admin's.
+  const plays = signedIn && !isCoach && !isPlatform;
 
   const logoutMut = useMutation({
     mutationFn: logout,
@@ -91,18 +95,18 @@ export function SiteNav() {
     { href: '/me/coach', label: t('coachHub'), show: isCoach, late: lateItem(isCoach) },
     { href: '/me/schedule', label: t('schedule'), show: isCoach, late: lateItem(isCoach) },
     // "My bookings" is a player's page: a coach's work is on their schedule.
-    { href: '/me/bookings', label: t('bookings'), show: signedIn && !isCoach, late: lateItem(signedIn && !isCoach) },
+    { href: '/me/bookings', label: t('bookings'), show: plays, late: lateItem(plays) },
   ].filter((i) => i.show);
   // Lives in the account menu on desktop (and in the one list on a phone), not
   // in the main bar: it is a personal shortcut, not a section of the site.
-  const favorites: NavItem = { href: '/me/favorites', label: t('favorites'), show: signedIn };
+  const favorites: NavItem = { href: '/me/favorites', label: t('favorites'), show: signedIn && !isPlatform };
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   // Plain vertical list — used in the mobile dropdown panel.
   const mobileLinks = (
     <>
-      {[...navItems, ...(signedIn ? [favorites] : [])].map((item) => (
+      {[...navItems, ...(favorites.show ? [favorites] : [])].map((item) => (
         <Link key={item.href} href={item.href} style={linkStyle} onClick={close}>
           {item.label}
         </Link>
@@ -254,7 +258,7 @@ export function SiteNav() {
                   {t('account')}
                 </Link>
               )}
-              {signedIn && (
+              {favorites.show && (
                 <Link href={favorites.href} role="menuitem" style={menuItem} onClick={() => setMenuOpen(false)}>
                   {favorites.label}
                 </Link>

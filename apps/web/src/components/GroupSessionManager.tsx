@@ -164,51 +164,123 @@ function useSessionTools() {
 }
 
 /**
- * The trainings the coach runs — who signed up, edit, cancel. Renders nothing
- * until there is at least one, so it can sit at the top of the coach's page.
+ * What the coach can do with one of their trainings, wherever it is shown:
+ * see who signed up, edit it (including a new day and hour), cancel it. The
+ * lists and the cancel question open in place, under the buttons.
  */
-export function MyGroupSessions({ coachProfileId }: { coachProfileId: number }) {
+export function SessionManage({
+  session,
+  align = 'start',
+}: {
+  session: GroupSessionDto;
+  /** Where the buttons sit in their row. */
+  align?: 'start' | 'end';
+}) {
   const t = useTranslations('GroupSessions');
-  const lv = useTranslations('Levels');
   const locale = useLocale();
   const { toast, tt, refresh, onError } = useSessionTools();
-
-  const [editing, setEditing] = useState<GroupSessionDto | null>(null);
-  const [peopleOpen, setPeopleOpen] = useState<number | null>(null);
-  const [confirmCancel, setConfirmCancel] = useState<number | null>(null);
-
-  const mine = useQuery({ queryKey: ['myGroupSessions'], queryFn: getMyGroupSessions });
+  const [peopleOpen, setPeopleOpen] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   const cancel = useMutation({
-    mutationFn: (id: number) => cancelGroupSession(id),
+    mutationFn: () => cancelGroupSession(session.id),
     onSuccess: () => {
       refresh();
-      setConfirmCancel(null);
+      setConfirmCancel(false);
       toast(tt('sessionCancelled'));
     },
     onError,
   });
 
+  const live = !session.cancelled && new Date(session.endsAt).getTime() > Date.now();
+  const people = session.participants ?? [];
+  const loc = locale === 'bg' ? 'bg-BG' : 'en-GB';
+  const fmt = (opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(loc, { ...opts, timeZone: 'Europe/Sofia' });
+  const day = fmt({ weekday: 'short', day: 'numeric', month: 'long' });
+  const time = fmt({ hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const when = `${day.format(new Date(session.startsAt))}, ${time.format(new Date(session.startsAt))}–${time.format(new Date(session.endsAt))}`;
+
+  return (
+    <div className="gsm-manage">
+      <div className="gsm-actions" style={align === 'end' ? { justifyContent: 'flex-end' } : undefined}>
+        <button type="button" className="acct-btn" aria-expanded={peopleOpen} onClick={() => setPeopleOpen((v) => !v)}>
+          {t('participants', { n: session.registeredCount })}
+        </button>
+        {live && (
+          <>
+            <button type="button" className="acct-btn" onClick={() => setEditing(true)}>
+              {t('edit')}
+            </button>
+            <button type="button" className="acct-btn is-danger" onClick={() => setConfirmCancel(true)}>
+              {t('cancel')}
+            </button>
+          </>
+        )}
+      </div>
+
+      <Collapse open={peopleOpen}>
+        <div className="gsm-people">
+          {people.length === 0 ? (
+            <p className="acct-help">{t('noParticipants')}</p>
+          ) : (
+            <ol>
+              {people.map((p) => (
+                <li key={p.userId}>{p.name}</li>
+              ))}
+            </ol>
+          )}
+        </div>
+      </Collapse>
+
+      <Collapse open={confirmCancel}>
+        <div className="gsm-confirm" role="alert">
+          <span>{t('cancelConfirm')}</span>
+          <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" className="acct-btn is-danger" disabled={cancel.isPending} onClick={() => cancel.mutate()}>
+              <BusyLabel busy={cancel.isPending}>{t('cancelYes')}</BusyLabel>
+            </button>
+            <button type="button" className="acct-btn" onClick={() => setConfirmCancel(false)}>
+              {t('cancelNo')}
+            </button>
+          </span>
+        </div>
+      </Collapse>
+
+      {editing && (
+        <EditSession
+          session={session}
+          coachProfileId={session.coachProfileId}
+          when={when}
+          onClose={() => setEditing(false)}
+          onSaved={(moved) => {
+            refresh();
+            setEditing(false);
+            toast(moved ? t('savedMoved') : t('saved'));
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * The trainings the coach runs. Renders nothing until there is at least one,
+ * so it can sit at the top of the coach's page.
+ */
+export function MyGroupSessions() {
+  const t = useTranslations('GroupSessions');
+  const lv = useTranslations('Levels');
+  const locale = useLocale();
+
+  const mine = useQuery({ queryKey: ['myGroupSessions'], queryFn: getMyGroupSessions });
+
   const loc = locale === 'bg' ? 'bg-BG' : 'en-GB';
   const tz = 'Europe/Sofia';
-  const dfDay = new Intl.DateTimeFormat(loc, {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'long',
-    timeZone: tz,
-  });
-  const dfTime = new Intl.DateTimeFormat(loc, {
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-    timeZone: tz,
-  });
+  const dfDay = new Intl.DateTimeFormat(loc, { weekday: 'short', day: 'numeric', month: 'long', timeZone: tz });
+  const dfTime = new Intl.DateTimeFormat(loc, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: tz });
   const money = (cents: number, currency: string) =>
-    new Intl.NumberFormat(loc, {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: cents % 100 ? 2 : 0,
-    }).format(cents / 100);
+    new Intl.NumberFormat(loc, { style: 'currency', currency, maximumFractionDigits: cents % 100 ? 2 : 0 }).format(cents / 100);
 
   // Live ones first, soonest on top; cancelled and finished after them.
   const now = Date.now();
@@ -224,8 +296,6 @@ export function MyGroupSessions({ coachProfileId }: { coachProfileId: number }) 
       <div className="gsm-list">
         {sessions.map((s) => {
           const live = isLive(s);
-          const people = s.participants ?? [];
-          const open = peopleOpen === s.id;
           return (
             <article key={s.id} className={`gsm-item${live ? '' : ' is-off'}`}>
               <div className="gsm-when">
@@ -243,100 +313,18 @@ export function MyGroupSessions({ coachProfileId }: { coachProfileId: number }) 
                 </div>
                 <p className="gsm-meta">
                   {[s.clubName, s.courtName].filter(Boolean).join(' · ')} ·{' '}
-                  {s.priceCents > 0
-                    ? t('perPlayer', { price: money(s.priceCents, s.currency) })
-                    : t('free')}
+                  {s.priceCents > 0 ? t('perPlayer', { price: money(s.priceCents, s.currency) }) : t('free')}
                 </p>
                 <div className="gs-meter" aria-hidden>
-                  <i
-                    style={{ width: `${Math.min(100, (s.registeredCount / s.capacity) * 100)}%` }}
-                  />
+                  <i style={{ width: `${Math.min(100, (s.registeredCount / s.capacity) * 100)}%` }} />
                 </div>
-                <p className="gsm-meta">
-                  {t('registeredOf', { n: s.registeredCount, cap: s.capacity })}
-                </p>
-
-                <div className="gsm-actions">
-                  <button
-                    type="button"
-                    className="acct-btn"
-                    aria-expanded={open}
-                    onClick={() => setPeopleOpen(open ? null : s.id)}
-                  >
-                    {t('participants', { n: s.registeredCount })}
-                  </button>
-                  {live && (
-                    <>
-                      <button type="button" className="acct-btn" onClick={() => setEditing(s)}>
-                        {t('edit')}
-                      </button>
-                      <button
-                        type="button"
-                        className="acct-btn is-danger"
-                        onClick={() => setConfirmCancel(s.id)}
-                      >
-                        {t('cancel')}
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                <Collapse open={open}>
-                  <div className="gsm-people">
-                    {people.length === 0 ? (
-                      <p className="acct-help">{t('noParticipants')}</p>
-                    ) : (
-                      <ol>
-                        {people.map((p) => (
-                          <li key={p.userId}>{p.name}</li>
-                        ))}
-                      </ol>
-                    )}
-                  </div>
-                </Collapse>
-
-                <Collapse open={confirmCancel === s.id}>
-                  <div className="gsm-confirm" role="alert">
-                    <span>{t('cancelConfirm')}</span>
-                    <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <button
-                        type="button"
-                        className="acct-btn is-danger"
-                        disabled={cancel.isPending}
-                        onClick={() => cancel.mutate(s.id)}
-                      >
-                        <BusyLabel busy={cancel.isPending}>{t('cancelYes')}</BusyLabel>
-                      </button>
-                      <button
-                        type="button"
-                        className="acct-btn"
-                        onClick={() => setConfirmCancel(null)}
-                      >
-                        {t('cancelNo')}
-                      </button>
-                    </span>
-                  </div>
-                </Collapse>
+                <p className="gsm-meta">{t('registeredOf', { n: s.registeredCount, cap: s.capacity })}</p>
+                <SessionManage session={s} />
               </div>
             </article>
           );
         })}
       </div>
-
-      {editing && (
-        <EditSession
-          key={editing.id}
-          session={editing}
-          coachProfileId={coachProfileId}
-          when={`${dfDay.format(new Date(editing.startsAt))}, ${dfTime.format(new Date(editing.startsAt))}–${dfTime.format(new Date(editing.endsAt))}`}
-          onClose={() => setEditing(null)}
-          onSaved={(moved) => {
-            refresh();
-            setEditing(null);
-            toast(moved ? t('savedMoved') : t('saved'));
-          }}
-        />
-      )}
     </section>
   );
 }

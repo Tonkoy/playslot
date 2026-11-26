@@ -22,6 +22,7 @@ import { SLOT_STYLE } from '@/lib/slotStates';
 import { AddToCalendar } from '@/components/AddToCalendar';
 import { BusyLabel } from '@/components/Spinner';
 import { CoachPicker } from './CoachPicker';
+import { CloseIcon } from '@/components/CloseIcon';
 import { useMounted } from '@/lib/useMounted';
 
 /** Days shown in the strip above the grid. */
@@ -675,7 +676,7 @@ export function AvailabilityGrid({
             </div>
             <div className="avail-bookbar-actions">
               <button type="button" className="avail-clear" onClick={clearSelection} aria-label={t('clearSelection')} title={t('clearSelection')}>
-                ×
+                <CloseIcon />
               </button>
               <button type="button" className="avail-book" onClick={() => setCheckoutOpen(true)}>
                 {t('book')}

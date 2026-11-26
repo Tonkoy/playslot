@@ -753,8 +753,12 @@ button.avail-hour-top {
   white-space: nowrap;
 }
 .avail-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 40px;
   height: 40px;
+  padding: 0;
   border: 1px solid var(--line-2);
   border-radius: 50%;
   background: var(--surface);
@@ -2395,5 +2399,26 @@ button.bk-coach.is-on .bk-coach-dot {
     flex-direction: row;
     align-items: baseline;
     gap: 10px;
+  }
+}
+
+/* The coach's tools under their own training in the public list. */
+.gs-manage {
+  grid-column: 1 / -1;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+/* The names and the cancel question line up with the training's text, under the date tile's column. */
+.gs-manage .gsm-people,
+.gs-manage .gsm-confirm {
+  margin-left: 112px;
+}
+@media (max-width: 760px) {
+  .gs-manage .gsm-actions {
+    justify-content: flex-start !important;
+  }
+  .gs-manage .gsm-people,
+  .gs-manage .gsm-confirm {
+    margin-left: 0;
   }
 }

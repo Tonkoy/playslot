@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { CloseIcon } from './CloseIcon';
 
 /**
  * Accessible centered modal: backdrop click + Esc to close, aria-modal, focus
@@ -120,8 +121,10 @@ export function Modal({
             position: 'absolute',
             top: 14,
             right: 14,
-            width: 32,
-            height: 32,
+            width: 36,
+            height: 36,
+            minHeight: 0,
+            padding: 0,
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -129,12 +132,10 @@ export function Modal({
             border: '1px solid var(--line-2)',
             background: 'var(--surface)',
             color: 'var(--ink-2)',
-            fontSize: 16,
-            lineHeight: 1,
             cursor: 'pointer',
           }}
         >
-          ×
+          <CloseIcon />
         </button>
         {title && (
           <h3

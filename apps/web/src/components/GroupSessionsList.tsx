@@ -8,6 +8,7 @@ import { getMe, listGroupSessions, registerGroupSession, unregisterGroupSession 
 import { errorMessage } from '@/lib/errors';
 import { BusyLabel } from '@/components/Spinner';
 import { Avatar } from './Avatar';
+import { SessionManage } from './GroupSessionManager';
 import { useToast } from './Toast';
 
 /**
@@ -127,11 +128,7 @@ export function GroupSessionsList({
                       ? t('full')
                       : t('spotsLeft', { n: s.spotsLeft })}
                 </div>
-                {s.mine ? (
-                  <Link href="/me/coach" className="gs-btn is-outline">
-                    {t('manage')} →
-                  </Link>
-                ) : s.registered ? (
+                {s.mine ? null : s.registered ? (
                   <button type="button" className="gs-btn is-outline" disabled={busy} onClick={() => unreg.mutate(s.id)}>
                     <BusyLabel busy={busy}>{t('leave')}</BusyLabel>
                   </button>
@@ -146,6 +143,13 @@ export function GroupSessionsList({
                   </button>
                 )}
               </div>
+
+              {/* The coach manages their own training right here. */}
+              {s.mine && (
+                <div className="gs-manage">
+                  <SessionManage session={s} align="end" />
+                </div>
+              )}
             </article>
           );
         })}

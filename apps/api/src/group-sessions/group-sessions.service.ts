@@ -147,9 +147,11 @@ export class GroupSessionsService {
       where: { cancelledAt: null, endsAt: { gt: new Date() }, ...(clubId ? { clubId } : {}) },
       orderBy: { startsAt: 'asc' },
       take: 100,
-      ...this.dtoInclude(userId),
+      // Everyone signed up is read so a coach can manage their own sessions
+      // from this list too; the names go out only on those (see toDto).
+      ...this.dtoInclude(userId, true),
     });
-    return rows.map((r) => this.toDto(r, userId));
+    return rows.map((r) => this.toDto(r, userId, userId != null && r.coach.userId === userId));
   }
 
   /** A coach's own sessions (upcoming + recent), including cancelled, for management. */

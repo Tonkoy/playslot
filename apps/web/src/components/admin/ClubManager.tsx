@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { OFFERED_SPORTS } from '@playslot/contracts';
 import { enumLabel } from '@/lib/enums';
-import { APP_NAME } from '@/lib/brand';
 import { Link, useRouter } from '@/i18n/navigation';
 import { ClosuresManager } from './ClosuresManager';
 import { ClubDetailsEditor } from './ClubDetailsEditor';
@@ -125,19 +124,6 @@ export function ClubManager({ clubId }: { clubId: number }) {
       </Link>
       <PushNotificationToggle nudge="club" />
       <div>
-        <span
-          className="mono"
-          style={{
-            display: 'inline-flex',
-            fontSize: 12,
-            fontWeight: 600,
-            letterSpacing: '0.12em',
-            color: 'var(--green)',
-            marginBottom: 8,
-          }}
-        >
-          {APP_NAME}
-        </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <h1 style={{ fontSize: 'clamp(22px, 4vw, 32px)', fontWeight: 800 }}>{club?.name}</h1>
         <Link

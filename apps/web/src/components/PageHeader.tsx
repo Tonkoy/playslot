@@ -1,10 +1,6 @@
-import { APP_NAME } from '@/lib/brand';
-
 /**
- * Shared "inner page" header: the product badge + big heading + optional
- * subtitle, echoing the homepage hero's visual language so every page reads as
- * the same product. The badge is always the product name — it used to repeat
- * the heading ("// КЛУБОВЕ" above "Клубове"), which said nothing twice.
+ * Shared "inner page" header: big heading + optional subtitle. No badge above
+ * the heading — the logo in the bar already says which site this is.
  */
 export function PageHeader({
   title,
@@ -24,21 +20,7 @@ export function PageHeader({
         borderBottom: '1px solid var(--line)',
       }}
     >
-      <span
-        className="mono"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 8,
-          fontSize: 12,
-          fontWeight: 600,
-          letterSpacing: '0.12em',
-          color: 'var(--green)',
-        }}
-      >
-        {APP_NAME}
-      </span>
-      <h1 style={{ fontSize: 'clamp(28px, 4.5vw, 44px)', fontWeight: 800, margin: '12px 0 0' }}>{title}</h1>
+      <h1 style={{ fontSize: 'clamp(28px, 4.5vw, 44px)', fontWeight: 800, margin: 0 }}>{title}</h1>
       {subtitle && (
         <p
           style={{

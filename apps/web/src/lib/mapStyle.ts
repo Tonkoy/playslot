@@ -8,17 +8,17 @@ import type { LayerSpecification, StyleSpecification, VectorSourceSpecification 
  * tint, since courts are what people come here to find.
  */
 const C = {
-  land: '#f1f4ee',
-  urban: '#ecf0e9',
+  land: '#eef1ea',
+  urban: '#e7ece3',
   green: '#d6e9d3',
   wood: '#cbe3c8',
   water: '#c5e3e6',
   sport: '#f4d3c1',
   sportLine: '#e3a787',
-  building: '#e2e7df',
-  buildingLine: '#d5dcd2',
+  building: '#dde3da',
+  buildingLine: '#cfd7cc',
   road: '#ffffff',
-  roadCase: '#dae1d7',
+  roadCase: '#d3dbd0',
   highway: '#e6f1b4',
   highwayCase: '#c3d285',
   rail: '#cdd5cb',

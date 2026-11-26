@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useLocale, useTranslations } from 'next-intl';
 import { useMemo, useRef, useState } from 'react';
 import type { ClubPublic } from '@/lib/api';
+import { directionsUrl } from '@/lib/latlng';
 import { Link } from '@/i18n/navigation';
 import { CourtMark } from '@/components/ClubThumb';
 import { CloseIcon } from '@/components/CloseIcon';
@@ -112,11 +113,6 @@ export function ClubsExplorer({ clubs }: { clubs: ClubPublic[] }) {
   };
 
   const distanceLabel = (d: number) => (d < 1 ? t('distanceM', { m: Math.round(d * 100) * 10 }) : t('distanceKm', { km: d.toFixed(d < 10 ? 1 : 0) }));
-  const mapsSearch = (c: ClubPublic) =>
-    // To the club's own pin when it has set one; otherwise by its address, which Google finds better than our guess.
-    hasPin(c) && !c.pinApprox
-      ? `https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`
-      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${c.name}, ${place(c)}`)}`;
 
   return (
     <div className="cexp">
@@ -216,7 +212,7 @@ export function ClubsExplorer({ clubs }: { clubs: ClubPublic[] }) {
                     <Link href={`/clubs/${chosen.club.slug}`} className="cmap-card-go">
                       {t('viewClub')} →
                     </Link>
-                    <a className="cmap-card-dir" href={mapsSearch(chosen.club)} target="_blank" rel="noopener">
+                    <a className="cmap-card-dir" href={directionsUrl(chosen.club)} target="_blank" rel="noopener">
                       {t('directions')} ↗
                     </a>
                   </span>
@@ -258,7 +254,7 @@ export function ClubsExplorer({ clubs }: { clubs: ClubPublic[] }) {
                   ) : (
                     <span className="cexp-nopin">{t('noPin')}</span>
                   )}
-                  <a className="cexp-link" href={mapsSearch(c)} target="_blank" rel="noopener">
+                  <a className="cexp-link" href={directionsUrl(c)} target="_blank" rel="noopener">
                     {t('directions')} ↗
                   </a>
                 </span>

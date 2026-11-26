@@ -5,18 +5,11 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import dynamic from 'next/dynamic';
 import { useState } from 'react';
 import type { ClubPublic } from '@/lib/api';
 import { adminUpdateClubProfile } from '@/lib/api';
 import { useToast } from '../Toast';
 import { BusyLabel } from '@/components/Spinner';
-
-// Leaflet needs the browser.
-const ClubLocationPicker = dynamic(() => import('./ClubLocationPicker').then((m) => m.ClubLocationPicker), {
-  ssr: false,
-  loading: () => <div className="clp-map cmap-loading" aria-hidden />,
-});
 
 /** Club-admin editor for the public club profile (name, contact, photo, about, rules). */
 export function ClubDetailsEditor({ clubId, club }: { clubId: number; club: ClubPublic }) {
@@ -31,9 +24,6 @@ export function ClubDetailsEditor({ clubId, club }: { clubId: number; club: Club
   const [photoUrl, setPhotoUrl] = useState(club.photoUrl ?? '');
   const [description, setDescription] = useState(club.description ?? '');
   const [rules, setRules] = useState(club.rules ?? '');
-  const [pos, setPos] = useState<{ lat: number; lng: number } | null>(
-    club.lat != null && club.lng != null ? { lat: club.lat, lng: club.lng } : null,
-  );
 
   const save = useMutation({
     mutationFn: () =>
@@ -44,8 +34,6 @@ export function ClubDetailsEditor({ clubId, club }: { clubId: number; club: Club
         photoUrl: photoUrl.trim(),
         description: description.trim(),
         rules: rules.trim(),
-        lat: pos?.lat ?? null,
-        lng: pos?.lng ?? null,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['myClubs'] });
@@ -83,15 +71,6 @@ export function ClubDetailsEditor({ clubId, club }: { clubId: number; club: Club
         {t('address')}
         <input value={address} onChange={(e) => setAddress(e.target.value)} style={input} />
       </label>
-
-      <div style={{ marginTop: 12 }}>
-        <ClubLocationPicker
-          lat={pos?.lat ?? null}
-          lng={pos?.lng ?? null}
-          address={club.city?.name ? `${address}, ${club.city.name}` : address}
-          onChange={setPos}
-        />
-      </div>
 
       <label style={{ ...field, marginTop: 10 }}>
         {t('about')}

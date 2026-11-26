@@ -15,6 +15,7 @@ import { MembershipPlansSection } from '@/components/MembershipPlansSection';
 import { ReviewsSection } from '@/components/ReviewsSection';
 import { AvatarZoom } from '@/components/AvatarZoom';
 import { getClub, getClubCourts, getCoaches } from '@/lib/api';
+import { directionsUrl } from '@/lib/latlng';
 import { minToHHMM } from '@/lib/tz';
 
 const WEEK = [1, 2, 3, 4, 5, 6, 0]; // Monday … Sunday
@@ -172,6 +173,10 @@ export default async function ClubProfilePage({
             </div>
             <p style={{ color: 'var(--ink-2)', marginTop: 6 }}>
               {club.city.name} · {club.address}
+              {' · '}
+              <a href={directionsUrl(club)} target="_blank" rel="noopener" style={{ color: 'var(--green)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                {t('directions')} ↗
+              </a>
               {club.phone ? <> · <a href={`tel:${club.phone}`} style={{ color: 'var(--teal)' }}>{club.phone}</a></> : null}
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>

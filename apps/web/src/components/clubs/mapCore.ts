@@ -16,7 +16,14 @@ export const SOFIA: [number, number] = [23.3219, 42.6977];
  */
 export async function createBaseMap(
   el: HTMLElement,
-  opts: { locale: string; center: [number, number]; zoom: number; gestureHelp: { touch: string; ctrl: string; cmd: string } },
+  opts: {
+    locale: string;
+    center: [number, number];
+    zoom: number;
+    /** Let the mouse wheel zoom at once (a tool, like the location picker) instead of only after a click. */
+    wheel?: boolean;
+    gestureHelp: { touch: string; ctrl: string; cmd: string };
+  },
 ): Promise<{ map: MapLibreMap; ml: MapLibre }> {
   const [mod, style] = await Promise.all([import('maplibre-gl'), loadMapStyle(opts.locale)]);
   // The package is one CommonJS bundle: bundlers hand it over as `default`.
@@ -42,7 +49,7 @@ export async function createBaseMap(
   });
   map.touchZoomRotate.disableRotation();
   map.keyboard.disableRotation();
-  if (!touch) {
+  if (!touch && !opts.wheel) {
     map.scrollZoom.disable();
     map.on('click', () => map.scrollZoom.enable());
     el.addEventListener('mouseleave', () => map.scrollZoom.disable());

@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { OFFERED_SPORTS } from '@playslot/contracts';
 import { enumLabel } from '@/lib/enums';
@@ -31,6 +32,12 @@ import {
   platformGetClub,
 } from '@/lib/api';
 import { BusyLabel } from '@/components/Spinner';
+
+// The map needs the browser (WebGL).
+const ClubLocationEditor = dynamic(() => import('./ClubLocationPicker').then((m) => m.ClubLocationEditor), {
+  ssr: false,
+  loading: () => <section className="clp clp-loading" aria-hidden />,
+});
 
 const SURFACES = ['CLAY', 'HARD', 'GRASS', 'CARPET', 'ARTIFICIAL_GRASS', 'PARQUET', 'OTHER'];
 const EMPTY: CourtInput = { name: '', sport: 'TENNIS', surface: 'HARD', isIndoor: false, hasLighting: false };
@@ -148,6 +155,9 @@ export function ClubManager({ clubId }: { clubId: number }) {
 
       {/* ── Club profile ── */}
       {club && <ClubDetailsEditor clubId={clubId} club={club} />}
+
+      {/* ── Where the club is: its pin on the clubs map, and where directions lead ── */}
+      {club && <ClubLocationEditor clubId={clubId} club={club} />}
 
       {/* ── Slot time (club-wide) ── */}
       <section style={card}>

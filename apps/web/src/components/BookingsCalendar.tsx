@@ -138,7 +138,7 @@ export function BookingsCalendar({
         {dayList.length === 0 ? (
           <p style={{ color: 'var(--ink-2)' }}>{t('noneThisDay')}</p>
         ) : (
-          <div style={{ display: 'grid', gap: 12 }}>{dayList.map(renderRow)}</div>
+          <div className="bk-list">{dayList.map(renderRow)}</div>
         )}
       </section>
     </div>

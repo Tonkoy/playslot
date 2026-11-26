@@ -332,6 +332,14 @@
     "cancel": "Cancel"
   },
   "MyBookings": {
+    "next": "Next · {when}",
+    "withCoach": "with {name}",
+    "minutes": "{n} min",
+    "emptyHelp": "Pick a club and a free hour — the confirmation comes to your email.",
+    "bookCourt": "Book a court",
+    "noneAhead": "You have no bookings ahead.",
+    "showAll": "Show all {n}",
+    "showFewer": "Show fewer",
     "title": "My bookings",
     "empty": "You have no bookings yet.",
     "cancel": "Cancel",
@@ -583,6 +591,7 @@
     "backToAccount": "Back to account"
   },
   "Games": {
+    "openTag": "Open to players",
     "invite": "Invite players",
     "seeGame": "See the game",
     "openTitle": "Open the court to other players",

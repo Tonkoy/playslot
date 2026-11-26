@@ -1222,7 +1222,7 @@ export class ReservationsService {
       where: { userId },
       orderBy: { startsAt: 'desc' },
       include: {
-        resources: { select: { resourceId: true } },
+        resources: { select: { resourceId: true, resource: { select: { name: true, type: true } } } },
         club: { select: { name: true, photoUrl: true } },
         groupSession: { select: { id: true, cancelledAt: true } },
       },
@@ -1234,7 +1234,10 @@ export class ReservationsService {
   async getOne(id: number, userId: number, roles: string[]): Promise<ReservationSummary> {
     const r = await this.prisma.reservation.findUnique({
       where: { id },
-      include: { resources: { select: { resourceId: true } }, club: { select: { name: true, photoUrl: true } } },
+      include: {
+        resources: { select: { resourceId: true, resource: { select: { name: true, type: true } } } },
+        club: { select: { name: true, photoUrl: true } },
+      },
     });
     if (!r) throw new AppException('not_found');
     const isStaff = await this.isClubStaff(r.clubId, userId, roles);
@@ -1536,10 +1539,11 @@ export class ReservationsService {
     priceCents: number;
     currency: string;
     paymentMethod: string;
-    resources: { resourceId: number }[];
+    resources: { resourceId: number; resource?: { name: string; type: string } }[];
     club?: { name: string; photoUrl?: string | null };
     groupSession?: { id: number; cancelledAt: Date | null } | null;
   }): ReservationSummary {
+    const named = (type: string) => r.resources.find((x) => x.resource?.type === type)?.resource?.name ?? null;
     return {
       id: r.id,
       clubId: r.clubId,
@@ -1553,6 +1557,8 @@ export class ReservationsService {
       currency: r.currency,
       paymentMethod: r.paymentMethod,
       resourceIds: r.resources.map((x) => x.resourceId),
+      courtName: named('COURT'),
+      coachName: named('COACH'),
       groupSessionId: r.groupSession && !r.groupSession.cancelledAt ? r.groupSession.id : null,
     };
   }

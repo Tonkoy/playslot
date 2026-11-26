@@ -133,6 +133,10 @@ export interface ReservationSummary {
   currency: string;
   paymentMethod: string;
   resourceIds: number[];
+  /** The court's name, when the booking has one. */
+  courtName?: string | null;
+  /** The coach, for a lesson. */
+  coachName?: string | null;
   /** The game the owner opened to other players on this booking, if any (and not called off). */
   groupSessionId?: number | null;
 }

@@ -2613,6 +2613,265 @@ button.bk-coach.is-on .bk-coach-dot {
   color: var(--green-deep);
 }
 
+/* ── My bookings: one card per booking, in the look of the trainings list ── */
+.bk-lists {
+  display: grid;
+  gap: 32px;
+}
+.bk-h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 20px;
+  font-weight: 800;
+}
+.bk-h2 span {
+  padding: 2px 10px;
+  border-radius: var(--pill);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-family: var(--font-hanken);
+  font-size: 13px;
+  font-weight: 700;
+}
+.bk-list {
+  display: grid;
+  gap: 12px;
+  container-type: inline-size;
+}
+.bk-card {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) auto;
+  gap: 6px 18px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.bk-card.is-next {
+  border-color: var(--green-deep);
+  box-shadow:
+    inset 0 0 0 1px var(--green-deep),
+    var(--shadow-sm);
+}
+.bk-date {
+  grid-row: 1 / span 2;
+  align-self: start;
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  padding: 10px 6px;
+  border-radius: 14px;
+  background: var(--green-deep);
+  color: #fff;
+  text-align: center;
+}
+.bk-date small {
+  color: #b9cfc4;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+.bk-date b {
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1.05;
+}
+.bk-date span {
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: var(--pill);
+  background: var(--lime);
+  color: var(--on-lime);
+  font-size: 13px;
+  font-weight: 700;
+}
+.bk-body {
+  min-width: 0;
+}
+.bk-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.bk-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--pill);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.bk-tag::first-letter {
+  text-transform: uppercase;
+}
+.bk-tag.is-ok {
+  background: var(--green-soft);
+  color: var(--green-deep);
+}
+.bk-tag.is-wait {
+  background: var(--held-soft);
+  color: #6b4a00;
+}
+.bk-tag.is-bad {
+  background: var(--clay-soft);
+  color: #8f3513;
+}
+.bk-tag.is-off {
+  background: var(--past-soft);
+  color: var(--ink-3);
+}
+.bk-tag.is-next {
+  background: var(--lime);
+  color: var(--on-lime);
+}
+.bk-tag.is-game {
+  background: var(--green-deep);
+  color: var(--lime);
+}
+.bk-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.bk-meta {
+  margin-top: 4px;
+  color: var(--ink-2);
+  font-size: 14.5px;
+}
+.bk-side {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  text-align: right;
+}
+.bk-side b {
+  font-family: var(--font-display);
+  font-size: 22px;
+}
+.bk-side small {
+  color: var(--ink-3);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.bk-actions {
+  grid-column: 2 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.bk-cancel {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--clay);
+  border-radius: var(--pill);
+  background: var(--surface);
+  color: var(--clay);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.bk-cancel:hover {
+  background: var(--clay-soft);
+}
+.acct-btn.bk-confirm-cancel {
+  border-color: transparent;
+  background: var(--clay);
+  color: #fff;
+}
+/* behind us or called off: the same card, quieter */
+.bk-card.is-off {
+  background: var(--surface-2);
+  box-shadow: none;
+}
+.bk-card.is-off .bk-date {
+  background: #dfe6e1;
+  color: var(--ink-2);
+}
+.bk-card.is-off .bk-date small {
+  color: var(--ink-3);
+}
+.bk-card.is-off .bk-date span {
+  background: var(--surface);
+  color: var(--ink-2);
+}
+.bk-card.is-off .bk-title,
+.bk-card.is-off .bk-side b {
+  color: var(--ink-2);
+}
+.bk-more {
+  margin-top: 12px;
+}
+.bk-empty {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 28px;
+  border: 1px dashed var(--line-2);
+  border-radius: 20px;
+  background: var(--surface);
+}
+.bk-empty b {
+  font-family: var(--font-display);
+  font-size: 20px;
+}
+.bk-empty p {
+  color: var(--ink-2);
+}
+.bk-empty a {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 4px;
+  text-decoration: none;
+}
+.bk-empty.is-inline {
+  padding: 20px;
+}
+/* narrow: a phone, or the day panel beside the month calendar */
+@container (max-width: 560px) {
+  .bk-card {
+    grid-template-columns: 68px minmax(0, 1fr);
+    gap: 6px 12px;
+    padding: 14px;
+  }
+  .bk-date {
+    grid-row: auto;
+  }
+  .bk-date b {
+    font-size: 26px;
+  }
+  .bk-title {
+    font-size: 18px;
+  }
+  .bk-side {
+    grid-column: 1 / -1;
+    grid-template-columns: auto 1fr;
+    align-items: baseline;
+    justify-items: start;
+    gap: 10px;
+    text-align: left;
+  }
+  .bk-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
 /* ── Clubs: map + list ── */
 .cexp-bar {
   display: flex;

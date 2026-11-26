@@ -20,6 +20,19 @@ type View = 'list' | 'calendar';
 const VIEW_KEY = 'playslot.bookingsView';
 
 const CANCELLABLE = ['HOLD', 'PENDING_PAYMENT', 'PENDING_APPROVAL', 'CONFIRMED'];
+/** How many past bookings show before "show all". */
+const PAST_SHOWN = 4;
+/** The colour a status is said in: settled, waiting on someone, off, or went wrong. */
+const STATUS_TONE: Record<string, 'ok' | 'wait' | 'off' | 'bad' | 'plain'> = {
+  CONFIRMED: 'ok',
+  COMPLETED: 'plain',
+  HOLD: 'wait',
+  PENDING_PAYMENT: 'wait',
+  PENDING_APPROVAL: 'wait',
+  CANCELLED: 'off',
+  REFUNDED: 'off',
+  NO_SHOW: 'bad',
+};
 
 export function MyBookings() {
   const t = useTranslations('MyBookings');
@@ -43,6 +56,7 @@ export function MyBookings() {
     enabled: me.isSuccess,
   });
   const [pending, setPending] = useState<ReservationSummary | null>(null);
+  const [allPast, setAllPast] = useState(false);
   // List or calendar; the choice is remembered on this device.
   const [view, setView] = useState<View>('list');
   useEffect(() => {
@@ -66,121 +80,121 @@ export function MyBookings() {
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['myReservations'] });
       setPending(null);
-      toast(tt('cancelled'));
-      if (res.refundCents > 0) {
-        window.alert(t('refundNote', { amount: (res.refundCents / 100).toFixed(0) }));
-      }
+      toast(res.refundCents > 0 ? t('refundNote', { amount: (res.refundCents / 100).toFixed(0) }) : tt('cancelled'));
     },
     onError: (e) => toast(e instanceof Error ? e.message : tt('error'), 'error'),
   });
 
-  const dtf = new Intl.DateTimeFormat(locale === 'bg' ? 'bg-BG' : 'en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
+  const loc = locale === 'bg' ? 'bg-BG' : 'en-GB';
+  // Clubs are in Bulgaria; a booking is read in the club's time wherever the player is.
+  const part = (iso: string, opts: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat(loc, { ...opts, timeZone: 'Europe/Sofia' }).format(new Date(iso));
+  const time = (iso: string) => part(iso, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const longDay = (iso: string) => part(iso, { weekday: 'long', day: 'numeric', month: 'long' });
+  const dtf = { format: (d: Date) => `${longDay(d.toISOString())}, ${time(d.toISOString())}` };
   const money = (cents: number, ccy: string) =>
-    new Intl.NumberFormat(locale === 'bg' ? 'bg-BG' : 'en-US', {
-      style: 'currency',
-      currency: ccy,
-      maximumFractionDigits: 0,
-    }).format(cents / 100);
+    new Intl.NumberFormat(loc, { style: 'currency', currency: ccy, maximumFractionDigits: cents % 100 ? 2 : 0 }).format(cents / 100);
+  const rel = new Intl.RelativeTimeFormat(loc, { numeric: 'auto' });
+  /** "tomorrow", "in 3 days", "in 2 hours" — how soon the next booking is. */
+  const soon = (iso: string, from: number) => {
+    const min = Math.round((new Date(iso).getTime() - from) / 60_000);
+    if (min < 60) return rel.format(Math.max(1, min), 'minute');
+    if (min < 24 * 60) return rel.format(Math.round(min / 60), 'hour');
+    return rel.format(Math.round(min / (24 * 60)), 'day');
+  };
 
   if (me.isLoading || me.isError) return <p style={{ color: 'var(--ink-3)' }}>…</p>;
 
   const now = Date.now();
   const all = list.data ?? [];
-  const upcoming = all.filter(
-    (r) => new Date(r.startsAt).getTime() >= now && !['CANCELLED', 'REFUNDED', 'NO_SHOW'].includes(r.status),
-  );
+  const upcoming = all
+    .filter((r) => new Date(r.startsAt).getTime() >= now && !['CANCELLED', 'REFUNDED', 'NO_SHOW'].includes(r.status))
+    // soonest first: the next one is what people open this page for
+    .sort((x, y) => x.startsAt.localeCompare(y.startsAt));
   const past = all.filter((r) => !upcoming.includes(r));
+  const nextId = upcoming[0]?.id ?? null;
+  const shownPast = allPast ? past : past.slice(0, PAST_SHOWN);
 
-  const row = (r: (typeof all)[number]) => (
-    <div
-      key={r.id}
-      style={{
-        display: 'flex',
-        gap: 12,
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        background: 'var(--surface)',
-        border: '1px solid var(--line)',
-        borderRadius: 'var(--radius)',
-        padding: 16,
-      }}
-    >
-      <ClubThumb src={r.clubPhotoUrl ?? null} />
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontWeight: 700 }}>{r.clubName ?? `#${r.clubId}`}</div>
-        <div className="mono" style={{ color: 'var(--ink-3)', fontSize: 12 }}>
-          {dtf.format(new Date(r.startsAt))} · {enumLabel(te, 'ReservationType', r.type)} ·{' '}
-          {money(r.priceCents, r.currency)}
+  const row = (r: (typeof all)[number]) => {
+    const ahead = new Date(r.startsAt).getTime() > now;
+    const live = CANCELLABLE.includes(r.status) && ahead;
+    const off = !upcoming.includes(r);
+    const minutes = Math.round((new Date(r.endsAt).getTime() - new Date(r.startsAt).getTime()) / 60_000);
+    return (
+      <article key={r.id} className={`bk-card${off ? ' is-off' : ''}${r.id === nextId ? ' is-next' : ''}`}>
+        {/* when */}
+        <div className="bk-date">
+          <small>{part(r.startsAt, { weekday: 'short' })}</small>
+          <b>{part(r.startsAt, { day: 'numeric' })}</b>
+          {/* the month in letters: a short month is a number in Bulgarian */}
+          <small>{part(r.startsAt, { month: 'long' }).slice(0, 3)}</small>
+          <span className="mono">{time(r.startsAt)}</span>
         </div>
-        <div className="mono" style={{ color: 'var(--ink-3)', fontSize: 12, marginTop: 2 }}>
-          {t('bookingRef')}: <strong>#{r.id}</strong>
+
+        {/* what and where */}
+        <div className="bk-body">
+          <div className="bk-tags">
+            {r.id === nextId && <span className="bk-tag is-next">{t('next', { when: soon(r.startsAt, now) })}</span>}
+            <span className={`bk-tag is-${STATUS_TONE[r.status] ?? 'plain'}`}>{st.has(r.status) ? st(r.status) : r.status}</span>
+            <span className="bk-tag">{enumLabel(te, 'ReservationType', r.type)}</span>
+            {r.groupSessionId != null && <span className="bk-tag is-game">{tg('openTag')}</span>}
+          </div>
+          <h3 className="bk-title">
+            <ClubThumb src={r.clubPhotoUrl ?? null} size={30} />
+            {r.clubName ?? `#${r.clubId}`}
+          </h3>
+          <p className="bk-meta">
+            {[r.courtName, r.coachName && t('withCoach', { name: r.coachName }), `${time(r.startsAt)}–${time(r.endsAt)}`, t('minutes', { n: minutes })]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
         </div>
-      </div>
-      <span
-        className="mono"
-        style={{
-          fontSize: 12,
-          padding: '4px 10px',
-          borderRadius: 100,
-          border: '1px solid var(--line-2)',
-          color: r.status === 'CANCELLED' ? 'var(--ink-3)' : 'var(--teal)',
-        }}
-      >
-        {st.has(r.status) ? st(r.status) : r.status}
-      </span>
-      {/* Upcoming and still on: one tap into the phone's own calendar. */}
-      {CANCELLABLE.includes(r.status) && new Date(r.startsAt).getTime() > now && (
-        <span style={{ marginLeft: 'auto' }}>
-          <AddToCalendar
-            reservationId={r.id}
-            title={`${enumLabel(te, 'ReservationType', r.type)} · ${r.clubName ?? ''}`}
-            location={r.clubName}
-            startsAt={r.startsAt}
-            endsAt={r.endsAt}
-            compact
-          />
-        </span>
-      )}
-      {/* A confirmed court ahead can be opened to other players — or already is. */}
-      {r.type === 'COURT' && r.status === 'CONFIRMED' && new Date(r.startsAt).getTime() > now &&
-        (r.groupSessionId ? (
-          <Link href={`/sessions#gs-${r.groupSessionId}`} className="bk-game is-open">
-            {tg('seeGame')}
-          </Link>
-        ) : (
-          <OpenGameButton
-            className="bk-game"
-            booking={{
-              id: r.id,
-              priceCents: r.priceCents,
-              currency: r.currency,
-              summary: `${dtf.format(new Date(r.startsAt))} · ${r.clubName ?? ''}`,
-            }}
-          />
-        ))}
-      {/* A booking that has already started cannot be cancelled from here. */}
-      {CANCELLABLE.includes(r.status) && new Date(r.startsAt).getTime() > now && (
-        <button
-          type="button"
-          onClick={() => setPending(r)}
-          style={{
-            minHeight: 40,
-            padding: '0 14px',
-            border: '1px solid var(--clay)',
-            color: 'var(--clay)',
-            background: 'var(--surface)',
-            borderRadius: 'var(--pill)',
-            cursor: 'pointer',
-          }}
-        >
-          {t('cancel')}
-        </button>
-      )}
-    </div>
-  );
+
+        {/* price and number */}
+        <div className="bk-side">
+          <b>{money(r.priceCents, r.currency)}</b>
+          <small className="mono">
+            {t('bookingRef')} {r.id}
+          </small>
+        </div>
+
+        {/* what can be done with it: only while it is still ahead and on */}
+        {live && (
+          <div className="bk-actions">
+            <AddToCalendar
+              reservationId={r.id}
+              title={`${enumLabel(te, 'ReservationType', r.type)} · ${r.clubName ?? ''}`}
+              location={r.clubName}
+              startsAt={r.startsAt}
+              endsAt={r.endsAt}
+              compact
+            />
+            {/* A confirmed court ahead can be opened to other players — or already is. */}
+            {r.type === 'COURT' &&
+              r.status === 'CONFIRMED' &&
+              (r.groupSessionId ? (
+                <Link href={`/sessions#gs-${r.groupSessionId}`} className="bk-game is-open">
+                  {tg('seeGame')}
+                </Link>
+              ) : (
+                <OpenGameButton
+                  className="bk-game"
+                  booking={{
+                    id: r.id,
+                    priceCents: r.priceCents,
+                    currency: r.currency,
+                    summary: `${dtf.format(new Date(r.startsAt))} · ${r.clubName ?? ''}`,
+                  }}
+                />
+              ))}
+            <button type="button" className="bk-cancel" onClick={() => setPending(r)}>
+              {t('cancel')}
+            </button>
+          </div>
+        )}
+      </article>
+    );
+  };
 
   return (
     <div>
@@ -201,21 +215,49 @@ export function MyBookings() {
         </div>
       )}
       {list.isLoading && <SkeletonRows />}
-      {list.isSuccess && all.length === 0 && <p style={{ color: 'var(--ink-2)' }}>{t('empty')}</p>}
+      {list.isSuccess && all.length === 0 && (
+        <div className="bk-empty">
+          <b>{t('empty')}</b>
+          <p>{t('emptyHelp')}</p>
+          <Link href="/clubs" className="acct-btn is-primary">
+            {t('bookCourt')}
+          </Link>
+        </div>
+      )}
 
       {view === 'calendar' && list.isSuccess && all.length > 0 && <BookingsCalendar bookings={all} renderRow={row} />}
 
-      {view === 'list' && upcoming.length > 0 && (
-        <section style={{ marginBottom: 28 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>{t('upcoming')}</h2>
-          <div style={{ display: 'grid', gap: 12 }}>{upcoming.map(row)}</div>
-        </section>
-      )}
-      {view === 'list' && past.length > 0 && (
-        <section>
-          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>{t('past')}</h2>
-          <div style={{ display: 'grid', gap: 12 }}>{past.map(row)}</div>
-        </section>
+      {view === 'list' && list.isSuccess && all.length > 0 && (
+        <div className="bk-lists">
+          <section>
+            <h2 className="bk-h2">
+              {t('upcoming')} <span>{upcoming.length}</span>
+            </h2>
+            {upcoming.length > 0 ? (
+              <div className="bk-list">{upcoming.map(row)}</div>
+            ) : (
+              <div className="bk-empty is-inline">
+                <p>{t('noneAhead')}</p>
+                <Link href="/clubs" className="acct-btn is-primary">
+                  {t('bookCourt')}
+                </Link>
+              </div>
+            )}
+          </section>
+          {past.length > 0 && (
+            <section>
+              <h2 className="bk-h2">
+                {t('past')} <span>{past.length}</span>
+              </h2>
+              <div className="bk-list">{shownPast.map(row)}</div>
+              {past.length > PAST_SHOWN && (
+                <button type="button" className="acct-btn bk-more" aria-expanded={allPast} onClick={() => setAllPast((v) => !v)}>
+                  {allPast ? t('showFewer') : t('showAll', { n: past.length })}
+                </button>
+              )}
+            </section>
+          )}
+        </div>
       )}
 
       <Modal open={pending !== null} onClose={() => setPending(null)} title={t('cancelConfirmTitle')}>
@@ -229,38 +271,11 @@ export function MyBookings() {
               })}
             </p>
             <p style={{ color: 'var(--ink-3)', fontSize: 13 }}>{t('cancelConfirmNote')}</p>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => setPending(null)}
-                style={{
-                  minHeight: 44,
-                  padding: '0 18px',
-                  border: '1px solid var(--line-2)',
-                  background: 'var(--surface)',
-                  color: 'var(--ink)',
-                  borderRadius: 'var(--pill)',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                }}
-              >
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              <button type="button" className="acct-btn" onClick={() => setPending(null)}>
                 {t('keepBooking')}
               </button>
-              <button
-                type="button"
-                onClick={() => cancel.mutate(pending.id)}
-                disabled={cancel.isPending}
-                style={{
-                  minHeight: 44,
-                  padding: '0 18px',
-                  border: 'none',
-                  background: 'var(--clay)',
-                  color: '#fff',
-                  borderRadius: 'var(--pill)',
-                  cursor: 'pointer',
-                  fontWeight: 700,
-                }}
-              >
+              <button type="button" className="acct-btn bk-confirm-cancel" onClick={() => cancel.mutate(pending.id)} disabled={cancel.isPending}>
                 <BusyLabel busy={cancel.isPending}>{t('confirmCancel')}</BusyLabel>
               </button>
             </div>

@@ -114,6 +114,9 @@ export const updateClubProfileSchema = z.object({
   phone: z.string().max(40).nullish(),
   photoUrl: z.string().url().max(2000).nullish().or(z.literal('')),
   rules: z.string().max(8000).nullish(),
+  /** Where the club is, for the map; null clears it. */
+  lat: z.number().min(-90).max(90).nullish(),
+  lng: z.number().min(-180).max(180).nullish(),
 });
 export type UpdateClubProfileInput = z.infer<typeof updateClubProfileSchema>;
 

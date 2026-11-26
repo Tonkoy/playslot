@@ -296,6 +296,9 @@ export class ClubsService {
         ...(input.phone !== undefined ? { phone: input.phone || null } : {}),
         ...(input.photoUrl !== undefined ? { photoUrl: input.photoUrl || null } : {}),
         ...(input.rules !== undefined ? { rules: input.rules || null } : {}),
+        // Where the club is, for the map on the clubs page (null clears it).
+        ...(input.lat !== undefined ? { lat: input.lat } : {}),
+        ...(input.lng !== undefined ? { lng: input.lng } : {}),
       },
       select: PUBLIC_CLUB_SELECT,
     });

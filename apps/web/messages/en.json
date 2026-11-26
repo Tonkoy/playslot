@@ -370,6 +370,24 @@
     "TOURNAMENT": "Tournament"
   },
   "Clubs": {
+    "searchPlaceholder": "Search by name, address or area",
+    "nearMe": "Near me",
+    "nearMeOn": "By distance ✓",
+    "locating": "Finding you…",
+    "locateDenied": "The browser did not allow access to your location. You can turn it on in its settings.",
+    "locateUnavailable": "We could not tell where you are.",
+    "city": "City",
+    "allCities": "All",
+    "found": "{count, plural, one {# club} other {# clubs}}",
+    "noMatch": "No club matches the search.",
+    "showOnMap": "On the map",
+    "directions": "Directions",
+    "noPin": "No place on the map",
+    "notOnMap": "{n, plural, one {# club has} other {# clubs have}} no place on the map yet.",
+    "distanceKm": "{km} km",
+    "distanceM": "{m} m",
+    "you": "You are here",
+    "mapLabel": "Map of the clubs",
     "title": "Clubs",
     "subtitle": "Pick a club to see its free courts.",
     "empty": "No clubs are available right now.",
@@ -541,6 +559,8 @@
     "worksWith": "Works with"
   },
   "CoachHub": {
+    "createSession": "Open a group session",
+    "createSessionHelp": "Pick a time and court; players get the invite",
     "schedule": "My schedule",
     "publicPage": "My public page",
     "account": "My account",
@@ -726,6 +746,14 @@
     "seniors": "Seniors"
   },
   "ClubAdmin": {
+    "location": "Place on the map",
+    "locationNone": "Not set yet — the club does not show on the map.",
+    "locationFind": "Find from the address",
+    "locationFinding": "Searching…",
+    "locationClear": "Remove",
+    "locationHelp": "Click on the map or drag the pin to the club’s entrance. Save the changes below.",
+    "locationCheck": "This is from the address — check it and move the pin if it is off.",
+    "locationNotFound": "We could not find this address. Click on the map where the club is.",
     "detailsTitle": "Club profile",
     "detailsHelp": "Shown on your public club page. Photo, contact, about and rules.",
     "name": "Club name",

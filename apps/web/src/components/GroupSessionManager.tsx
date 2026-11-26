@@ -329,8 +329,17 @@ export function MyGroupSessions() {
   );
 }
 
-/** The form that opens a new group training: a free slot, then what it is and for whom. */
-export function GroupSessionManager({ coachProfileId }: { coachProfileId: number }) {
+/**
+ * The form that opens a new group training: a free slot, then what it is and
+ * for whom. Lives in a dialog (`onCreated` closes it); the dialog gives the title.
+ */
+export function GroupSessionManager({
+  coachProfileId,
+  onCreated,
+}: {
+  coachProfileId: number;
+  onCreated?: () => void;
+}) {
   const t = useTranslations('GroupSessions');
   const { toast, tt, refresh, onError } = useSessionTools();
 
@@ -373,6 +382,7 @@ export function GroupSessionManager({ coachProfileId }: { coachProfileId: number
       setDescription('');
       setLevel(null);
       toast(tt('sessionCreated'));
+      onCreated?.();
     },
     onError,
   });
@@ -381,10 +391,7 @@ export function GroupSessionManager({ coachProfileId }: { coachProfileId: number
     effectiveClub != null && start != null && courtId != null && title.trim().length > 0;
 
   return (
-    <section className="acct-card">
-      <h2 className="acct-h2" style={{ marginBottom: 4 }}>
-        {t('createTitle')}
-      </h2>
+    <div>
       <p className="acct-help" style={{ marginBottom: 16 }}>
         {t('createHelp')}
       </p>
@@ -491,7 +498,7 @@ export function GroupSessionManager({ coachProfileId }: { coachProfileId: number
           {t('inviteNote')}
         </p>
       </div>
-    </section>
+    </div>
   );
 }
 

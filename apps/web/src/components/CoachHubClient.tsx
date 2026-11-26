@@ -2,11 +2,12 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useRouter } from '@/i18n/navigation';
 import { getMe, getMyCoachProfile } from '@/lib/api';
 import { Avatar } from './Avatar';
 import { CoachProfileEditor } from './CoachProfileEditor';
+import { Modal } from './Modal';
 import { GroupSessionManager, MyGroupSessions } from './GroupSessionManager';
 import { PushNotificationToggle } from './PushNotificationToggle';
 
@@ -19,6 +20,7 @@ const ICON = {
 /** Coach hub: who the coach is on the left, their public profile and group trainings on the right. */
 export function CoachHubClient() {
   const t = useTranslations('CoachHub');
+  const tg = useTranslations('GroupSessions');
   const router = useRouter();
   const me = useQuery({ queryKey: ['me'], queryFn: getMe, retry: false });
   useEffect(() => {
@@ -27,6 +29,7 @@ export function CoachHubClient() {
 
   const isCoach = me.data?.user.roles.includes('COACH') ?? false;
   const profile = useQuery({ queryKey: ['coachProfile'], queryFn: getMyCoachProfile, enabled: me.isSuccess && isCoach });
+  const [creating, setCreating] = useState(false);
 
   if (me.isLoading || me.isError) return <p style={{ color: 'var(--ink-3)' }}>…</p>;
   if (!isCoach) {
@@ -60,6 +63,19 @@ export function CoachHubClient() {
           </div>
         </section>
 
+        {/* The main thing a coach does here: in reach at once, not at the end of the page. */}
+        {profile.data && (
+          <button type="button" className="chub-create" onClick={() => setCreating(true)}>
+            <span className="chub-create-plus" aria-hidden>
+              +
+            </span>
+            <span>
+              <b>{t('createSession')}</b>
+              <small>{t('createSessionHelp')}</small>
+            </span>
+          </button>
+        )}
+
         <nav className="acct-card acct-nav" aria-label={t('shortcuts')}>
           {links.map((l) => (
             <Link key={l.href} href={l.href} className="acct-nav-link">
@@ -80,8 +96,13 @@ export function CoachHubClient() {
         {/* What is coming up first; the profile and the form to open a new one after it. */}
         <MyGroupSessions />
         <CoachProfileEditor name={user.name} />
-        {profile.data && <GroupSessionManager coachProfileId={profile.data.coachProfileId} />}
       </div>
+
+      {profile.data && (
+        <Modal open={creating} onClose={() => setCreating(false)} title={tg('createTitle')}>
+          <GroupSessionManager coachProfileId={profile.data.coachProfileId} onCreated={() => setCreating(false)} />
+        </Modal>
+      )}
     </div>
   );
 }

@@ -2422,3 +2422,403 @@ button.bk-coach.is-on .bk-coach-dot {
     margin-left: 0;
   }
 }
+
+/* ── Clubs: map + list ── */
+.cexp-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.cexp-search {
+  flex: 1 1 280px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 50px;
+  padding: 0 16px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--pill);
+  background: var(--surface);
+  color: var(--ink-3);
+}
+.cexp-search:focus-within {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 18%, transparent);
+}
+.cexp-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+.cexp-near {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 50px;
+  padding: 0 20px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--pill);
+  background: var(--surface);
+  color: var(--green-deep);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cexp-near.is-on {
+  border-color: var(--green-deep);
+  background: var(--green-deep);
+  color: var(--lime);
+}
+.cexp-near:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.cexp-cities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.cexp-count {
+  margin-left: 4px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.cexp-note {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--held-soft);
+  color: var(--ink);
+  font-size: 14px;
+}
+.cexp-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 20px;
+  align-items: start;
+}
+.cexp-map {
+  order: 2;
+  position: sticky;
+  top: 92px;
+}
+.cmap {
+  height: calc(100vh - 130px);
+  min-height: 420px;
+  max-height: 760px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface-2);
+  z-index: 0;
+}
+.cmap-loading {
+  background: repeating-linear-gradient(135deg, var(--surface-2) 0 12px, #edf1ee 12px 24px);
+}
+.cexp-map-note {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.cexp-list {
+  order: 1;
+  display: grid;
+  gap: 10px;
+}
+.cexp-total {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+.cexp-empty {
+  padding: 24px;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius);
+  color: var(--ink-2);
+  text-align: center;
+}
+.cexp-card {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  scroll-margin: 100px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.cexp-card:hover {
+  border-color: var(--green);
+}
+.cexp-card.is-on {
+  border-color: var(--green-deep);
+  box-shadow: inset 0 0 0 1px var(--green-deep), var(--shadow-sm);
+}
+.cexp-thumb {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.cexp-thumb img {
+  max-width: 100%;
+  max-height: 100%;
+  padding: 6px;
+  object-fit: contain;
+  box-sizing: border-box;
+}
+.cexp-thumb svg {
+  width: 56px;
+  height: auto;
+}
+.cexp-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.cexp-name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+}
+.cexp-name:hover {
+  color: var(--green);
+}
+.cexp-addr {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.cexp-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  margin-top: 2px;
+  font-size: 13.5px;
+}
+.cexp-meta b {
+  color: var(--green-deep);
+}
+.cexp-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--green);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.cexp-link:hover {
+  text-decoration: underline;
+}
+.cexp-nopin {
+  color: var(--ink-3);
+}
+.cexp-go {
+  grid-column: 2;
+  justify-self: start;
+  padding: 10px 16px;
+  border-radius: var(--pill);
+  background: var(--lime);
+  color: var(--on-lime);
+  font-size: 13.5px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+/* pins */
+.cmap-icon {
+  background: none;
+  border: 0;
+}
+.cmap-pin svg {
+  display: block;
+  filter: drop-shadow(0 2px 3px rgba(18, 59, 44, 0.35));
+  transition: transform 0.15s ease;
+  transform-origin: 50% 100%;
+}
+.cmap-pin path {
+  fill: var(--green-deep);
+  stroke: #fff;
+  stroke-width: 1.5;
+}
+.cmap-pin circle {
+  fill: var(--lime);
+}
+.cmap-pin.is-active svg {
+  transform: scale(1.25);
+}
+.cmap-pin.is-active path {
+  fill: var(--clay);
+}
+.cmap-pin.is-active circle {
+  fill: #fff;
+}
+.cmap-me {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: var(--mine);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--mine) 25%, transparent);
+}
+.cmap .leaflet-popup-content-wrapper {
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(18, 59, 44, 0.18);
+}
+.cmap .leaflet-popup-content {
+  margin: 12px 14px;
+  font: inherit;
+}
+.cmap-pop {
+  display: grid;
+  gap: 4px;
+  min-width: 180px;
+}
+.cmap-pop b {
+  font-size: 15px;
+  color: var(--ink);
+}
+.cmap-pop span {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.cmap-pop-links {
+  display: flex;
+  gap: 14px;
+  margin-top: 4px;
+}
+.cmap .cmap-pop a {
+  color: var(--green);
+  font-weight: 700;
+  text-decoration: none;
+}
+@media (max-width: 900px) {
+  .cexp-layout {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .cexp-map {
+    order: 0;
+    position: static;
+  }
+  .cmap {
+    height: 46vh;
+    min-height: 280px;
+    max-height: 420px;
+  }
+  .cexp-list {
+    order: 1;
+  }
+}
+@media (max-width: 560px) {
+  .cexp-card {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+  .cexp-thumb {
+    width: 64px;
+    height: 64px;
+  }
+  .cexp-go {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    text-align: center;
+  }
+}
+
+/* Club admin: where the club is */
+.clp {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+.clp-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.clp-map {
+  height: 300px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: crosshair;
+  z-index: 0;
+}
+
+/* Coach hub: "open a group training" — the main action, at the top of the side column. */
+.chub-create {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px 18px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--green-deep);
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.15s ease;
+}
+.chub-create:hover {
+  box-shadow: 0 8px 24px rgba(18, 59, 44, 0.22);
+}
+.chub-create:active {
+  transform: scale(0.98);
+}
+.chub-create-plus {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--lime);
+  color: var(--on-lime);
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1;
+}
+.chub-create b {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+}
+.chub-create small {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: #b9cfc4;
+}

@@ -96,50 +96,33 @@ export function SearchClient() {
     }).format(cents / 100);
 
   const results = query.data?.results ?? [];
+  // The day the results on screen are for, said in words above them.
+  const shownDay = new Intl.DateTimeFormat(locale === 'bg' ? 'bg-BG' : 'en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'UTC',
+  }).format(new Date(`${query.data?.date ?? applied.date}T12:00:00Z`));
 
   return (
-    <div>
-      {/* ── search bar ── */}
+    <div className="srch">
+      {/* ── what to look for ── */}
       <form
+        className="srch-form"
         onSubmit={(e) => {
           e.preventDefault();
           submit();
         }}
       >
-        <div
-          style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--line)',
-            borderRadius: 'var(--radius)',
-            boxShadow: 'var(--shadow)',
-            padding: 18,
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: 14,
-          }}
-        >
-          {/* Location */}
-          <label style={field}>
-            <span style={labelText}>{t('location')}</span>
-            <div style={{ position: 'relative' }}>
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                stroke="var(--ink-3)"
-                strokeWidth="1.6"
-                style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
-                aria-hidden
-              >
-                <circle cx="7" cy="7" r="5" />
-                <path d="m11 11 3.5 3.5" strokeLinecap="round" />
+        <div className="srch-fields">
+          <label className="srch-field">
+            <span className="srch-label">{t('location')}</span>
+            <span className="srch-select">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
+                <path d="M8 14.5s4.5-4.3 4.5-7.9a4.5 4.5 0 0 0-9 0c0 3.6 4.5 7.9 4.5 7.9z" strokeLinejoin="round" />
+                <circle cx="8" cy="6.5" r="1.6" />
               </svg>
-              <select
-                value={cityId}
-                onChange={(e) => setCityId(e.target.value === '' ? '' : Number(e.target.value))}
-                style={{ ...ctrl, paddingLeft: 34, width: '100%' }}
-              >
+              <select value={cityId} onChange={(e) => setCityId(e.target.value === '' ? '' : Number(e.target.value))}>
                 <option value="">{t('anyCity')}</option>
                 {cities.data?.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -147,155 +130,146 @@ export function SearchClient() {
                   </option>
                 ))}
               </select>
-            </div>
-          </label>
-
-          {/* Sport */}
-          <label style={field}>
-            <span style={labelText}>{t('sport')}</span>
-            <select value={sport} onChange={(e) => setSport(e.target.value)} style={ctrl}>
-              <option value="">{t('anySport')}</option>
-              {OFFERED_SPORTS.map((s) => (
-                <option key={s} value={s}>
-                  {enumLabel(te, 'Sport', s)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {/* Date */}
-          <label style={field}>
-            <span style={labelText}>
-              {t('date')} <span style={optionalText}>({t('optionalTag')})</span>
             </span>
+          </label>
+
+          <label className="srch-field">
+            <span className="srch-label">{t('date')}</span>
             <DatePicker value={date} onChange={setDate} locale={locale} placeholder={t('anyDate')} />
-          </label>
-
-          {/* Time */}
-          <label style={field}>
-            <span style={labelText}>
-              {t('time')} <span style={optionalText}>({t('optionalTag')})</span>
-            </span>
-            <select value={time} onChange={(e) => setTime(e.target.value)} style={ctrl}>
-              <option value="any">{t('anyTime')}</option>
-              <option value="morning">{t('morning')}</option>
-              <option value="afternoon">{t('afternoon')}</option>
-              <option value="evening">{t('evening')}</option>
-            </select>
           </label>
         </div>
 
-        <button
-          type="submit"
-          aria-busy={searching}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            width: '100%',
-            minHeight: 48,
-            marginTop: 14,
-            background: 'var(--lime)',
-            color: 'var(--on-lime)',
-            border: 'none',
-            borderRadius: 'var(--radius-sm)',
-            fontWeight: 800,
-            fontSize: 15,
-            cursor: 'pointer',
-          }}
-        >
-          {searching && <Spinner size={16} />}
+        <div className="srch-fields">
+          <Choice
+            label={t('sport')}
+            value={sport}
+            onChange={setSport}
+            options={[
+              { value: '', title: t('anySportShort') },
+              ...OFFERED_SPORTS.map((s) => ({ value: s as string, title: enumLabel(te, 'Sport', s) })),
+            ]}
+          />
+          <Choice
+            label={t('time')}
+            value={time}
+            onChange={setTime}
+            options={[
+              { value: 'any', title: t('anyTimeShort') },
+              { value: 'morning', title: t('morningShort'), note: '06–12' },
+              { value: 'afternoon', title: t('afternoonShort'), note: '12–17' },
+              { value: 'evening', title: t('eveningShort'), note: '17–22' },
+            ]}
+          />
+        </div>
+
+        <button type="submit" className="srch-go" aria-busy={searching}>
+          {searching ? (
+            <Spinner size={16} />
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+              <circle cx="7" cy="7" r="5" />
+              <path d="m11 11 3.5 3.5" />
+            </svg>
+          )}
           {searching ? t('searching') : t('findCourt')}
         </button>
       </form>
 
-      {/* ── results ── */}
-      <div
-        aria-busy={searching}
-        style={{ marginTop: 20, opacity: searching && !query.isLoading ? 0.5 : 1, transition: 'opacity 150ms ease' }}
-      >
-        {query.isLoading && <SkeletonRows />}
-        {query.isSuccess && results.length === 0 && <p style={{ color: 'var(--ink-2)' }}>{t('empty')}</p>}
+      {/* ── what there is ── */}
+      <section className={`srch-results${searching && !query.isLoading ? ' is-stale' : ''}`} aria-busy={searching}>
+        {query.isLoading && <SkeletonRows height={92} />}
 
-        <div style={{ display: 'grid', gap: 12 }}>
+        {query.isSuccess && (
+          <h2 className="srch-h2">
+            {t('resultsTitle')}
+            {results.length > 0 && <span>{results.length}</span>}
+            <small>{shownDay}</small>
+          </h2>
+        )}
+
+        {query.isSuccess && results.length === 0 && (
+          <div className="srch-empty">
+            <b>{t('empty')}</b>
+            <span>{t('emptyHelp')}</span>
+          </div>
+        )}
+
+        <div className="srch-list">
           {results.map((r) => (
             <Link
               key={r.club.id}
               href={`/clubs/${r.club.slug}`}
               onClick={closeModal}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 12,
-                flexWrap: 'wrap',
-                textDecoration: 'none',
-                color: 'var(--ink)',
-                background: 'var(--surface)',
-                border: '1px solid var(--line)',
-                borderRadius: 'var(--radius)',
-                padding: 16,
-                boxShadow: 'var(--shadow-sm)',
-                opacity: r.freeCount === 0 ? 0.6 : 1,
-              }}
+              className={`srch-card${r.freeCount === 0 ? ' is-none' : ''}`}
             >
-              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', minWidth: 0 }}>
-                <ClubThumb src={r.club.photoUrl} />
-                <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 18 }}>{r.club.name}</div>
-                <div className="mono" style={{ color: 'var(--ink-3)', fontSize: 12, marginTop: 4 }}>
-                  {r.club.cityName}
-                  {r.club.surfaces.length
-                    ? ` · ${r.club.surfaces.map((sf) => enumLabel(te, 'Surface', sf)).join(', ')}`
-                    : ''}
-                </div>
+              <ClubThumb src={r.club.photoUrl} size={56} />
+              <span className="srch-body">
+                <span className="srch-name">{r.club.name}</span>
+                <span className="srch-meta">
+                  {[r.club.cityName, ...r.club.surfaces.map((sf) => enumLabel(te, 'Surface', sf))].join(' · ')}
+                </span>
                 {r.sampleTimes.length > 0 && (
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                  <span className="srch-times">
+                    <small>{t('earliest')}</small>
                     {r.sampleTimes.map((tm) => (
-                      <span key={tm} className="mono" style={chip}>
+                      <span key={tm} className="mono">
                         {tm}
                       </span>
                     ))}
-                  </div>
+                  </span>
                 )}
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontWeight: 700, color: r.freeCount ? 'var(--free)' : 'var(--ink-3)' }}>
-                  {t('freeSlots', { count: r.freeCount })}
-                </div>
+              </span>
+              <span className="srch-side">
+                <span className={`bk-tag ${r.freeCount ? 'is-ok' : 'is-off'}`}>
+                  {r.freeCount ? t('freeSlots', { count: r.freeCount }) : t('noFree')}
+                </span>
                 {r.fromPriceCents != null && (
-                  <div className="mono" style={{ color: 'var(--ink-2)', fontSize: 13 }}>
-                    {t('from')} {money(r.fromPriceCents, r.currency)}
-                  </div>
+                  <span className="srch-price">
+                    <small>{t('from')}</small> {money(r.fromPriceCents, r.currency)}
+                  </span>
                 )}
-              </div>
+              </span>
+              <svg className="srch-arrow" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="m7 4 5 5-5 5" />
+              </svg>
             </Link>
           ))}
         </div>
-      </div>
+      </section>
     </div>
   );
 }
 
-const field: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6 };
-const labelText: React.CSSProperties = { fontWeight: 700, fontSize: 13, color: 'var(--ink)' };
-const optionalText: React.CSSProperties = { fontWeight: 400, color: 'var(--ink-3)' };
-const ctrl: React.CSSProperties = {
-  minHeight: 46,
-  padding: '0 12px',
-  border: '1px solid var(--line-2)',
-  background: 'var(--surface)',
-  color: 'var(--ink)',
-  borderRadius: 'var(--radius-sm)',
-  fontFamily: 'inherit',
-  fontSize: 15,
-};
-const chip: React.CSSProperties = {
-  fontSize: 12,
-  background: 'var(--free-soft)',
-  color: 'var(--free)',
-  borderRadius: 100,
-  padding: '3px 10px',
-};
+/** One-of-a-few as a row of pills: every option is in view, one tap to pick. */
+function Choice({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; title: string; note?: string }[];
+}) {
+  return (
+    <div className="srch-field" role="radiogroup" aria-label={label}>
+      <span className="srch-label">{label}</span>
+      <span className="srch-pills">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={value === o.value}
+            className={`srch-pill${value === o.value ? ' is-on' : ''}`}
+            onClick={() => onChange(o.value)}
+          >
+            {o.title}
+            {o.note && <small className="mono">{o.note}</small>}
+          </button>
+        ))}
+      </span>
+    </div>
+  );
+}

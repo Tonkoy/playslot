@@ -34,84 +34,91 @@ export default async function CoachesPage({ params }: { params: Promise<{ locale
   const level = (l: string) => (lv.has(l) ? lv(l) : l);
   const ageGroup = (g: string) => (ag.has(g) ? ag(g) : g);
   const coaches = (await getCoaches()) ?? [];
+  const money = (cents: number) =>
+    new Intl.NumberFormat(locale === 'bg' ? 'bg-BG' : 'en-GB', {
+      style: 'currency',
+      currency: 'EUR',
+      maximumFractionDigits: cents % 100 ? 2 : 0,
+    }).format(cents / 100);
 
   return (
     <>
       <SiteHeader />
       <main style={{ maxWidth: 'var(--maxw)', margin: '0 auto', padding: '32px 20px 64px' }}>
-        <h1 style={{ fontSize: 'clamp(26px, 5vw, 40px)', fontWeight: 800 }}>{t('title')}</h1>
+        <h1 className="cdir-h1">
+          {t('title')}
+          {coaches.length > 0 && <span>{coaches.length}</span>}
+        </h1>
         <p style={{ color: 'var(--ink-2)', margin: '8px 0 24px' }}>{t('subtitle')}</p>
 
         {coaches.length === 0 ? (
-          <div style={{ background: 'var(--surface)', border: '1px dashed var(--line-2)', borderRadius: 'var(--radius)', padding: 24, color: 'var(--ink-2)' }}>
-            {t('empty')}
-          </div>
+          <p className="gs-empty">{t('empty')}</p>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
-            {coaches.map((coach) => (
-              <Link
-                key={coach.coachProfileId}
-                href={`/coaches/${coach.coachProfileId}`}
-                style={{ display: 'block', textDecoration: 'none', color: 'var(--ink)', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: 18, boxShadow: 'var(--shadow-sm)' }}
-              >
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <AvatarZoom name={coach.name} photoUrl={coach.photoUrl} size={52} />
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontFamily: 'var(--font-bricolage)', fontWeight: 700, fontSize: 19 }}>{coach.name}</div>
-                    {coach.ratingAvg != null && (
-                      <div style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 2 }}>
-                        <span style={{ color: 'var(--held)' }}>★</span> <strong>{coach.ratingAvg.toFixed(1)}</strong>{' '}
-                        <span style={{ color: 'var(--ink-3)' }}>({t('ratingCount', { count: coach.ratingCount })})</span>
-                      </div>
-                    )}
-                    <div className="mono" style={{ color: 'var(--ink-3)', fontSize: 12, marginTop: 2 }}>
-                      {[
-                        coach.clubs.map((c) => c.name).join(' · '),
-                        coach.experienceYears != null ? t('yearsExp', { n: coach.experienceYears }) : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </div>
-                  </div>
-                </div>
-                {coach.bio && (
-                  <div style={{ color: 'var(--ink-2)', fontSize: 14, marginTop: 12, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {coach.bio}
-                  </div>
-                )}
-                {(coach.levels.length > 0 || coach.languages.length > 0 || coach.worksWith.length > 0) && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
-                    {coach.levels.map((l) => (
-                      <span key={l} className="mono" style={tag}>{level(l)}</span>
-                    ))}
-                    {coach.worksWith.map((g) => (
-                      <span key={g} className="mono" style={{ ...tag, color: 'var(--clay)', borderColor: 'var(--clay)' }}>{ageGroup(g)}</span>
-                    ))}
-                    {coach.languages.map((l) => (
-                      <span key={l} className="mono" style={{ ...tag, color: 'var(--teal)', borderColor: 'var(--teal)' }}>
-                        {enumLabel(te, 'Language', l)}
+          <div className="cdir-grid">
+            {coaches.map((coach) => {
+              // The lowest price says "from"; a coach with no services listed shows none.
+              const prices = coach.services.map((sv) => sv.priceCents);
+              const from = prices.length ? Math.min(...prices) : null;
+              const about = [
+                ...coach.worksWith.map((g) => ({ key: `w-${g}`, label: ageGroup(g), tone: ' is-age' })),
+                ...coach.levels.map((l) => ({ key: `l-${l}`, label: level(l), tone: ' is-level' })),
+                ...coach.languages.map((l) => ({ key: `g-${l}`, label: enumLabel(te, 'Language', l), tone: '' })),
+              ];
+              return (
+                <Link key={coach.coachProfileId} href={`/coaches/${coach.coachProfileId}`} className="cdir-card">
+                  <span className="cdir-top">
+                    <AvatarZoom name={coach.name} photoUrl={coach.photoUrl} size={64} />
+                    <span className="cdir-who">
+                      <span className="cdir-name">{coach.name}</span>
+                      <span className="cdir-club">{coach.clubs.map((c) => c.name).join(' · ')}</span>
+                    </span>
+                  </span>
+
+                  {(coach.ratingAvg != null || coach.experienceYears != null) && (
+                    <span className="cdir-facts">
+                      {coach.ratingAvg != null && (
+                        <span className="cdir-rating">
+                          <i aria-hidden>★</i> <b>{coach.ratingAvg.toFixed(1)}</b>{' '}
+                          <small>({t('ratingCount', { count: coach.ratingCount })})</small>
+                        </span>
+                      )}
+                      {coach.experienceYears != null && <span className="cdir-exp">{t('yearsExp', { n: coach.experienceYears })}</span>}
+                    </span>
+                  )}
+
+                  {coach.bio && <span className="cdir-bio">{coach.bio}</span>}
+
+                  {about.length > 0 && (
+                    <span className="cdir-tags">
+                      {about.map((a) => (
+                        <span key={a.key} className={`gs-tag${a.tone}`}>
+                          {a.label}
+                        </span>
+                      ))}
+                    </span>
+                  )}
+
+                  <span className="cdir-foot">
+                    {from != null ? (
+                      <span className="cdir-price">
+                        <small>{t('from')}</small> {money(from)}
                       </span>
-                    ))}
-                  </div>
-                )}
-                {coach.services[0] && (
-                  <div style={{ marginTop: 12, fontWeight: 700 }}>
-                    {t('from')} {Math.round(coach.services[0].priceCents / 100)} €
-                  </div>
-                )}
-              </Link>
-            ))}
+                    ) : (
+                      <span />
+                    )}
+                    <span className="cdir-go">
+                      {t('viewProfile')}
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="m5 3 4 4-4 4" />
+                      </svg>
+                    </span>
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         )}
       </main>
     </>
   );
 }
-
-const tag: React.CSSProperties = {
-  fontSize: 11,
-  padding: '2px 8px',
-  borderRadius: 100,
-  border: '1px solid var(--line-2)',
-  color: 'var(--ink-3)',
-};

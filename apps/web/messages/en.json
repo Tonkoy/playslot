@@ -90,6 +90,8 @@
     "error": "The link is invalid or expired."
   },
   "Admin": {
+    "publicPage": "Public page",
+    "noClubsHelp": "When a club adds you as an admin or staff member, it will appear here.",
     "title": "Manage",
     "signedInAs": "Signed in as {email}",
     "yourClubs": "Your clubs",
@@ -262,6 +264,15 @@
     "needBooking": "You can review after a completed booking at this club."
   },
   "Search": {
+    "anySportShort": "All",
+    "anyTimeShort": "Any time",
+    "morningShort": "Morning",
+    "afternoonShort": "Afternoon",
+    "eveningShort": "Evening",
+    "resultsTitle": "Free courts",
+    "emptyHelp": "Try another day or time.",
+    "earliest": "Earliest:",
+    "noFree": "None free",
     "title": "Find a court",
     "subtitle": "Find free courts across clubs for a chosen date.",
     "date": "Date",
@@ -286,6 +297,7 @@
     "anyDate": "Any date"
   },
   "Coaches": {
+    "viewProfile": "View profile",
     "title": "Coaches",
     "subtitle": "Pick a coach for a private or group lesson.",
     "empty": "No coaches registered yet.",

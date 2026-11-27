@@ -10,6 +10,7 @@
     "slowRequest": "This is taking too long. Please try again."
   },
   "Nav": {
+    "menuAriaNamed": "{name}'s menu",
     "clubs": "Clubs",
     "coaches": "Coaches",
     "login": "Log in",

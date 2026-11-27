@@ -24,6 +24,7 @@ export function SiteNav() {
   const [open, setOpen] = useState(false); // mobile hamburger panel
   const [menuOpen, setMenuOpen] = useState(false); // desktop account/settings dropdown
   const [installHelp, setInstallHelp] = useState(false); // "how to install" steps (iPhone)
+  const [photoBroken, setPhotoBroken] = useState(false); // the profile picture failed to load
   const pathname = usePathname();
   const router = useRouter();
   const qc = useQueryClient();
@@ -193,29 +194,32 @@ export function SiteNav() {
         </button>
 
         <div ref={menuRef} style={{ position: 'relative' }}>
+          {/* Who is signed in, and the way into their menu: their picture (or a
+              plain figure before sign-in) with an arrow that turns when it opens. */}
           <button
             type="button"
-            aria-label={t('menuAria')}
+            className="nav-acct"
+            aria-label={signedIn ? t('menuAriaNamed', { name: me.data.user.name }) : t('menuAria')}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((o) => !o)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minWidth: 44,
-              minHeight: 44,
-              padding: 0,
-              background: menuOpen ? 'var(--green-soft)' : 'var(--surface)',
-              border: '1px solid var(--line-2)',
-              borderRadius: '50%',
-              color: 'var(--green-deep)',
-              cursor: 'pointer',
-              fontSize: 22,
-              lineHeight: 1,
-            }}
           >
-            <span aria-hidden>⋯</span>
+            {signedIn ? (
+              // A picture that will not load falls back to the initials rather than a broken image.
+              <span className="nav-acct-pic" onErrorCapture={() => setPhotoBroken(true)}>
+                <Avatar name={me.data.user.name} photoUrl={photoBroken ? null : me.data.user.avatarUrl} size={36} />
+              </span>
+            ) : (
+              <span className="nav-acct-guest" aria-hidden>
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <circle cx="8" cy="5.5" r="2.7" />
+                  <path d="M2.8 13.8c.6-2.5 2.7-3.9 5.2-3.9s4.6 1.4 5.2 3.9" />
+                </svg>
+              </span>
+            )}
+            <svg className="nav-acct-arrow" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M2.5 4.5 6 8l3.5-3.5" />
+            </svg>
           </button>
 
           {menuOpen && (
